@@ -12,6 +12,8 @@ a {
   margin: 1em;
   padding: 1em;
   border: 1px solid #ccc;
+  max-height: 500px;
+  overflow: auto;
 }
 
 .clearer {
@@ -35,3 +37,4 @@ p b {
 #live-traders .name:hover {
   background-color: red;
 }
+

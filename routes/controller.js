@@ -16,34 +16,27 @@ exports.index = function(req, res) {
   res.render('index', {
     title: 'Stampede'
   });
+  
+  Trader.wakeAll();
 };
 
 exports.addTrader = function(req, res) {
-  var trader = new Trader();
+  var trader = new Trader.instance();
   trader.create(function(error, response) {
-    trader.wakeAll(function(live_traders) {
-      console.log("Added trader and woke all.");
-      res.redirect("/");
-    });
+    res.redirect("/");
   });
 };
 
 exports.removeTrader = function(req, res) {
   var trader_name = req.params.trader_name;
-  var trader = new Trader(trader_name);
+  var trader = new Trader.instance(trader_name);
   trader.remove(function(live_traders) {
     res.send({message: "Removed."});
   });
 };
 
-exports.traders = function(callback) {
-  var trader = new Trader();
-  trader.presentAll(callback);
-};
-
 exports.wakeTraders = function(done) {
-  var trader = new Trader();
-  trader.wakeAll(done);
+  Trader.wakeAll(done);
 };
 
 exports.balance = function(done) {
@@ -72,7 +65,7 @@ exports.updateMarket = function(data) {
     data: data,
     container: "live-ticker"
   };
-  console.log("Updating market with data.", data);
+  //console.log("Updating market with data.", data);
   live.sendToAll("stampede_updates", outgoing);
 };
 
@@ -82,9 +75,32 @@ exports.updateWallet = function(data, done) {
     container: "live-balance"
   };
   
-  console.log("Updating wallet with data.", data);
+  //console.log("^^^^^ Updating wallet with data.", data);
   live.sendToAll("stampede_updates", outgoing);
   done();
+};
+
+exports.updateTraders = function(data, done) {
+  var outgoing = {
+    data: data,
+    container: "live-traders"
+  };
+  
+  //console.log("^^^^^ Updating wallet with data.", data);
+  live.sendToAll("stampede_updates", outgoing);
+  if (done) done();
+};
+
+exports.updateDecisions = function(data, done) {
+  var outgoing = {
+    data: data,
+    rendering: "prepend",
+    container: "live-decisions"
+  };
+  
+  //console.log("^^^^^ Updating wallet with data.", data);
+  live.sendToAll("stampede_updates", outgoing);
+  if (done) done();
 };
 
 

@@ -21,14 +21,15 @@ Wallet.prototype = {
       data.timestamp = new Date();
       me.current = data;
       me.current.cool = me.current.cool || 1;
-      me.summarizeDeals();
-      callback(error, data);
+      me.summarizeDeals(callback);
+      //callback(error, data);
       //console.log("Checked wallet:", me);
     }); 
   },
-  summarizeDeals: function() {
+  summarizeDeals: function(callback) {
     var me = this;
     me.current.investment = 0;
+    me.current.btc_amount_managed = 0;
     controller.user_transactions(function(error, transactions) {
       //console.log("wallet | summarizeDeals | transactions:", transactions);
       for (var trader_name in live_traders) {
@@ -39,11 +40,13 @@ Wallet.prototype = {
           var transaction = transactions.lookup("order_id", current_trader_deal.order_id),
               deal_buy_price = current_trader_deal.buy_price,
               deal_amount = current_trader_deal.amount;
-          console.log("^^^^^^^^^^^ Found transaction for deal, transaction:", current_trader_deal.name, transaction);
+          me.current.btc_amount_managed += deal_amount;
+          if (transaction) console.log("^^^^^^ Found transaction for deal, transaction:", current_trader_deal.name, transaction);
           if (!isNaN(deal_amount * deal_buy_price)) me.current.investment += (deal_amount * deal_buy_price);
           live_traders[trader_name].record.current_investment += isNaN(deal_amount * deal_buy_price) ? 0 : (deal_amount * deal_buy_price);
         });
       }
+      if (callback) callback(error, me.current);
     });
     //console.log("||| Live traders after wallet recalc:", live_traders);
   }
