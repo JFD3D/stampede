@@ -1,0 +1,37 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+.block {
+  float: left;
+  margin: 1em;
+  padding: 1em;
+  border: 1px solid #ccc;
+}
+
+.clearer {
+  width: 100%;
+  clear: both;
+}
+
+p b {
+  color: #444;
+}
+
+.container, .container b {
+  font-size: 70%;
+  color: #ccc;
+}
+
+#live-traders .name {
+  cursor: pointer;
+}
+
+#live-traders .name:hover {
+  background-color: red;
+}

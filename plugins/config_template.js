@@ -1,0 +1,20 @@
+exports.bitstamp_credentials = {
+  client_id: "your_bitstamp_login_id",
+  key: "your_bitstamp_API_key",
+  secret: "your_bitstamp_API_secret"
+};
+
+exports.owner = {
+  email: "your_email_address"
+};
+
+exports.email = {
+  presence: "application_from_email(gmail)",
+  password: "application_from_email_password(gmail)"
+};
+
+exports.trading = {
+  maximum_$_per_trade: 15,
+  maximum_investment: 100,
+  bid_alignment: 0.995
+};

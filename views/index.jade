@@ -1,0 +1,22 @@
+extends layout
+
+block content
+  h1= title
+  .block
+    form(action="trader/create", method="post")
+      //input(name="start_price", type="text", placeholder="$")
+      button Add trader
+  .block#live-traders
+    p Waking traders
+  .block#live-balance
+    p Loading...
+  .block#live-ticker
+    p Loading...
+  .block#live-decisions
+    p No decision
+  //.block#live-transactions
+    p No transaction
+  .block#live-messages
+    p No message
+  .block#live-errors
+    p No error

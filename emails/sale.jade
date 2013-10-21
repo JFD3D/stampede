@@ -1,0 +1,8 @@
+h2 Deal sale
+p
+  span Details
+  p
+    - if (deal)
+      h3 deal.name
+      p Amount: #{deal.amount} BTC
+      p Original sale price: $#{deal.sell_price}
