@@ -61,7 +61,7 @@ function update(container, data, rendering) {
 function render(data) {
   var inner_html= "";
   for (var key in data) {
-    console.log("Rendering | key, data[key]:", key, data[key]);
+    //console.log("Rendering | key, data[key]:", key, data[key]);
     if (key === "last") document.title = "$"+data[key];
     inner_html += (typeof(data[key]) === "object") ?
       "<div class='sub-block'>"+render(data[key])+"</div>" :

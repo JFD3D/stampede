@@ -16,8 +16,6 @@ exports.index = function(req, res) {
   res.render('index', {
     title: 'Stampede'
   });
-  
-  Trader.wakeAll();
 };
 
 exports.addTrader = function(req, res) {

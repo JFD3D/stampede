@@ -31,6 +31,7 @@ Wallet.prototype = {
     me.current.investment = 0;
     me.current.btc_amount_managed = 0;
     controller.user_transactions(function(error, transactions) {
+      if (error) console.log("BITSTAMP: wallet | summarizeDeals | transactions | error when loading:", error)
       //console.log("wallet | summarizeDeals | transactions:", transactions);
       for (var trader_name in live_traders) {
         var current_trader_deals = live_traders[trader_name].deals || [];

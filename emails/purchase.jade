@@ -1,8 +1,18 @@
 h2 Deal purchase
 p
-  span Details
-  p
-    - if (deal)
-      h3 deal.name
-      p Amount: #{deal.amount} BTC
-      p Original sale price: $#{deal.sell_price}
+  - if (deal)
+    h3 deal.name
+    p Amount: #{deal.amount} BTC
+    p Bought for: $#{deal.buy_price}
+    p Designated sale price: $#{deal.sell_price}
+    p Original order ID: #{deal.order_id || "Unavailable"}
+p
+  - if (market.current)
+    h3 Current market details
+    each value, property in market.current
+      p #{property}: #{value}
+p
+  - if (wallet.current)
+    h3 Current wallet details
+    each value, property in wallet.current
+      p #{property}: #{value}

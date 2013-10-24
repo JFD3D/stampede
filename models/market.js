@@ -22,8 +22,8 @@ Market.prototype = {
           data[property] = parseFloat(data[property] || 0);
         });
         data.timestamp = new Date(parseInt(data.timestamp)*1000);
-        data.shift_span = (data.high - data.low) / (data.low || 0 + 0.00001);
         data.middle = (data.high + data.low) / 2;
+        data.shift_span = (data.high - data.low) / (data.high || 0 + 0.00001);
         callback(error, data);
       }
     }); 
