@@ -24,7 +24,7 @@ $(document).ready(function() {
   $("body").on("click", ".trader-switch", function() {
     var action = $(this).attr("data-action") || "/stop",
         button = this;
-
+    
     //console.log("Triggering action:", action);
     $(button).text((action === "/stop") ? "Stopping trade..." : "Starting trade...");
     $(button).disabled = true;
