@@ -13,6 +13,7 @@
     "connect-redis": "*",
     "async": "*",
     "nodemailer": "*",
-    "underscore": "*" 
+    "underscore": "*",
+    "passport": "*"
   }
 }

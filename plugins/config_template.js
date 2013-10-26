@@ -18,3 +18,17 @@ exports.trading = {
   maximum_investment: 100,
   bid_alignment: 0.995
 };
+
+exports.auth = {
+  client_id: "googleOauthClientId",
+  client_secret: "googleOauthClientSecret"
+};
+
+exports.port = 3111;
+
+exports.hosts = {
+  development: "http://localhost",
+  production: "production_url"
+};
+
+exports.allowed_user_emails = ["email@address.com", "email2@address.com"];

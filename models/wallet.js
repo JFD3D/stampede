@@ -6,6 +6,7 @@ var db = require("redis").createClient(6379),
 
 function Wallet() {
   this.current = {};
+  this.cool = 1;
   this.check_frequency = 5000;
 }
 
@@ -20,7 +21,7 @@ Wallet.prototype = {
       });
       data.timestamp = new Date();
       me.current = data;
-      me.current.cool = me.current.cool || 1;
+      me.current.cool = me.cool;
       me.summarizeDeals(callback);
       //callback(error, data);
       //console.log("Checked wallet:", me);
