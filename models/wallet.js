@@ -25,7 +25,7 @@ Wallet.prototype = {
       me.summarizeDeals(callback);
       //callback(error, data);
       //console.log("Checked wallet:", me);
-    }); 
+    });
   },
   summarizeDeals: function(callback) {
     var me = this;

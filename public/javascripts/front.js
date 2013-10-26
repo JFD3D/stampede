@@ -25,7 +25,7 @@ $(document).ready(function() {
     var action = $(this).attr("data-action") || "/stop",
         button = this;
 
-    console.log("Triggering action:", action);
+    //console.log("Triggering action:", action);
     $(button).text((action === "/stop") ? "Stopping trade..." : "Starting trade...");
     $(button).disabled = true;
     $.get(action, function(response) {
@@ -38,6 +38,7 @@ $(document).ready(function() {
       else {
         $(button).text((action === "/stop") ? "Stop all" : "Wake all");
       }
+      //console.log("Wakeup response:", response);
       $(button).disabled = false;
     });
   });

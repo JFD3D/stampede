@@ -6,7 +6,9 @@ var db = require("redis").createClient(6379),
     controller = require("./../routes/controller"),
     Market = require("./market"),
     Wallet = require("./wallet"),
-    market, wallet, timer, trader_count,
+    market = new Market(), 
+    wallet = new Wallet(), 
+    timer, trader_count,
     
     /*
      *
@@ -351,15 +353,16 @@ function stringDeal(deal) {
 }
 
 function checkMarket(done) {
-
+  console.log("checking market.");
   // Initialize into global var, exposed on top
-  market = new Market();
   market.check(function(error, market_current) {
+
     controller.updateMarket(market_current);
     if (live_traders) {
       var i = 0;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
-      for (var trader_name in live_traders) {
+      wallet.current.usd_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + wallet.current.usd_ballance;
+      var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
         if (
           btc_to_distribute > 0 &&
@@ -376,28 +379,34 @@ function checkMarket(done) {
             console.log("updateMarket | Ad hoc deal recorded | new_deal, redis_error, redis_response:", new_deal, redis_error, redis_response);
           });
         }
-        trader.decide(function() {
-          i++;
-          if (i === trader_count) {
-            var cool_up = market.current.shift_span / 2;
-            wallet.cool = (
-              wallet.cool < 1 && 
-              cool_up < (1 - wallet.cool)
-            ) ? wallet.cool + cool_up : 1;
-            var next_check = (market.check_frequency);
-            console.log("Will check again in:", (next_check / 1000), "seconds.");
-            timer = setTimeout(function() {
-              checkMarket(done ? done : console.log);
-            }, next_check);
-            if (done) done();
-            controller.updateWallet(wallet.current, done);
-          }
+        console.log("Trader deciding:", trader_name);
+        trader.decide(internal_callback);
+      }, 2);
+      q.drain = function() {
+        console.log("Queue drained in checkMarket.");
+        var cool_up = market.current.shift_span / 2;
+        wallet.cool = (
+          wallet.cool < 1 && 
+          cool_up < (1 - wallet.cool)
+        ) ? wallet.cool + cool_up : 1;
+        var next_check = (market.check_frequency);
+        console.log("Will check again in:", (next_check / 1000), "seconds.");
+        timer = setTimeout(function() {
+          checkMarket(function() {
+            console.log("Market check complete.");
+          });
+        }, next_check);
+        done(null, market.current);
+      }
+      for (var trader_name in live_traders) {
+        q.push(trader_name, function(error) {
+          console.log("Finished processing trader:", trader_name);
         });
       }
     }
     else {
       console.log("No traders present.");
-      done();
+      done(null, market.current);
     }
   });
 }
@@ -405,37 +414,56 @@ function checkMarket(done) {
 
 function checkWallet(done) {
   // Initialize into global var, exposed on top
-  wallet = new Wallet();
+  console.log("Checking wallet.");
   wallet.check(live_traders, function() {
-    wallet.available_to_traders = 
+    wallet.current.available_to_traders = 
       (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current.usd_available ? 
         MAX_SUM_INVESTMENT - wallet.current.investment : 
         wallet.current.usd_available;
-    controller.updateWallet(wallet.current, done);
+    controller.updateWallet(wallet.current);
+    done(null, wallet.current);
+  });
+}
+
+function checkTraders(trader_list, done) {
+  var q = async.queue(function(trader_name, internal_callback) {
+    var trader = new Trader(trader_name);
+    trader.wake(function(error, trader_record) {
+      console.log("Trader wakeup: ", trader_name)
+      internal_callback(error);
+    });
+  }, 2);
+  q.drain = function() {
+    console.log("Finished (async.queue) waking traders.")
+    controller.updateTraders(live_traders, done);
+  }
+  trader_list.forEach(function(trader_name) {
+    q.push(trader_name);
   });
 }
 
 function wakeAll(done) {
   db.smembers("stampede_traders", function(error, trader_list) {
-    var i = 0;
+    console.log("wakeAll, Waking ("+trader_list.length+") traders...");
+    trader_count = trader_list.length;
     if (
       trader_list &&
       trader_list.length > 0
     ) {
-      trader_count = trader_list.length;
-      trader_list.forEach(function(trader_name) {
-        var trader = new Trader(trader_name);
-        trader.wake(function(error, trader_record) {
-          i++;
-          if (i === trader_list.length) {
-            checkWallet(function() {
-              checkMarket(function() {
-                controller.updateTraders(live_traders, done);
-                //if (done) done(live_traders);
-              });
-            });
-          }
-        });
+      async.series([
+        function(internal_callback) {
+          checkTraders(trader_list, internal_callback);
+        },
+        checkWallet,
+        checkMarket
+      ], function(errors, results) {
+        if (errors) {
+          console.log("Problems loading traders, market or wallet:", errors);
+          done();
+        }
+        else {
+          if (done) done();
+        }
       });
     }
     else {

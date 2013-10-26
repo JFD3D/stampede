@@ -94,7 +94,7 @@ exports.updateWallet = function(data, done) {
   
   //console.log("^^^^^ Updating wallet with data.", data);
   live.sendToAll("stampede_updates", outgoing);
-  done();
+  if (done) done();
 };
 
 exports.updateTraders = function(data, done) {
