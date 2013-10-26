@@ -8,12 +8,7 @@ function Stampede() {
 }
     
 socket.on('connect', function(){
-//  console.log(socket.socket.sessionid);
   sio_id = socket.socket.sessionid;
-  //console.log("Connection to IO:", sio_id);
-  //request("balance");
-  //request("ticker");
-  //request("traders");
 });
 
 socket.on("stampede_updates", function(incoming) {
@@ -25,7 +20,28 @@ $(document).ready(function() {
     var target = $(this).attr("data-target");
     $(target).toggle();
   });
-  
+
+  $("body").on("click", ".trader-switch", function() {
+    var action = $(this).attr("data-action") || "/stop",
+        button = this;
+
+    console.log("Triggering action:", action);
+    $(button).text((action === "/stop") ? "Stopping trade..." : "Starting trade...");
+    $(button).disabled = true;
+    $.get(action, function(response) {
+      notify(response.message || "Attempted to "+action+".");
+      if (response.success) {
+        $(".block")[(action === "/stop" ? "addClass" : "removeClass")]("inactive");
+        $(button).text((action === "/stop") ? "Wake all" : "Stop all");
+        $(button).attr("data-action", (action === "/stop") ? "/start" : "/stop");
+      }
+      else {
+        $(button).text((action === "/stop") ? "Stop all" : "Wake all");
+      }
+      $(button).disabled = false;
+    });
+  });
+
   $("body").on("click", "#live-traders .name", function() {
     var confirmation = confirm("Sure to remove trader?");
     if (confirmation) {

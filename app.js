@@ -22,18 +22,17 @@ app.configure(function(){
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
   app.use(express.favicon());
-  app.use(express.logger('dev'));
   app.use(express.bodyParser());
   app.use(express.methodOverride());
   app.use(express.cookieParser('d9aue0c2uq0euc0aw90daspjaxs'));
-  app.use(express.session());
+  app.use(express.session({ secret: '9s98dd8d8s99cs9s9a9a9s88d'+environment, store: sessionStore, key: 'stampede-'+environment+'.sid' }));
   
   // Authentication module injection
   auth.initiate(app);
 
   app.use(app.router);
   app.use(express.static(path.join(__dirname, 'public')));
-  app.use(express.session({ secret: '9s98dd8d8s99cs9s9a9a9s88d'+environment, store: sessionStore, key: 'stampede-'+environment+'.sid' }));
+  app.use(express.logger('dev'));
 
   // development only
   if ('development' === environment) {
@@ -49,14 +48,14 @@ var controller = require('./routes/controller'),
 
 if (server) {
   live.sockets(app, server);
-  controller.wakeTraders(function(live_traders) {
-    app.set("live_traders", live_traders);
+  //controller.wakeTraders(function(live_traders) {
+    //app.set("live_traders", live_traders);
     //console.log("Traders are now awake | live_traders:", live_traders);
-  });
+  //});
 }
 
 app.get("/", auth.ensure, controller.index);
 app.post("/trader/create", auth.ensure, controller.addTrader);
 app.get("/trader/:trader_name/remove", auth.ensure, controller.removeTrader);
-
-
+app.get("/stop", auth.ensure, controller.stop);
+app.get("/start", auth.ensure, controller.start);

@@ -444,5 +444,14 @@ function wakeAll(done) {
   });
 }
 
+function stopAll(done) {
+  clearTimeout(timer);
+  wallet = null;
+  market = null;
+  live_traders = {};
+  done();
+}
+
+exports.stopAll = stopAll;
 exports.wakeAll = wakeAll;
 exports.instance = Trader;

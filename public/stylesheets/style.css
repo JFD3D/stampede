@@ -16,6 +16,16 @@ a {
   overflow: auto;
 }
 
+.block.inactive {
+  color: #ccc;
+  background-color: #eee;
+}
+
+.trader-switch {
+  padding: 1em;
+  float: left;
+}
+
 .clearer {
   width: 100%;
   clear: both;

@@ -3,7 +3,8 @@ var config = require("./../plugins/config"),
     Bitstamp = require("./../plugins/bitstamp.js"),
     bitstamp = new Bitstamp(creds.client_id, creds.key, creds.secret),
     Trader = require("./../models/trader"),
-    live = require("./../plugins/live");
+    live = require("./../plugins/live"),
+    traders_awake;
 
 /*
  * Rendered actions
@@ -14,7 +15,8 @@ var config = require("./../plugins/config"),
 
 exports.index = function(req, res) {
   res.render('index', {
-    title: 'Stampede'
+    title: 'Stampede',
+    traders_awake: traders_awake
   });
 };
 
@@ -34,7 +36,24 @@ exports.removeTrader = function(req, res) {
 };
 
 exports.wakeTraders = function(done) {
-  Trader.wakeAll(done);
+  Trader.wakeAll(function() {
+    traders_awake = true;
+  });
+};
+
+exports.stop = function(req, res) {
+  Trader.stopAll(function() {
+    res.send({message: "Stopped all traders.", success: true});
+  });
+};
+
+exports.start = function(req, res) {
+  
+  Trader.wakeAll(function() {
+    traders_awake = true;
+    res.send({message: "Woke all traders.", success: true});
+  });
+
 };
 
 exports.balance = function(done) {
