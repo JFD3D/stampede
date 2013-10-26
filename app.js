@@ -21,18 +21,18 @@ app.configure(function(){
   app.set('port', process.env.PORT || config.port);
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
+  app.use(express.logger('dev'));
   app.use(express.favicon());
   app.use(express.bodyParser());
   app.use(express.methodOverride());
   app.use(express.cookieParser('d9aue0c2uq0euc0aw90daspjaxs'));
-  app.use(express.session({ secret: '9s98dd8d8s99cs9s9a9a9s88d'+environment, store: sessionStore, key: 'stampede-'+environment+'.sid' }));
+  app.use(express.session({ secret: 'ss9809s0a0s0s99s8d9s8a9d8s9ad0s98'+environment, store: sessionStore, key: 'stampede-'+environment+'.sid' }));
   
   // Authentication module injection
   auth.initiate(app);
 
   app.use(app.router);
   app.use(express.static(path.join(__dirname, 'public')));
-  app.use(express.logger('dev'));
 
   // development only
   if ('development' === environment) {
@@ -48,10 +48,6 @@ var controller = require('./routes/controller'),
 
 if (server) {
   live.sockets(app, server);
-  //controller.wakeTraders(function(live_traders) {
-    //app.set("live_traders", live_traders);
-    //console.log("Traders are now awake | live_traders:", live_traders);
-  //});
 }
 
 app.get("/", auth.ensure, controller.index);
