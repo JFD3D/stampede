@@ -5,7 +5,7 @@ var db = require("redis").createClient(6379),
 
 function Market() {
   this.current = {};
-  this.check_frequency = 20000 + (Math.random()*9000);
+  this.check_frequency = 6000 + (Math.random()*9000);
 }
 
 Market.prototype = {
