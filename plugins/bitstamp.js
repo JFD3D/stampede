@@ -32,9 +32,10 @@ Bitstamp.prototype._request = function(method, path, data, callback, args) {
     path: path,
     method: method,
     headers: {
-      'User-Agent': 'Mozilla/4.0 (compatible; Bitstamp node.js client)'
+      'User-Agent': 'Mozilla/4.0 (compatible; Bitstamp node.js client)',
     }
   };
+  if (method === "post") options.headers['Content-Length'] = Buffer.byteLength(data, 'utf8');
   var req = https.request(options, function(res) {
     res.setEncoding('utf8');
     var buffer = '';
@@ -45,6 +46,7 @@ Bitstamp.prototype._request = function(method, path, data, callback, args) {
       try {
         var json = JSON.parse(buffer);
       } catch (err) {
+        console.log("https.request | buffer, err, options:", buffer, err, options);
         return callback(err);
       }
       callback(null, json);

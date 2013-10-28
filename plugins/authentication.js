@@ -101,9 +101,7 @@ exports.initiate = function(app) {
       allowedUser(req.user.emails[0].value, function(yes, user) {
         if (yes) {
           req.current_user = user;
-          var redirect_to = req.session.redirect_to || '/';
-          delete req.session.redirect_to;
-          res.redirect(redirect_to);
+          res.redirect("/");
         }
         else {
           res.render('noaccess');

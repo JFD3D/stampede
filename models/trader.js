@@ -134,7 +134,7 @@ Trader.prototype = {
     
     var has_free_hands = me.record.hands > me.deals.length,
         has_resources = me.record.current_investment < (me.record.hands * MAX_PER_HAND),
-        available_resources = wallet.current.investment < MAX_SUM_INVESTMENT,
+        available_resources = (wallet.current.investment < MAX_SUM_INVESTMENT) && (wallet.current.usd_available > MAX_PER_HAND),
         trader_bid = (market.current.last / BID_ALIGN),
         bid_below_middle = trader_bid < market.current.middle,
         potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
@@ -156,7 +156,7 @@ Trader.prototype = {
     console.log(
       "*** Buying deal? ***",
       "\n|- Has hands available (..., me.deals.length):", has_free_hands, me.deals.length,
-      "\n|- Has resources(..., me.record.current_investment):", has_resources, me.record.current_investment,
+      "\n|- Has resources(..., me.record.current_investment, wallet.current.usd_available):", has_resources, me.record.current_investment, wallet.current.usd_available,
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
       "\n|- Bid is below middle (..., market.current.last, market.current.middle):", bid_below_middle, market.current.last, market.current.middle,
       "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span,
@@ -353,12 +353,14 @@ function stringDeal(deal) {
 }
 
 function checkMarket(done) {
-  console.log("checking market.");
+  console.log("* Checking market.");
   // Initialize into global var, exposed on top
   market.check(function(error, market_current) {
+    controller.updateMarket(market.current);
+    controller.updateWallet(wallet.current);
 
-    controller.updateMarket(market_current);
     if (live_traders) {
+      controller.updateTraders(live_traders);
       var i = 0;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
       wallet.current.usd_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + wallet.current.usd_ballance;
@@ -383,7 +385,7 @@ function checkMarket(done) {
         trader.decide(internal_callback);
       }, 2);
       q.drain = function() {
-        console.log("Queue drained in checkMarket.");
+        //console.log("Queue drained in checkMarket.");
         var cool_up = market.current.shift_span / 2;
         wallet.cool = (
           wallet.cool < 1 && 
@@ -391,10 +393,9 @@ function checkMarket(done) {
         ) ? wallet.cool + cool_up : 1;
         var next_check = (market.check_frequency);
         console.log("Will check again in:", (next_check / 1000), "seconds.");
+        if (timer) clearTimeout(timer);
         timer = setTimeout(function() {
-          checkMarket(function() {
-            console.log("Market check complete.");
-          });
+          checkMarket(done);
         }, next_check);
         done(null, market.current);
       }
@@ -414,13 +415,12 @@ function checkMarket(done) {
 
 function checkWallet(done) {
   // Initialize into global var, exposed on top
-  console.log("Checking wallet.");
+  console.log("* Checking wallet.");
   wallet.check(live_traders, function() {
     wallet.current.available_to_traders = 
       (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current.usd_available ? 
         MAX_SUM_INVESTMENT - wallet.current.investment : 
         wallet.current.usd_available;
-    controller.updateWallet(wallet.current);
     done(null, wallet.current);
   });
 }
@@ -434,8 +434,8 @@ function checkTraders(trader_list, done) {
     });
   }, 2);
   q.drain = function() {
-    console.log("Finished (async.queue) waking traders.")
-    controller.updateTraders(live_traders, done);
+    console.log("Queue drained in checkTraders.");
+    done(null, live_traders);
   }
   trader_list.forEach(function(trader_name) {
     q.push(trader_name);
