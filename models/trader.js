@@ -8,7 +8,9 @@ var db = require("redis").createClient(6379),
     Wallet = require("./wallet"),
     market = new Market(), 
     wallet = new Wallet(), 
-    timer, trader_count,
+    timer, 
+    trader_count,
+    sheets = [],
     
     /*
      *
@@ -363,7 +365,9 @@ function checkMarket(done) {
       controller.updateTraders(live_traders);
       var i = 0;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
-      wallet.current.usd_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + wallet.current.usd_ballance;
+      wallet.current.usd_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current.usd_balance || 0);
+
+      
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
         if (
@@ -395,8 +399,11 @@ function checkMarket(done) {
         console.log("Will check again in:", (next_check / 1000), "seconds.");
         if (timer) clearTimeout(timer);
         timer = setTimeout(function() {
-          checkMarket(done);
+          checkMarket(function() {
+            updateSheets();
+          });
         }, next_check);
+        
         done(null, market.current);
       }
       for (var trader_name in live_traders) {
@@ -409,6 +416,42 @@ function checkMarket(done) {
       console.log("No traders present.");
       done(null, market.current);
     }
+  });
+}
+
+function checkSheets(done) {
+  console.log("* Checking history sheets.");
+  var now = new Date(),
+      timestamp = now.getTime();
+  db.smembers("stampede_usd_value", function(error, sheet_records) {
+    //console.log("checkSheets | done | error, response:", error, sheet_records);
+    sheet_records.forEach(function(record) {
+      var current = record.split("|");
+      if (
+        current[0] &&
+        !isNaN(parseInt(current[0])) &&
+        current[1] &&
+        !isNaN(parseFloat(current[1]))
+      ) sheets.push({time: parseInt(current[0]), value: parseFloat(current[1])});
+    });
+    sheets.sort(function(a, b) {return a.time - b.time});
+    controller.drawSheets(sheets, "full");
+    done(error, sheets);
+
+  });
+}
+
+function updateSheets() {
+  console.log("* Updating history sheets.");
+  var now = new Date(),
+      timestamp = now.getTime(),
+      current_usd_value = wallet.current.usd_value;
+
+  db.sadd("stampede_usd_value", timestamp+"|"+current_usd_value, function(error, response) {
+    var new_value = {time: timestamp, value: current_usd_value};
+    sheets.push(new_value);
+    //console.log("updateSheets | sheets:", sheets);
+    controller.drawSheets(new_value, "incremental");
   });
 }
 
@@ -455,6 +498,7 @@ function wakeAll(done) {
           checkTraders(trader_list, internal_callback);
         },
         checkWallet,
+        checkSheets,
         checkMarket
       ], function(errors, results) {
         if (errors) {

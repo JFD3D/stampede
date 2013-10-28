@@ -86,6 +86,16 @@ exports.updateMarket = function(data) {
   live.sendToAll("stampede_updates", outgoing);
 };
 
+exports.drawSheets = function(data, update_type) {
+  console.log("Drawing sheets ("+(data.length || "incremental")+").");
+  var outgoing = {
+    data: data,
+    update_type: update_type,
+    container: "live-sheets"
+  };
+  live.sendToAll("stampede_value_sheet_update", outgoing);
+};
+
 exports.updateWallet = function(data, done) {
   var outgoing = {
     data: data,

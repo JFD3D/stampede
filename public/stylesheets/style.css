@@ -48,3 +48,25 @@ p b {
   background-color: red;
 }
 
+.axis {
+  font-size: 80%;
+  color: #ccc;
+}
+
+path {
+  fill: #0082FF;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.brush .extent {
+  stroke: #ccc;
+  fill: #73BAFF;
+  fill-opacity: .125;
+  shape-rendering: crispEdges;
+}
