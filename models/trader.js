@@ -518,8 +518,8 @@ function wakeAll(done) {
 
 function stopAll(done) {
   clearTimeout(timer);
-  wallet = null;
-  market = null;
+  wallet = new Wallet();
+  market = new Market;
   sheets = [];
   live_traders = {};
   done();

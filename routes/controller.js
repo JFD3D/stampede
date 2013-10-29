@@ -43,6 +43,7 @@ exports.wakeTraders = function(done) {
 
 exports.stop = function(req, res) {
   Trader.stopAll(function() {
+    traders_awake = false;
     res.send({message: "Stopped all traders.", success: true});
   });
 };
