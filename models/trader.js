@@ -520,6 +520,7 @@ function stopAll(done) {
   clearTimeout(timer);
   wallet = null;
   market = null;
+  sheets = [];
   live_traders = {};
   done();
 }
