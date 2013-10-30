@@ -7,27 +7,30 @@ function Stampede() {
   
   var _me = this;
 
-  this.cache = {
+  _me.cache = {
     value_sheet: []
   };
 
   this.updateValueSheet = function(incoming) {
-
+    _me.value_sheet = _me.cache.value_sheet;
     if (
       incoming.update_type &&
       incoming.update_type === "full" &&
       incoming.data
     ) {
       _me.cache.value_sheet = incoming.data;
-      renderValueSheet(_me.cache.value_sheet);
+      renderValueSheet(_me.value_sheet);
     }
     else if (
       incoming.update_type &&
       incoming.update_type === "incremental" &&
       incoming.data
     ) {
-      _me.cache.value_sheet.push(incoming.data);
-      renderValueSheet(_me.cache.value_sheet);
+      if (_me.value_sheet.length > 0) {
+        _me.value_sheet.push(incoming.data);
+        renderValueSheet(_me.cache.value_sheet);
+      } else console.log("Waiting for full cache update to value_sheet");
+      
     }
     else {
       console.log("Cache problem.");
@@ -137,7 +140,7 @@ function renderValueSheet(data) {
   d3.select("svg").remove();
   
   var min_value = d3.min(data.map(function(d) { return d.value; }));
-  console.log("Minimum value for drawing is:", min_value);
+  //console.log("Minimum value for drawing is:", min_value);
 
   data.forEach(function(d) {
     d.time = new Date(d.time);

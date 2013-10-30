@@ -3,7 +3,7 @@ extends layout
 block content
   - var class_for_status = (traders_awake == true ? "active" : "inactive")
   h1= title
-  button.trader-switch(data-action=(traders_awake == true ? "/stop" : "/start"))= (traders_awake ? "Stop traders" : "Wake traders")
+  button.trader-switch(data-action=(traders_awake == true ? "/stop" : "/start"))= (traders_awake == true ? "Stop traders" : "Wake traders")
   .block(class="#{class_for_status}")
     form(action="trader/create", method="post")
       //input(name="start_price", type="text", placeholder="$")

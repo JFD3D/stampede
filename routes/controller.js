@@ -4,7 +4,7 @@ var config = require("./../plugins/config"),
     bitstamp = new Bitstamp(creds.client_id, creds.key, creds.secret),
     Trader = require("./../models/trader"),
     live = require("./../plugins/live"),
-    traders_awake;
+    traders_awake = false;
 
 /*
  * Rendered actions
@@ -18,6 +18,8 @@ exports.index = function(req, res) {
     title: 'Stampede',
     traders_awake: traders_awake
   });
+  console.log("Traders are awake:", traders_awake);
+  if (traders_awake) Trader.updateAll();
 };
 
 exports.addTrader = function(req, res) {

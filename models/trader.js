@@ -525,6 +525,15 @@ function stopAll(done) {
   done();
 }
 
+function updateAll() {
+  controller.updateTraders(live_traders);
+  controller.updateMarket(market.current);
+  controller.updateWallet(wallet.current);
+  console.log("trader | updateAll | sheets.length :", sheets.length);
+  setTimeout(controller.drawSheets(sheets, "full"), 5000);
+}
+
 exports.stopAll = stopAll;
 exports.wakeAll = wakeAll;
 exports.instance = Trader;
+exports.updateAll = updateAll;
