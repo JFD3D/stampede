@@ -40,6 +40,7 @@ exports.removeTrader = function(req, res) {
 exports.wakeTraders = function(done) {
   Trader.wakeAll(function() {
     traders_awake = true;
+    if (done) done();
   });
 };
 
