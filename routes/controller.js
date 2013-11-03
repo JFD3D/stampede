@@ -37,6 +37,18 @@ exports.removeTrader = function(req, res) {
   });
 };
 
+exports.removeDeal = function(req, res) {
+  var deal_name = req.params.deal_name,
+      deal = {name: deal_name},
+      trader_name = req.params.trader_name,
+      trader = new Trader.instance(trader_name);
+  trader.wake(function(error, record) {
+    trader.removeDeal(deal, function() {
+      res.send({message: "Deal removed."});
+    });
+  });
+};
+
 exports.wakeTraders = function(done) {
   Trader.wakeAll(function() {
     traders_awake = true;
@@ -63,6 +75,17 @@ exports.start = function(req, res) {
 exports.balance = function(done) {
   console.log("Getting ballance for user.");
   bitstamp.balance(done);
+};
+
+exports.getValueSheet = function(req, res) {
+  //callback(error, data);
+  Trader.pullValueSheet(function(value_sheet) {
+
+    res.send({
+      value_sheet: value_sheet,
+      message: "Value sheet pulled: Length ("+value_sheet.length+")"
+    });
+  });
 };
 
 

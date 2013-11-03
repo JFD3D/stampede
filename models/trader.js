@@ -441,6 +441,10 @@ function checkSheets(done) {
   });
 }
 
+function pullValueSheet(callback) {
+  callback(sheets);
+}
+
 function updateSheets() {
   console.log("* Updating history sheets.");
   var now = new Date(),
@@ -450,7 +454,6 @@ function updateSheets() {
   db.sadd("stampede_usd_value", timestamp+"|"+current_usd_value, function(error, response) {
     var new_value = {time: timestamp, value: current_usd_value};
     sheets.push(new_value);
-    //console.log("updateSheets | sheets:", sheets);
     controller.drawSheets(new_value, "incremental");
   });
 }
@@ -537,3 +540,4 @@ exports.stopAll = stopAll;
 exports.wakeAll = wakeAll;
 exports.instance = Trader;
 exports.updateAll = updateAll;
+exports.pullValueSheet = pullValueSheet;

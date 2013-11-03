@@ -40,11 +40,11 @@ p b {
   color: #ccc;
 }
 
-#live-traders .name {
+#live-traders .record, #live-traders .deals .name {
   cursor: pointer;
 }
 
-#live-traders .name:hover {
+#live-traders .record:hover, #live-traders .deals .name:hover {
   background-color: red;
 }
 

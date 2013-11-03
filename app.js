@@ -54,5 +54,7 @@ if (server) {
 app.get("/", auth.ensure, controller.index);
 app.post("/trader/create", auth.ensure, controller.addTrader);
 app.get("/trader/:trader_name/remove", auth.ensure, controller.removeTrader);
+app.get("/trader/:trader_name/deal/:deal_name/remove", auth.ensure, controller.removeDeal);
 app.get("/stop", auth.ensure, controller.stop);
+app.get("/value_sheet", auth.ensure, controller.getValueSheet);
 app.get("/start", auth.ensure, controller.start);

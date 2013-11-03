@@ -29,7 +29,15 @@ function Stampede() {
       if (_me.value_sheet.length > 0) {
         _me.value_sheet.push(incoming.data);
         renderValueSheet(_me.cache.value_sheet);
-      } else console.log("Waiting for full cache update to value_sheet");
+      } else {
+        console.log("Waiting for full cache update to value_sheet");
+        $.get("/value_sheet", function(incoming) {
+          if (incoming.value_sheet) {
+            _me.cache.value_sheet = incoming.value_sheet;
+            renderValueSheet(_me.value_sheet);
+          }
+        })
+      }
       
     }
     else {
@@ -78,15 +86,31 @@ $(document).ready(function() {
     });
   });
 
-  $("body").on("click", "#live-traders .name", function() {
+  $("body").on("click", "#live-traders .record", function() {
     var confirmation = confirm("Sure to remove trader?");
     if (confirmation) {
-      var trader_name = $(".value", this).text();
+      var trader_name = $(this).parent().attr("data-key");
       $.get("/trader/"+trader_name+"/remove", function(response) {
         notify(response.message || "Updated.");
       });
     }
   });
+
+  $("body").on("click", "#live-traders .deals .name", function() {
+    var confirmation = confirm("Sure to remove trader?");
+    if (confirmation) {
+      var deal_name = $(".value", this).text();
+      var record_container = $(this).parents(".deals");
+      //console.log("record_container", record_container);
+      var trader_name = $(record_container).parent().attr("data-key");
+      if (trader_name && deal_name) {
+        $.get("/trader/"+trader_name+"/deal/"+deal_name+"/remove", function(response) {
+          notify(response.message || "Updated.");
+        });
+      }
+      else notify("Unable to identify record names.");
+    }
+  });  
 });
 
 
@@ -116,8 +140,8 @@ function render(data) {
     //console.log("Rendering | key, data[key]:", key, data[key]);
     if (key === "last") document.title = "$"+data[key];
     inner_html += (typeof(data[key]) === "object") ?
-      "<div class='sub-block'>"+render(data[key])+"</div>" :
-      ("<p class='"+key+"'><b>"+capitaliseFirstLetter(key.replace(/_/g, " "))+": </b><span class='value'>"+data[key]+"</span></p>");
+      "<div class='sub-block "+key+"' data-key='"+key+"'>"+render(data[key])+"</div>" :
+      ("<p class='"+key+"' data-key='"+key+"'><b>"+capitaliseFirstLetter(key.replace(/_/g, " "))+": </b><span class='value'>"+data[key]+"</span></p>");
   }
   return inner_html+"<hr>";
 }
