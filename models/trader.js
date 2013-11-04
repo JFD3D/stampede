@@ -323,10 +323,12 @@ Trader.prototype = {
         deal_position = me.deals.lookupIndex("name", deal.name);
     if (deal_position > -1) {
       me.deals.splice(deal_position, 1);
-      db.srem(me.record.book, deal.name, callback);
+      db.srem(me.record.book, deal.name, function(error, response) {
+        wallet.check(live_traders, callback);
+      });
     }
     else {
-      done("Problems finding deal.", null);
+      callback("Problems finding deal.", null);
     }
   }
 };

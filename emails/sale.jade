@@ -1,7 +1,7 @@
 h2 Deal sale
 p
   - if (deal)
-    h3 deal.name
+    h3= deal.name
     p Amount: #{deal.amount} BTC
     p Bought for: $#{(deal.amount * deal.buy_price)}
     p Original sale price: $#{deal.sell_price}
