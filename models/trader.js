@@ -135,7 +135,6 @@ Trader.prototype = {
     // decide if buying, how much
     
     var has_free_hands = me.record.hands > me.deals.length,
-        has_resources = me.record.current_investment < (me.record.hands * MAX_PER_HAND),
         available_resources = (wallet.current.investment < MAX_SUM_INVESTMENT) && (wallet.current.usd_available > MAX_PER_HAND),
         trader_bid = (market.current.last / BID_ALIGN),
         bid_below_middle = trader_bid < market.current.middle,
@@ -148,7 +147,6 @@ Trader.prototype = {
         
     if (
       has_free_hands &&
-      has_resources &&
       available_resources &&
       bid_below_middle &&
       potential_better_than_fee &&
@@ -158,7 +156,6 @@ Trader.prototype = {
     console.log(
       "*** Buying deal? ***",
       "\n|- Has hands available (..., me.deals.length):", has_free_hands, me.deals.length,
-      "\n|- Has resources(..., me.record.current_investment, wallet.current.usd_available):", has_resources, me.record.current_investment, wallet.current.usd_available,
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
       "\n|- Bid is below middle (..., market.current.last, market.current.middle):", bid_below_middle, market.current.last, market.current.middle,
       "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span,
@@ -425,19 +422,21 @@ function checkSheets(done) {
       timestamp = now.getTime();
   db.smembers("stampede_usd_value", function(error, sheet_records) {
     //console.log("checkSheets | done | error, response:", error, sheet_records);
-    sheet_records.forEach(function(record) {
+    var step = Math.round(sheet_records.length / 1000);
+    sheet_records.forEach(function(record, index) {
       var current = record.split("|");
       if (
         current[0] &&
         !isNaN(parseInt(current[0])) &&
         current[1] &&
-        !isNaN(parseFloat(current[1]))
+        !isNaN(parseFloat(current[1])) &&
+        step > 0 &&
+        (index % step) === 0
       ) sheets.push({time: parseInt(current[0]), value: parseFloat(current[1])});
     });
     sheets.sort(function(a, b) {return a.time - b.time});
     controller.drawSheets(sheets, "full");
     done(error, sheets);
-
   });
 }
 
