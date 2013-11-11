@@ -428,12 +428,12 @@ function checkSheets(done) {
     sheet_records.forEach(function(record, index) {
       var current = record.split("|");
       if (
-        current[0] &&
-        !isNaN(parseInt(current[0])) &&
-        current[1] &&
-        !isNaN(parseFloat(current[1])) &&
         step > 0 &&
-        (index % step) === 0
+        (index % step) === 0 &&
+        current[0] &&
+        parseInt(current[0]) > 10 &&
+        current[1] &&
+        parseFloat(current[1]) > 10
       ) sheets.push({time: parseInt(current[0]), value: parseFloat(current[1])});
     });
     sheets.sort(function(a, b) {return a.time - b.time});
@@ -451,12 +451,13 @@ function updateSheets() {
   var now = new Date(),
       timestamp = now.getTime(),
       current_usd_value = wallet.current.usd_value;
-
-  db.sadd("stampede_usd_value", timestamp+"|"+current_usd_value, function(error, response) {
-    var new_value = {time: timestamp, value: current_usd_value};
-    sheets.push(new_value);
-    controller.drawSheets(new_value, "incremental");
-  });
+  if (wallet.current.usd_value > 10) {
+    db.sadd("stampede_usd_value", timestamp+"|"+current_usd_value, function(error, response) {
+      var new_value = {time: timestamp, value: current_usd_value};
+      sheets.push(new_value);
+      controller.drawSheets(new_value, "incremental");
+    });
+  }
 }
 
 
