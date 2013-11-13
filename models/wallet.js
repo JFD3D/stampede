@@ -38,6 +38,7 @@ Wallet.prototype = {
       for (var trader_name in live_traders) {
         var current_trader_deals = live_traders[trader_name].deals || [];
         (live_traders[trader_name].record || {}).current_investment = 0;
+        (live_traders[trader_name].record || {}).current_deals = current_trader_deals.length;
         current_trader_deals.forEach(function(current_trader_deal) {
           //console.log("summarizeDeals | current_trader_deal:", current_trader_deal);
           //var transaction = transactions.lookup("order_id", current_trader_deal.order_id),

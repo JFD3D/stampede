@@ -55,6 +55,7 @@ Trader.prototype = {
         live_traders[me.name] = me;
         db.hmset(me.name, me.record, callback);
         me.record.current_investment = 0;
+        me.record.current_deals = 0;
       });
     });
   },
@@ -97,6 +98,7 @@ Trader.prototype = {
     //console.log("trader | checkRecord | trader:", trader);
     db.hgetall(trader.name, function(error, my_record) {
       trader.record = my_record;
+      //trader.title = trader.name.replace(/_/gi, " ").upperCaseFirst();
       my_record.hands = parseFloat(my_record.hands);
       trader.checkInventory(callback);
     });
@@ -173,18 +175,19 @@ Trader.prototype = {
     // decide if selling, how much
     var current_market_greed = (market.current.shift_span / 2),
         current_sale_price = (market.current.last * BID_ALIGN),
-        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100));
+        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
         candidate_deals = me.deals.filter(function(deal_for_sale) {
           //console.log("isSelling | deal_for_sale, market.current.last", deal_for_sale, market.current.last);
           console.log("trader | isSelling | would sell at:", (deal_for_sale.buy_price * (trader_greed + 1)), "current sale at:", current_sale_price);
           return (deal_for_sale.buy_price * (1 + trader_greed)) < current_sale_price;
         }),
-        weighted_heat = wallet.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN)));
+        weighted_heat = wallet.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN))),
         potential_better_than_heat = (weighted_heat > 1);
     
     if (
       candidate_deals &&
       candidate_deals.length > 0 &&
+      candidate_deals[0].amount <= wallet.current.btc_balance &&
       potential_better_than_heat
     ) {
       var deal_for_sale = candidate_deals[0];
@@ -200,6 +203,7 @@ Trader.prototype = {
       "*** Selling deal? ***",
       "\n|- candidate_deals:", candidate_deals,
       "\n|- potential_better_than_heat (..., weighted_heat, wallet.cool):", potential_better_than_heat, weighted_heat, wallet.cool,
+      "\n|- amount is managed:", ((candidate_deals[0] || {}).amount <= wallet.current.btc_balance),
       "\n_SALE_ Decision:", decision ? "SELLING" : "HOLDING",
       "\n******",
       "\nDeal for sale details:", deal
@@ -220,7 +224,7 @@ Trader.prototype = {
       }
       else {
         console.log("("+me.name+"): Not selling, nor buying.");
-        //controller.updateDecisions({decision: "("+me.name+") Decided to HOLD (last:$"+market.current.last+")."});
+        controller.updateDecisions({message: "("+me.name+") HOLDING (last:$"+market.current.last+")."});
         done();
       }
     }
@@ -249,7 +253,7 @@ Trader.prototype = {
     deal.heat = deal.buy_price / MAX_SUM_INVESTMENT;
     wallet.cool -= (wallet.cool > 0 && deal.heat > 0) ? deal.heat : (market.current.shift_span / 2);
     
-    controller.updateDecisions({decision: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+"."});
+    controller.updateDecisions({message: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+".", permanent: true});
     
     controller.sell(deal.amount, (market.current.last * BID_ALIGN).toFixed(2), function(error, order) {
       console.log("BITSTAMP: Response after attempt to sell | deal, error, order:", deal, error, order);
@@ -272,7 +276,7 @@ Trader.prototype = {
     deal.sell_price = (deal.buy_price * (1 + market.current.shift_span + (wallet.current.fee / 100)));
     deal.heat = deal.buy_price / MAX_SUM_INVESTMENT;
     wallet.cool -= (wallet.cool > 0 && deal.heat > 0) ? deal.heat : (market.current.shift_span / 2);
-    controller.updateDecisions({decision: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_HAND+"."});
+    controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_HAND+".", permanent: true});
     deal.buy_price = deal.buy_price;
     
     email.send({
@@ -370,7 +374,7 @@ function checkMarket(done) {
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
         if (
-          btc_to_distribute > 0 &&
+          btc_to_distribute > 0.01 &&
           live_traders[trader_name].deals.length < MAX_HANDS
         ) {
           var new_deal = {
@@ -524,7 +528,7 @@ function wakeAll(done) {
 function stopAll(done) {
   clearTimeout(timer);
   wallet = new Wallet();
-  market = new Market;
+  market = new Market();
   sheets = [];
   live_traders = {};
   done();

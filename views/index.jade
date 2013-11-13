@@ -1,27 +1,26 @@
 extends layout
 
+block navigation
+  #live-messages
+    .content
 block content
   - var class_for_status = (traders_awake == true ? "active" : "inactive")
-  h1= title
-  button.trader-switch(data-action=(traders_awake == true ? "/stop" : "/start"))= (traders_awake == true ? "Stop traders" : "Wake traders")
-  .block(class="#{class_for_status}")
-    form(action="trader/create", method="post")
-      //input(name="start_price", type="text", placeholder="$")
-      button Add trader
+  .clearer  
   .block#live-traders(class="#{class_for_status}")
-    p ---
+    h2 Traders
+    .clearer
+    button.trader-switch.lefter(data-action=(traders_awake == true ? "/stop" : "/start"))= (traders_awake == true ? "STOP" : "START")
+    form.lefter(action="trader/create", method="post", style="margin-bottom: 10px;")
+      button Add trader        
+    .clearer
+    .content
   .block#live-balance(class="#{class_for_status}")
-    p ---
+    h2 Wallet
+    .content
   .block#live-ticker(class="#{class_for_status}")
-    p ---
-  .block#live-decisions(class="#{class_for_status}")
-    h2 Decisions
+    h2 Market
+    .content
+  .clearer
   .block#live-sheets(class="#{class_for_status}")
-    h2 Value sheets
-  .block#live-messages(class="#{class_for_status}")
-    h2 Messages
-  .block#live-errors(class="#{class_for_status}")
-    h2 Errors
-  .block#live-value(class="#{class_for_status}")
-    h2 Value
-    #value-graph
+    h2 Current $ value change
+    .content

@@ -17,4 +17,10 @@ html
     script(type='text/javascript', src='/javascripts/front.js')    
   
   body
-    block content
+    #navigation
+      //.lefter
+        span= title
+      block navigation
+    .clearer
+    #content
+      block content
