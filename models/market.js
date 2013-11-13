@@ -23,6 +23,7 @@ Market.prototype = {
         });
         data.timestamp = new Date(parseInt(data.timestamp)*1000);
         data.middle = (data.high + data.low) / 2;
+        data.top = me.top = (me.top && me.top > data.high) ? me.top : data.high;
         data.shift_span = (data.high - data.low) / (data.high || 0 + 0.00001);
         callback(error, data);
       }
