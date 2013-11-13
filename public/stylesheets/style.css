@@ -1,10 +1,41 @@
 body {
-  padding: 50px;
+  padding: 100px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
 }
 
 a {
   color: #00B7FF;
+}
+
+#navigation {
+  padding: 1em;
+  position: fixed;
+  top: -1em;
+  border: 1px solid #ccc;
+  background-color: #eee;
+  border-radius: .5em;
+  box-shadow: 0em .25em .5em 0em rgba(0, 0, 0, 0.1);
+}
+
+#navigation button {
+  margin: 1em 1em 1em 1em;
+
+}
+
+#live-messages {
+  max-height: 70px;
+  min-width: 600px;
+  line-height: 60%;
+  overflow: auto;
+  float: right;
+}
+
+#live-messages:hover {
+  max-height: 600px;
+}
+
+#live-messages {
+  font: 80%;
 }
 
 .block {
@@ -21,8 +52,11 @@ a {
   background-color: #eee;
 }
 
-.trader-switch {
+button {
   padding: 1em;
+}
+
+.lefter {
   float: left;
 }
 
@@ -35,6 +69,15 @@ p b {
   color: #444;
 }
 
+table td {
+  padding: 1em;
+  border: 1px solid red;
+}
+
+table {
+  border: 1px solid green;
+}
+
 .container, .container b {
   font-size: 70%;
   color: #ccc;
@@ -45,7 +88,27 @@ p b {
 }
 
 #live-traders .record:hover, #live-traders .deals .name:hover {
-  background-color: red;
+  background-color: #FF5300;
+}
+
+#live-traders .book, #live-traders .title b {
+  display: none;
+}
+
+.deals .sub-block {
+  font-size: 90%;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: .5em;
+  margin-bottom: .5em;
+  background-color: #fff;
+}
+
+#live-traders .level_1 {
+  padding: .5em;
+  margin-bottom: 1em;
+  background-color: #eee;
+  border: 1px solid #ccc;
 }
 
 .axis {

@@ -7,7 +7,7 @@ Array.prototype.lookup = function(key, value) {
     i++;
   }
   return result;
-}
+};
 
 Array.prototype.lookupIndex = function(key, value) {
   var i=0, result;
@@ -18,4 +18,9 @@ Array.prototype.lookupIndex = function(key, value) {
     i++;
   }
   return result;
-}
+};
+
+String.prototype.upperCaseFirst = function() {
+  var string = this;
+  return string.charAt(0).toUpperCase() + string.slice(1);
+};

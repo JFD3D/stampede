@@ -146,11 +146,7 @@ exports.updateTraders = function(data, done) {
 };
 
 exports.updateDecisions = function(data, done) {
-  var outgoing = {
-    data: data,
-    rendering: "prepend",
-    container: "live-decisions"
-  };
+  var outgoing = data;
   
   //console.log("^^^^^ Updating wallet with data.", data);
   live.sendToAll("stampede_updates", outgoing);

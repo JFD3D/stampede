@@ -51,7 +51,10 @@ socket.on('connect', function(){
 });
 
 socket.on("stampede_updates", function(incoming) {
-  update(incoming.container || "live-messages", incoming.data, incoming.rendering || "html");
+  if (incoming.container) {
+    update(incoming.container, incoming.data, incoming.rendering || "html");  
+  }
+  else if (incoming.message) notify(incoming.message, (incoming.permanent ? null : 30000)); 
 });
 
 
@@ -72,14 +75,14 @@ $(document).ready(function() {
     $(button).text((action === "/stop") ? "Stopping trade..." : "Starting trade...");
     $(button).disabled = true;
     $.get(action, function(response) {
-      notify(response.message || "Attempted to "+action+".");
+      notify(response.message || "Attempted to "+action+".", 60000);
       if (response.success) {
         $(".block")[(action === "/stop" ? "addClass" : "removeClass")]("inactive");
-        $(button).text((action === "/stop") ? "Wake all" : "Stop all");
+        $(button).text((action === "/stop") ? "START" : "STOP");
         $(button).attr("data-action", (action === "/stop") ? "/start" : "/stop");
       }
       else {
-        $(button).text((action === "/stop") ? "Stop all" : "Wake all");
+        $(button).text((action === "/stop") ? "STOP" : "START");
       }
       //console.log("Wakeup response:", response);
       $(button).disabled = false;
@@ -91,7 +94,7 @@ $(document).ready(function() {
     if (confirmation) {
       var trader_name = $(this).parent().attr("data-key");
       $.get("/trader/"+trader_name+"/remove", function(response) {
-        notify(response.message || "Updated.");
+        notify(response.message || "Updated.", 10000);
       });
     }
   });
@@ -105,7 +108,7 @@ $(document).ready(function() {
       var trader_name = $(record_container).parent().attr("data-key");
       if (trader_name && deal_name) {
         $.get("/trader/"+trader_name+"/deal/"+deal_name+"/remove", function(response) {
-          notify(response.message || "Updated.");
+          notify(response.message || "Updated.", 10000);
         });
       }
       else notify("Unable to identify record names.");
@@ -114,13 +117,20 @@ $(document).ready(function() {
 });
 
 
-function notify(message) {
-  $("#live-messages").append("<p class='notification'>"+message+"</p>");
+function notify(message, decay) {
+  var date = new Date(),
+      message_id = "notification_"+parseInt(+date);
+  //console.log("notify | message_id, decay, message:", message_id, decay, message);
+  $(".content", "#live-messages").prepend("<p class='notification' id='"+message_id+"''><i>"+message+"</i><span style='color:grey'> | "+date+"</span></p>");
+  if (decay) {
+    $("#"+message_id).fadeOut(decay, function() {
+      $(this).remove();
+    });
+  }
 }
 
 
 function update(container, data, rendering) {
-
   var html = "";
   if (data.length) { 
     data.forEach(function(data_point) {
@@ -130,27 +140,27 @@ function update(container, data, rendering) {
   else {
     html += render(data);
   }
-  $("#"+container)[rendering](html);
-  
+  //notify("Updated "+container+", "+rendering, 4000);
+  $(".content", "#"+container)[rendering](html);
 }
 
-function render(data) {
+function render(data, level) {
+  level = (level || 0);
+  level++;
   var inner_html= "";
   for (var key in data) {
-    //console.log("Rendering | key, data[key]:", key, data[key]);
     if (key === "last") document.title = "$"+data[key];
-    inner_html += (typeof(data[key]) === "object") ?
-      "<div class='sub-block "+key+"' data-key='"+key+"'>"+render(data[key])+"</div>" :
-      ("<p class='"+key+"' data-key='"+key+"'><b>"+capitaliseFirstLetter(key.replace(/_/g, " "))+": </b><span class='value'>"+data[key]+"</span></p>");
+    inner_html += (typeof(data[key]) === "object" && data[key] != null) ?
+      "<div class='level_"+level+" sub-block "+key+"' data-key='"+key+"'>"+render(data[key], level)+"</div>" :
+      ("<p class='"+key+"' data-key='"+key+"'><b>"+capitaliseFirstLetter(key.replace(/_/g, " "))+": </b><span class='value'>"+(data[key] || "None")+"</span></p>");
   }
-  return inner_html+"<hr>";
+  return inner_html;
 }
 
 function request(action) {
   socket.emit("request", {
     action: action
   }, function(response) {
-    //console.log(action, response);
     update("live-"+action, response);
   });
 }
@@ -160,9 +170,7 @@ function capitaliseFirstLetter(string) {
 }
 
 function renderValueSheet(data) {
-  
   d3.select("svg").remove();
-  
   var min_value = d3.min(data.map(function(d) { return d.value; }));
   //console.log("Minimum value for drawing is:", min_value);
 
@@ -173,7 +181,7 @@ function renderValueSheet(data) {
 
   var margin = {top: 10, right: 10, bottom: 100, left: 40},
       margin2 = {top: 230, right: 10, bottom: 20, left: 40},
-      width = 930 - margin.left - margin.right,
+      width = 600 - margin.left - margin.right,
       height = 300 - margin.top - margin.bottom,
       height2 = 300 - margin2.top - margin2.bottom;
 
@@ -220,10 +228,6 @@ function renderValueSheet(data) {
 
   var context = svg.append("g")
       .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
-
-  
-  
-
 
   x.domain(d3.extent(data.map(function(d) { return d.time; })));
   y.domain([0, d3.max(data.map(function(d) { return d.value; })) - d3.min(data.map(function(d) { return d.value; }))]);
