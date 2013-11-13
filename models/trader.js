@@ -214,7 +214,10 @@ Trader.prototype = {
   
   decide: function(done) {
     var me = this;
-    if (market.current) {
+    if (
+      market.current &&
+      market.current.last > 10
+    ) {
       var deal = {};
       if (me.isBuying(deal)) {
         me.buy(deal, done);
@@ -229,7 +232,7 @@ Trader.prototype = {
       }
     }
     else {
-      console.log("("+me.name+"): Market is not ready for my decisions yet.")
+      console.log("("+me.name+"): Market is not ready for my decisions yet.");
       done();
     }
   },
@@ -259,8 +262,8 @@ Trader.prototype = {
       console.log("BITSTAMP: Response after attempt to sell | deal, error, order:", deal, error, order);
       if (order && order.id) {
         me.removeDeal(deal, function(redis_errors, redis_response) {
-          done();
-        });  
+          wakeAll(done);
+        });
       }
       else {
         done();
@@ -300,9 +303,7 @@ Trader.prototype = {
       ) {
         deal.order_id = parseInt(order.id);
         me.recordDeal(deal, function(redis_errors, redis_response) {
-          wakeAll(function(live_traders) {
-            console.log("Refreshing after PURCHASE.")
-          });
+          wakeAll(done);
         });
       }
       else {
@@ -366,7 +367,7 @@ function checkMarket(done) {
 
     if (live_traders) {
       controller.updateTraders(live_traders);
-      var i = 0;
+      var i = 0, new_deal_count = 0;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
       wallet.current.usd_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current.usd_balance || 0);
 
@@ -385,6 +386,7 @@ function checkMarket(done) {
           btc_to_distribute -= new_deal.amount;
           wallet.current.btc_amount_managed += new_deal.amount;
           trader.recordDeal(new_deal, function(redis_error, redis_response) {
+            new_deal_count++;
             console.log("updateMarket | Ad hoc deal recorded | new_deal, redis_error, redis_response:", new_deal, redis_error, redis_response);
           });
         }
@@ -408,6 +410,10 @@ function checkMarket(done) {
         }, next_check);
         
         done(null, market.current);
+        if (new_deal_count > 0) {
+          console.log("("+new_deal_count+") <-------------------------- New deals recorded, refreshing data.");
+          wakeAll();
+        }
       }
       for (var trader_name in live_traders) {
         q.push(trader_name, function(error) {
