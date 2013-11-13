@@ -30,7 +30,7 @@ exports.initiate = function(app) {
   });
 
   app.configure('production', function(){
-    app.googleRealm = 'http://codonia.com/';
+    app.googleRealm = config.hosts.production;
     app.googleReturnURL = config.hosts.production+'/auth/google/return';
   });
 
