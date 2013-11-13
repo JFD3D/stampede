@@ -179,7 +179,7 @@ Trader.prototype = {
         candidate_deals = me.deals.filter(function(deal_for_sale) {
           //console.log("isSelling | deal_for_sale, market.current.last", deal_for_sale, market.current.last);
           //var candidate_stop_price = (trader_greed + 1) * current_sale_price;
-          deal_for_sale.stop_price = market.current.high * (1 - trader_greed);
+          deal_for_sale.stop_price = market.current.high * (1 - (trader_greed/2);
           console.log("trader | isSelling? | would sell at:", (deal_for_sale.buy_price * (trader_greed + 1)), "could sell at:", current_sale_price, "trailing stop price reached? ($"+deal_for_sale.stop_price+"):", (deal_for_sale.stop_price >= current_sale_price));
 
           return (
