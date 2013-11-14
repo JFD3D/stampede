@@ -26,7 +26,7 @@ var Bitstamp = function(clientId, key, secret) {
   });
 }
 
-Bitstamp.prototype._request = function(method, path, data, callback, args) {
+Bitstamp.prototype._request = function(method, path, parameters, callback, args) {
   var options = {
     host: 'www.bitstamp.net',
     path: path,
@@ -35,7 +35,7 @@ Bitstamp.prototype._request = function(method, path, data, callback, args) {
       'User-Agent': 'Mozilla/4.0 (compatible; Bitstamp node.js client)',
     }
   };
-  if (method === "post") options.headers['Content-Length'] = Buffer.byteLength(data, 'utf8');
+  if (method === "post") options.headers['Content-Length'] = Buffer.byteLength(parameters, 'utf8');
   var req = https.request(options, function(res) {
     res.setEncoding('utf8');
     var buffer = '';
@@ -55,7 +55,7 @@ Bitstamp.prototype._request = function(method, path, data, callback, args) {
       callback(err);
     });
   });
-  req.end(data);
+  req.end(parameters);
 }
 
 Bitstamp.prototype._get = function(action, callback, args) {

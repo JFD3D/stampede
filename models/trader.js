@@ -178,8 +178,14 @@ Trader.prototype = {
         trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
         candidate_deals = me.deals.filter(function(deal_for_sale) {
           //console.log("isSelling | deal_for_sale, market.current.last", deal_for_sale, market.current.last);
-          console.log("trader | isSelling | would sell at:", (deal_for_sale.buy_price * (trader_greed + 1)), "current sale at:", current_sale_price);
-          return (deal_for_sale.buy_price * (1 + trader_greed)) < current_sale_price;
+          //var candidate_stop_price = (trader_greed + 1) * current_sale_price;
+          deal_for_sale.stop_price = market.current.high * (1 - (trader_greed/2));
+          console.log("trader | isSelling? | would sell at:", (deal_for_sale.buy_price * (trader_greed + 1)), "could sell at:", current_sale_price, "trailing stop price reached? ($"+deal_for_sale.stop_price+"):", (deal_for_sale.stop_price >= current_sale_price));
+
+          return (
+            (deal_for_sale.buy_price * (1 + trader_greed)) < current_sale_price &&
+            deal_for_sale.stop_price >= current_sale_price
+          );
         }),
         weighted_heat = wallet.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN))),
         potential_better_than_heat = (weighted_heat > 1);
@@ -187,8 +193,7 @@ Trader.prototype = {
     if (
       candidate_deals &&
       candidate_deals.length > 0 &&
-      candidate_deals[0].amount <= wallet.current.btc_balance &&
-      potential_better_than_heat
+      candidate_deals[0].amount <= wallet.current.btc_balance
     ) {
       var deal_for_sale = candidate_deals[0];
       deal.amount = deal_for_sale.amount.toFixed(6);
@@ -202,7 +207,6 @@ Trader.prototype = {
     console.log(
       "*** Selling deal? ***",
       "\n|- candidate_deals:", candidate_deals,
-      "\n|- potential_better_than_heat (..., weighted_heat, wallet.cool):", potential_better_than_heat, weighted_heat, wallet.cool,
       "\n|- amount is managed:", ((candidate_deals[0] || {}).amount <= wallet.current.btc_balance),
       "\n_SALE_ Decision:", decision ? "SELLING" : "HOLDING",
       "\n******",
