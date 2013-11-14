@@ -16,8 +16,8 @@ _.mixin({
   }
 });
 
-var Bitstamp = function(clientId, key, secret) {
-  this.clientId = clientId;
+var Bitstamp = function(client_id, key, secret) {
+  this.client_id = client_id;
   this.key = key;
   this.secret = secret;
   self = this
@@ -26,16 +26,21 @@ var Bitstamp = function(clientId, key, secret) {
   });
 }
 
-Bitstamp.prototype._request = function(method, path, parameters, callback, args) {
+Bitstamp.prototype._request = function(method, path, data, callback, args) {
   var options = {
     host: 'www.bitstamp.net',
     path: path,
     method: method,
     headers: {
-      'User-Agent': 'Mozilla/4.0 (compatible; Bitstamp node.js client)',
+      'User-Agent': 'Mozilla/4.0 (compatible; Bitstamp node.js client)'
     }
   };
-  if (method === "post") options.headers['Content-Length'] = Buffer.byteLength(parameters, 'utf8');
+
+  if(method === 'post') {
+    options.headers['Content-Length'] = data.length;
+    options.headers['content-type'] = 'application/x-www-form-urlencoded';
+  }
+
   var req = https.request(options, function(res) {
     res.setEncoding('utf8');
     var buffer = '';
@@ -46,16 +51,15 @@ Bitstamp.prototype._request = function(method, path, parameters, callback, args)
       try {
         var json = JSON.parse(buffer);
       } catch (err) {
-        console.log("https.request | buffer, err, options:", buffer, err, options);
         return callback(err);
       }
       callback(null, json);
     });
-    res.on('error', function(err) {
-      callback(err);
-    });
   });
-  req.end(parameters);
+  req.on('error', function(err) {
+    callback(err);
+  });
+  req.end(data);
 }
 
 Bitstamp.prototype._get = function(action, callback, args) {
@@ -65,18 +69,25 @@ Bitstamp.prototype._get = function(action, callback, args) {
 }
 
 Bitstamp.prototype._post = function(action, callback, args) {
-  if(!this.key || !this.secret)
-    return callback('Must provide key and secret to make this API request.');
+  if(!this.key || !this.secret || !this.client_id)
+    return callback('Must provide key, secret and client ID to make this API request.');
+
   var path = '/api/' + action + '/';
-  nonce = new Date().getTime()
-  args = _.extend({key: this.key, nonce: nonce}, args);
+
+  var nonce = +new Date() + '';
+  var message = nonce + this.client_id + this.key;
+  var signer = crypto.createHmac('sha256', new Buffer(this.secret, 'utf8'));
+  var signature = signer.update(message).digest('hex').toUpperCase();
+
+  args = _.extend({
+    key: this.key,
+    signature: signature,
+    nonce: nonce
+  }, args);
+
   args = _.compactObject(args);
-  var message = nonce.toString() + this.clientId + this.key
-  var hmac = crypto.createHmac("sha256", new Buffer(this.secret));
-  hmac.update(message);
-  signature = hmac.digest("hex").toUpperCase();
-  args.signature = signature;
   var data = querystring.stringify(args);
+
   this._request('post', path, data, callback, args);
 }
 
