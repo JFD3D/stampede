@@ -134,9 +134,9 @@ exports.updateWallet = function(data, done) {
   if (done) done();
 };
 
-exports.updateTraders = function(data, done) {
+exports.updateTraders = function(traders, done) {
   var outgoing = {
-    data: data,
+    data: traders,
     container: "live-traders"
   };
   

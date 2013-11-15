@@ -23,6 +23,7 @@ var mailer = require("nodemailer"),
  
 exports.send = function(mail_options, callback) {  
   mail_options.from = config.email.presence;
+  mail_options.to = mail_options.to || config.owner.email;
   if (mail_options.template) {
     var template_file = __dirname+"/../emails/"+mail_options.template;
     jade.renderFile(template_file, mail_options.data || {}, function(error, file) {
@@ -45,7 +46,7 @@ exports.send = function(mail_options, callback) {
     
   email_pipe.sendMail(mail_options, function(error, response){
       if (error) {
-          console.log(error);
+          console.log("email | sendMail | error:", error);
       } else {
           console.log("Message sent: " + response.message);
       }

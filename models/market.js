@@ -1,7 +1,8 @@
 var db = require("redis").createClient(6379),
     async = require("async"),
     config = require("./../plugins/config"),
-    controller = require("./../routes/controller");
+    controller = require("./../routes/controller"),
+    error_email_sent;
 
 function Market() {
   this.current = {};
@@ -12,9 +13,22 @@ Market.prototype = {
   check: function(callback) {
     var me = this;
     controller.ticker(function(error, data) {
-      if (error && !data) {
+      if (
+        error && 
+        !data
+      ) {
         console.log("!!! There was error loading market data ("+error+") !!!");
-        callback(error, data);
+        if (!error_email_sent) {
+          email.send({
+            to: config.owner.email,
+            subject: "Stampede: Error getting MARKET details from bitstamp API",
+            template: "error.jade",
+            data: {error:error}
+          }, function(success) {
+            console.log("ERROR Email sending success?:", success);
+            error_email_sent = true;
+          });        
+        }
       }
       else {
         me.current = data ? data : {};
@@ -25,8 +39,9 @@ Market.prototype = {
         data.middle = (data.high + data.low) / 2;
         data.top = me.top = (me.top && me.top > data.high) ? me.top : data.high;
         data.shift_span = (data.high - data.low) / (data.high || 0 + 0.00001);
-        callback(error, data);
+        error_email_sent = null;
       }
+      callback(error, data);      
     }); 
   }
 };

@@ -4,7 +4,7 @@ p
     h3= deal.name
     p Amount: #{deal.amount} BTC
     p Bought for: $#{(deal.amount * deal.buy_price)}
-    p Original sale price: $#{deal.sell_price}
+    p Sold (Aligned sale price): $#{deal.aligned_sell_price}
 p
   - if (market.current)
     h3 Current market details
