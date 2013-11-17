@@ -1,6 +1,7 @@
 var db = require("redis").createClient(6379),
     async = require("async"),
     config = require("./../plugins/config"),
+    email = require("./../plugins/email"),
     controller = require("./../routes/controller"),
     live_traders, error_email_sent;
 
