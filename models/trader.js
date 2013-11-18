@@ -445,21 +445,26 @@ function stringDeal(deal) {
 
 function checkMarket(done) {
   console.log("* Checking market.");
-
+  wallet.update_counter = (wallet.update_counter || 0) + 1;
   // Initialize market data into global var, exposed on top
   market.check(function(error, market_current) {
 
     // Update client side on current market data 
     // & current wallet data
     controller.updateMarket(market.current);
-    controller.updateWallet(wallet.current);
+    if (wallet.update_counter > 5) {
 
+      console.log("|||||||||||||||| Triggering periodic update to wallet.", wallet.update_counter);
+      
+      checkWallet();
+    }
     // Check if traders are initialized
     if (live_traders) {
       controller.updateTraders(live_traders);
       var i = 0, new_deal_count = 0;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
       wallet.current.usd_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current.usd_balance || 0);
+      controller.updateWallet(wallet.current); 
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
         if (
@@ -475,7 +480,7 @@ function checkMarket(done) {
           wallet.current.btc_amount_managed += new_deal.amount;
           trader.recordDeal(new_deal, function(redis_error, redis_response) {
             new_deal_count++;
-            console.log("trader | recordDeal | Ad hoc deal recorded | new_deal, redis_error, redis_response:", new_deal, redis_error, redis_response);
+            //console.log("trader | recordDeal | Ad hoc deal recorded | new_deal, redis_error, redis_response:", new_deal, redis_error, redis_response);
           });
         }
         trader.decide(internal_callback);
@@ -561,11 +566,12 @@ function checkWallet(done) {
   // Initialize into global var, exposed on top
   console.log("* Checking wallet.");
   wallet.check(live_traders, function() {
+    wallet.update_counter = 0;
     wallet.current.available_to_traders = 
       (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current.usd_available ? 
         MAX_SUM_INVESTMENT - wallet.current.investment : 
         wallet.current.usd_available;
-    done(null, wallet.current);
+    if (done) done(null, wallet.current);
   });
 }
 
