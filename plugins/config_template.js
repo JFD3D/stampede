@@ -16,7 +16,7 @@ exports.email = {
 exports.trading = {
   maximum_$_per_trade: 15,
   maximum_investment: 100,
-  bid_alignment: 0.995,
+  bid_alignment: 0.998,
   max_number_of_deals_per_trader: 3
 };
 
