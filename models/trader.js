@@ -233,14 +233,16 @@ Trader.prototype = {
           deal_for_sale.stop_price = market.current.high * (1 - (trader_greed/2));
           
           console.log(
-            "trader | isSelling? | would sell at:", (deal_for_sale.buy_price * (trader_greed + 1)), 
+            "||| trader | isSelling? | would sell at:", (deal_for_sale.buy_price * (trader_greed + 1)), 
             "could sell at:", current_sale_price, 
-            "trailing stop price reached? ($"+deal_for_sale.stop_price+"):", (deal_for_sale.stop_price >= current_sale_price)
+            "trailing stop price reached? ($"+deal_for_sale.stop_price+"):", (deal_for_sale.stop_price >= current_sale_price),
+            "frozen deal?:", (deal_for_sale.order_id === "freeze")
           );
           
           return (
             (deal_for_sale.buy_price * (1 + trader_greed)) < current_sale_price &&
-            deal_for_sale.stop_price >= current_sale_price
+            deal_for_sale.stop_price >= current_sale_price &&
+            deal_for_sale.order_id != "freeze"
           );
         }),
         weighted_heat = wallet.current.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN))),
@@ -249,7 +251,8 @@ Trader.prototype = {
     if (
       candidate_deals &&
       candidate_deals.length > 0 &&
-      candidate_deals[0].amount <= wallet.current.btc_balance
+      candidate_deals[0].amount <= wallet.current.btc_balance &&
+      potential_better_than_heat
     ) {
       var deal_for_sale = candidate_deals[0];
       deal.amount = deal_for_sale.amount.toFixed(6);
@@ -264,6 +267,7 @@ Trader.prototype = {
       "*** Selling deal? ***",
       "\n|- candidate_deals:", candidate_deals,
       "\n|- amount is managed:", ((candidate_deals[0] || {}).amount <= wallet.current.btc_balance),
+      "\n|- potential_better_than_heat:", potential_better_than_heat,
       "\n_SALE_ Decision:", decision ? "SELLING" : "HOLDING",
       "\n******",
       "\nDeal for sale details:", deal
@@ -316,12 +320,15 @@ Trader.prototype = {
 
     controller.sell(deal.amount, deal.aligned_sell_price, function(error, order) {
       console.log("BITSTAMP: Response after attempt to sell | error, order:", error, order);
-      if (order && order.id) {
+      if (
+        order && 
+        order.id
+      ) {
         me.removeDeal(deal, function(redis_errors, redis_response) {
+          console.log("trader | sell | removeDeal | deal, redis_errors, redis_response:", deal, redis_errors, redis_response);
           wakeAll(done);
         });
         email.send({
-          to: config.owner.email,
           subject: "Stampede - Selling: "+deal.name,
           template: "sale.jade",
           data: {
@@ -335,8 +342,9 @@ Trader.prototype = {
         });
       }
       else if (error) {
+        deal.order_id = "freeze";
+
         email.send({
-          to: config.owner.email,
           subject: "Stampede: Error SELLING deal through bitstamp API",
           template: "error.jade",
           data: {error:error}
@@ -368,7 +376,7 @@ Trader.prototype = {
         order &&
         order.id
       ) {
-        deal.order_id = parseInt(order.id);
+        deal.order_id = order.id;
         me.recordDeal(deal, function(redis_errors, redis_response) {
           wakeAll(done);
         });
@@ -418,6 +426,7 @@ Trader.prototype = {
       });
     }
     else {
+      console.log("!!! trader | removeDeal | Unable to find deal for removal | deal", deal);
       callback("Problems finding deal.", null);
     }
   }
@@ -432,31 +441,33 @@ function parseDeal(deal) {
         amount: parseFloat(deal_arrayed[1]),
         buy_price: parseFloat(deal_arrayed[2]),
         sell_price: parseFloat(deal_arrayed[3]),
-        order_id: parseInt(deal_arrayed[4])
+        order_id: deal_arrayed[4]
       };
   return objectified_deal;
 }
 
 //"deal|1.1|332|338"
 function stringDeal(deal) {
-  deal.name = "deal|"+deal.amount+"|"+deal.buy_price+"|"+deal.sell_price+"|"+deal.order_id;
+  deal.name = "deal|"+deal.amount+"|"+deal.buy_price+"|"+deal.sell_price+"|"+(deal.order_id || "freeze");
   return deal.name;
 }
 
 function checkMarket(done) {
   console.log("* Checking market.");
-  wallet.update_counter = (wallet.update_counter || 0) + 1;
+  wallet.update_counter = (wallet.update_counter || 3) - 1;
   // Initialize market data into global var, exposed on top
   market.check(function(error, market_current) {
 
     // Update client side on current market data 
     // & current wallet data
     controller.updateMarket(market.current);
-    if (wallet.update_counter > 5) {
+    if (wallet.update_counter === 0) {
 
-      console.log("|||||||||||||||| Triggering periodic update to wallet.", wallet.update_counter);
+      setTimeout(function() {
+        console.log("|||||||||||||||| Triggering periodic update to wallet:", wallet.update_counter);
+        checkWallet();
+      }, 1000);
       
-      checkWallet();
     }
     // Check if traders are initialized
     if (live_traders) {
@@ -467,6 +478,8 @@ function checkMarket(done) {
       controller.updateWallet(wallet.current); 
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
+        
+        // Create ad hoc deals for amount bought manually
         if (
           btc_to_distribute > 0.01 &&
           live_traders[trader_name].deals.length < MAX_HANDS
@@ -474,7 +487,8 @@ function checkMarket(done) {
           var new_deal = {
             buy_price: market.current.last,
             amount: btc_to_distribute < (MAX_PER_HAND / market.current.last) ? btc_to_distribute : (MAX_PER_HAND / market.current.last),
-            sell_price: market.current.last * (1 + (market.current.shift_span / 2))
+            sell_price: market.current.last * (1 + (market.current.shift_span / 2)),
+            order_id: "ad_hoc"
           };
           btc_to_distribute -= new_deal.amount;
           wallet.current.btc_amount_managed += new_deal.amount;
@@ -566,7 +580,7 @@ function checkWallet(done) {
   // Initialize into global var, exposed on top
   console.log("* Checking wallet.");
   wallet.check(live_traders, function() {
-    wallet.update_counter = 0;
+    wallet.update_counter = 3;
     wallet.current.available_to_traders = 
       (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current.usd_available ? 
         MAX_SUM_INVESTMENT - wallet.current.investment : 

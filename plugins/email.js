@@ -32,7 +32,7 @@ exports.send = function(mail_options, callback) {
     });
   }
   
-  console.log("email | send | mail_options:", mail_options);
+  //console.log("email | send | mail_options:", mail_options);
 
   var email_pipe = mailer.createTransport("SMTP", {
       host: "smtp.gmail.com", // hostname

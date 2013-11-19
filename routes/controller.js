@@ -25,7 +25,10 @@ exports.index = function(req, res) {
 exports.addTrader = function(req, res) {
   var trader = new Trader.instance();
   trader.create(function(error, response) {
-    res.redirect("/");
+    Trader.wakeAll(function() {
+      traders_awake = true;
+      res.redirect("/");
+    });
   });
 };
 
