@@ -14,6 +14,7 @@
     "async": "*",
     "nodemailer": "*",
     "underscore": "*",
-    "passport": "*"
+    "passport": "*",
+    "moving-average": "*"
   }
 }
