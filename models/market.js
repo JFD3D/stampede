@@ -3,6 +3,8 @@ var db = require("redis").createClient(6379),
     config = require("./../plugins/config"),
     email = require("./../plugins/email"),
     controller = require("./../routes/controller"),
+    MA = require('moving-average'),
+    ma = MA(20*60*1000),
     error_email_sent;
 
 function Market() {
@@ -32,10 +34,15 @@ Market.prototype = {
         }
       }
       else {
+
         me.current = data ? data : {};
         ["last", "bid", "low", "high", "volume", "ask"].forEach(function(property) {
           data[property] = parseFloat(data[property] || 0);
         });
+
+        ma.push(Date.now(), data.last);
+        data.EMA = ma.movingAverage();
+        data.moving_variance = ma.variance();
         data.timestamp = new Date(parseInt(data.timestamp)*1000);
         data.middle = (data.high + data.low) / 2;
         data.top = me.top = (me.top && me.top > data.high) ? me.top : data.high;
