@@ -252,7 +252,6 @@ Trader.prototype = {
         }),
         weighted_heat = wallet.current.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN))),
         potential_better_than_heat = (weighted_heat > 1);
-    
     if (
       candidate_deals &&
       candidate_deals.length > 0 &&
@@ -346,7 +345,7 @@ Trader.prototype = {
           if (error_email_sent) error_email_sent = null;
         });
       }
-      else if (error) {
+      else {
         deal.order_id = "freeze";
 
         email.send({
@@ -484,7 +483,8 @@ function checkMarket(done) {
         
         // Create ad hoc deals for amount bought manually
         if (
-          btc_to_distribute > 0.01 &&
+          //btc_to_distribute > 0.01 &&
+          1 > 2 && // knocking off ad hoc deal creation for now
           live_traders[trader_name].deals.length < MAX_DEALS_HELD &&
           wallet.current.available_to_traders > MAX_PER_DEAL
         ) {
