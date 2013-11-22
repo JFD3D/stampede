@@ -90,9 +90,10 @@ $(document).ready(function() {
   });
 
   $("body").on("click", "#live-traders .record", function() {
-    var confirmation = confirm("Sure to remove trader?");
+    var trader_name = $(this).parent().attr("data-key"),
+        confirmation = confirm("Sure to remove trader ("+trader_name+")?");
     if (confirmation) {
-      var trader_name = $(this).parent().attr("data-key");
+      
       $.get("/trader/"+trader_name+"/remove", function(response) {
         notify(response.message || "Updated.", 10000);
       });
@@ -100,9 +101,9 @@ $(document).ready(function() {
   });
 
   $("body").on("click", "#live-traders .deals .name", function() {
-    var confirmation = confirm("Sure to remove trader?");
+    var deal_name = $(".value", this).text(),
+        confirmation = confirm("Sure to remove deal ("+deal_name+")?");
     if (confirmation) {
-      var deal_name = $(".value", this).text();
       var record_container = $(this).parents(".deals");
       //console.log("record_container", record_container);
       var trader_name = $(record_container).parent().attr("data-key");

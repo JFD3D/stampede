@@ -16,7 +16,8 @@ var config = require("./../plugins/config"),
 exports.index = function(req, res) {
   res.render('index', {
     title: 'Stampede',
-    traders_awake: traders_awake
+    traders_awake: traders_awake,
+    trading_config: config.trading
   });
   console.log("Traders are awake:", traders_awake);
   if (traders_awake) Trader.updateAll();
@@ -25,10 +26,10 @@ exports.index = function(req, res) {
 exports.addTrader = function(req, res) {
   var trader = new Trader.instance();
   trader.create(function(error, response) {
-    Trader.wakeAll(function() {
-      traders_awake = true;
-      res.redirect("/");
-    });
+    //Trader.wakeAll(function() {
+      //traders_awake = true;
+    res.redirect("/");
+    //});
   });
 };
 
@@ -141,6 +142,17 @@ exports.updateTraders = function(traders, done) {
   var outgoing = {
     data: traders,
     container: "live-traders"
+  };
+  
+  //console.log("^^^^^ Updating wallet with data.", data);
+  live.sendToAll("stampede_updates", outgoing);
+  if (done) done();
+};
+
+exports.updateTradingConfig = function(done) {
+  var outgoing = {
+    data: config.trading,
+    container: "live-trading-config"
   };
   
   //console.log("^^^^^ Updating wallet with data.", data);

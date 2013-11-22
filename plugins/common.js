@@ -24,3 +24,23 @@ String.prototype.upperCaseFirst = function() {
   var string = this;
   return string.charAt(0).toUpperCase() + string.slice(1);
 };
+
+Array.prototype.averageByKey = function(key) {
+  var array = this,
+      sum = 0,
+      length = (array || []).length;
+  if (length > 0) {
+    for (var i=0; i < length; i++) {
+      var member = array[i];
+      if (
+        member[key] && 
+        !isNaN(member[key])
+      ) sum += member[key];
+    }
+    return (sum / length);
+  }
+  else {
+    return null;
+  }  
+};
+ 
