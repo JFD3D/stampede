@@ -312,10 +312,7 @@ Trader.prototype = {
     deal.aligned_sell_price = (market.current.last * BID_ALIGN).toFixed(2);
     
     // Align current cool to avoid all sell / buy
-    wallet.current.cool -= (
-      wallet.current.cool > 0 && 
-      deal.heat > 0
-    ) ? deal.heat : (INITIAL_GREED / 2);
+    wallet.current.cool -= INITIAL_GREED;
     
     controller.updateDecisions({
       message: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+".", 
@@ -367,12 +364,10 @@ Trader.prototype = {
     deal.buy_price = (market.current.last / BID_ALIGN);
     deal.amount = (MAX_PER_DEAL / deal.buy_price).toFixed(7);
     deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
-    deal.heat = deal.buy_price / MAX_SUM_INVESTMENT;
-    wallet.current.cool -= (wallet.current.cool > 0 && deal.heat > 0) ? deal.heat : (market.current.shift_span / 2);
+    deal.heat = INITIAL_GREED;
+    wallet.current.cool -= INITIAL_GREED;
     controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+".", permanent: true});
     deal.buy_price = deal.buy_price;
-    
-
     
     controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
@@ -381,9 +376,7 @@ Trader.prototype = {
         order.id
       ) {
         deal.order_id = order.id;
-        me.recordDeal(deal, function(redis_errors, redis_response) {
-          wakeAll(done);
-        });
+        me.recordDeal(deal, done);
         email.send({
           to: config.owner.email,
           subject: "Stampede - Buying: "+deal.amount+"BTC",
@@ -507,7 +500,7 @@ function checkMarket(done) {
       for (var trader_name in live_traders) q.push(trader_name);
 
       q.drain = function() {
-        var cool_up = market.current.shift_span / 2,
+        var cool_up = INITIAL_GREED,
             next_check = (market.check_frequency);
 
         wallet.current.cool = (
