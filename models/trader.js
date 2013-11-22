@@ -228,24 +228,25 @@ Trader.prototype = {
   
   isSelling: function(deal) {
     var me = this,
-        decision = false;
-    // decide if selling, how much
-    var current_market_greed = (market.current.shift_span / 2),
+        decision = false,
+        // decide if selling, how much
+        current_market_greed = (market.current.shift_span / 2),
         current_sale_price = (market.current.last * BID_ALIGN),
         trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
         candidate_deals = me.deals.filter(function(deal_for_sale) {
           deal_for_sale.stop_price = market.current.high * (1 - (trader_greed/2));
+          deal_for_sale.would_sell_at = deal_for_sale.buy_price * (1 + trader_greed + (1 - BID_ALIGN));
           
           console.log(
-            "||| trader | isSelling? | would sell at:", (deal_for_sale.buy_price * (trader_greed + 1)).toFixed(2), 
+            "||| trader | isSelling? | would sell at:", deal_for_sale.would_sell_at.toFixed(2), 
             "NOW could sell at:", current_sale_price.toFixed(2), 
-            "trailing stop price reached? ($"+deal_for_sale.stop_price.toFixed(2)+"):", (deal_for_sale.stop_price >= current_sale_price),
+            //"trailing stop price reached? ($"+deal_for_sale.stop_price.toFixed(2)+"):", (deal_for_sale.stop_price >= current_sale_price),
             "frozen deal?:", (deal_for_sale.order_id === "freeze")
           );
           
           return (
-            (deal_for_sale.buy_price * (1 + trader_greed)) < current_sale_price &&
-            deal_for_sale.stop_price >= current_sale_price &&
+            deal_for_sale.would_sell_at < current_sale_price &&
+            //deal_for_sale.stop_price >= current_sale_price &&
             deal_for_sale.order_id != "freeze"
           );
         }),
@@ -255,7 +256,7 @@ Trader.prototype = {
     if (
       candidate_deals &&
       candidate_deals.length > 0 &&
-      candidate_deals[0].amount <= wallet.current.btc_balance &&
+      candidate_deals[0].amount < wallet.current.btc_balance &&
       potential_better_than_heat
     ) {
       var deal_for_sale = candidate_deals[0];
@@ -270,7 +271,7 @@ Trader.prototype = {
     console.log(
       "*** Selling deal? ***",
       "\n|- candidate_deals:", candidate_deals,
-      "\n|- amount is managed:", ((candidate_deals[0] || {}).amount <= wallet.current.btc_balance),
+      "\n|- amount is managed (amount):", ((candidate_deals[0] || {}).amount < wallet.current.btc_balance), (candidate_deals[0] || {}).amount,
       "\n|- potential_better_than_heat:", potential_better_than_heat,
       "\n_SALE_ Decision:", decision ? "SELLING" : "HOLDING",
       "\n******",
@@ -315,7 +316,7 @@ Trader.prototype = {
     wallet.current.cool -= (
       wallet.current.cool > 0 && 
       deal.heat > 0
-    ) ? deal.heat : (market.current.shift_span / 2);
+    ) ? deal.heat : (INITIAL_GREED / 2);
     
     controller.updateDecisions({
       message: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+".", 
@@ -366,7 +367,7 @@ Trader.prototype = {
     var me = this;
     deal.buy_price = (market.current.last / BID_ALIGN);
     deal.amount = (MAX_PER_DEAL / deal.buy_price).toFixed(7);
-    deal.sell_price = (deal.buy_price * (1 + market.current.shift_span + (wallet.current.fee / 100)));
+    deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
     deal.heat = deal.buy_price / MAX_SUM_INVESTMENT;
     wallet.current.cool -= (wallet.current.cool > 0 && deal.heat > 0) ? deal.heat : (market.current.shift_span / 2);
     controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+".", permanent: true});
