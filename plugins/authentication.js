@@ -102,8 +102,9 @@ exports.initiate = function(app) {
     function(req, res) {
       allowedUser(req.path || "/", req.user.emails[0].value, function(yes, user) {
         if (yes) {
+          var redirect_to = req.session.redirect_to || "/";
           req.current_user = user;
-          res.redirect("/");
+          res.redirect(redirect_to);
         }
         else {
           res.render('noaccess');
