@@ -193,7 +193,7 @@ Trader.prototype = {
         profit_from_middle = trader_bid / market.current.middle,
         current_market_greed = (market.current.shift_span / 2),
         trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
-        weighted_heat = wallet.current.cool + (current_market_greed),
+        weighted_heat = wallet.current.cool + trader_greed,
         potential_better_than_heat = weighted_heat > 1,
         market_momentum_significant = (
           market.current.momentum_record_healthy &&
@@ -217,7 +217,7 @@ Trader.prototype = {
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
       // "\n|- Bid is below middle (..., market.current.last, market.current.middle):", bid_below_middle, market.current.last.toFixed(2), market.current.middle.toFixed(2),
       // "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span.toFixed(2),
-      "\n|- Projected profit is better than heat (..., wallet.current.cool, weighted_heat, profit_from_middle):", potential_better_than_heat, wallet.current.cool.toFixed(2), weighted_heat, profit_from_middle.toFixed(2),
+      "\n|- Projected profit is better than heat (..., wallet.current.cool, weighted_heat):", potential_better_than_heat, wallet.current.cool.toFixed(2), weighted_heat,
       "\n|- Market momentum is significant (..., momentum_indicator, momentum_healthy)", market_momentum_significant, market.current.momentum_indicator, market.current.momentum_record_healthy,
       "\n_BUY__ Decision:", decision ? "BUYING" : "HOLDING",
       "\n******"
@@ -252,7 +252,6 @@ Trader.prototype = {
         }),
         weighted_heat = wallet.current.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN))),
         potential_better_than_heat = (weighted_heat > 1);
-    
     if (
       candidate_deals &&
       candidate_deals.length > 0 &&
@@ -313,10 +312,7 @@ Trader.prototype = {
     deal.aligned_sell_price = (market.current.last * BID_ALIGN).toFixed(2);
     
     // Align current cool to avoid all sell / buy
-    wallet.current.cool -= (
-      wallet.current.cool > 0 && 
-      deal.heat > 0
-    ) ? deal.heat : (INITIAL_GREED / 2);
+    wallet.current.cool -= INITIAL_GREED;
     
     controller.updateDecisions({
       message: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+".", 
@@ -346,7 +342,7 @@ Trader.prototype = {
           if (error_email_sent) error_email_sent = null;
         });
       }
-      else if (error) {
+      else {
         deal.order_id = "freeze";
 
         email.send({
@@ -368,12 +364,10 @@ Trader.prototype = {
     deal.buy_price = (market.current.last / BID_ALIGN);
     deal.amount = (MAX_PER_DEAL / deal.buy_price).toFixed(7);
     deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
-    deal.heat = deal.buy_price / MAX_SUM_INVESTMENT;
-    wallet.current.cool -= (wallet.current.cool > 0 && deal.heat > 0) ? deal.heat : (market.current.shift_span / 2);
+    deal.heat = INITIAL_GREED;
+    wallet.current.cool -= INITIAL_GREED;
     controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+".", permanent: true});
     deal.buy_price = deal.buy_price;
-    
-
     
     controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
@@ -382,9 +376,7 @@ Trader.prototype = {
         order.id
       ) {
         deal.order_id = order.id;
-        me.recordDeal(deal, function(redis_errors, redis_response) {
-          wakeAll(done);
-        });
+        me.recordDeal(deal, done);
         email.send({
           to: config.owner.email,
           subject: "Stampede - Buying: "+deal.amount+"BTC",
@@ -484,7 +476,8 @@ function checkMarket(done) {
         
         // Create ad hoc deals for amount bought manually
         if (
-          btc_to_distribute > 0.01 &&
+          //btc_to_distribute > 0.01 &&
+          1 > 2 && // knocking off ad hoc deal creation for now
           live_traders[trader_name].deals.length < MAX_DEALS_HELD &&
           wallet.current.available_to_traders > MAX_PER_DEAL
         ) {
@@ -507,7 +500,7 @@ function checkMarket(done) {
       for (var trader_name in live_traders) q.push(trader_name);
 
       q.drain = function() {
-        var cool_up = market.current.shift_span / 2,
+        var cool_up = INITIAL_GREED,
             next_check = (market.check_frequency);
 
         wallet.current.cool = (
@@ -583,6 +576,7 @@ function checkWallet(done) {
   // Initialize into global var, exposed on top
   console.log("* Checking wallet.");
   wallet.check(live_traders, function() {
+    controller.updateShares(wallet.shares);
     wallet.update_counter = 3;
     wallet.current.available_to_traders = 
       (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current.usd_available ? 

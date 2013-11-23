@@ -7,6 +7,7 @@ var db = require("redis").createClient(6379),
 
 function Wallet() {
   this.current = {};
+  this.shares = [];
   this.cool = 1;
   this.check_frequency = 5000;
 }
@@ -51,7 +52,7 @@ Wallet.prototype = {
       current_trader_deals.forEach(function(current_trader_deal) {
             deal_buy_price = current_trader_deal.buy_price,
             deal_amount = current_trader_deal.amount;
-        me.current.btc_amount_managed += deal_amount;
+        me.current.btc_amount_managed += parseFloat(deal_amount);
         if (
           !isNaN(deal_amount * deal_buy_price)
         ) me.current.investment += (deal_amount * deal_buy_price);
@@ -59,8 +60,57 @@ Wallet.prototype = {
           isNaN(deal_amount * deal_buy_price) ? 0 : (deal_amount * deal_buy_price);
       });
     }
-    if (callback) callback(null, me.current);
+    me.summarizeShares(callback);
+  },
+
+  summarizeShares: function(callback) {
+    var me = this;
+    me.shares = [];
+    console.log("wallet | summarizeShares | usd_value:", me.current.usd_value);
+    db.smembers("stampede_shares", function(errors, share_list) {
+      if (
+        share_list && 
+        share_list.length > 0
+      ) {
+        me.current.initial_investment = 0;
+        // Parse each recorded share
+        share_list.forEach(function(share_string) {
+          var share_arrayed = share_string.split("|"),
+              share = {
+                holder: share_arrayed[0],
+                invested_$_amount: parseInt(share_arrayed[1])
+              };
+          me.current.initial_investment += share.invested_$_amount;
+          me.shares.push(share);
+        });
+
+        // Now assign part value
+        me.shares.forEach(function(share) {
+          share.current_$_value = (
+            share.invested_$_amount / (me.current.initial_investment || 0.01)
+            ) * me.current.usd_value;
+        });
+        if (callback) callback(errors, me.shares);
+      } 
+      else {
+        me.shares = [{
+          holder: "Primary",
+          invested_$_amount: 0,
+          current_$_value: me.current.usd_value || 0
+        }];
+        if (callback) callback(null, me.shares);
+      }
+    });
+  },
+
+  addShare: function(holder, amount_invested, callback) {
+    var share = {
+      holder: holder,
+      invested_$_amount: parseInt(amount_invested)
+    };
+    db.sadd("stampede_shares", share.holder+"|"+share.invested_$_amount, callback);
   }
+
 };
 
 

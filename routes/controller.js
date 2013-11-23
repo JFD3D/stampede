@@ -23,6 +23,19 @@ exports.index = function(req, res) {
   if (traders_awake) Trader.updateAll();
 };
 
+exports.shares = function(req, res) {
+  res.render('shares');
+};
+
+exports.updateShares = function(shares) {
+  console.log("Updating shares:", shares);
+  var outgoing = {
+    data: shares,
+    container: "live-shares"
+  };
+  live.sendToAll("stampede_updates", outgoing);  
+}
+
 exports.addTrader = function(req, res) {
   var trader = new Trader.instance();
   trader.create(function(error, response) {
