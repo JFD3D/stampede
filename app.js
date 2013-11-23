@@ -59,3 +59,4 @@ app.get("/stop", auth.ensure, controller.stop);
 app.get("/value_sheet", auth.ensure, controller.getValueSheet);
 app.get("/start", auth.ensure, controller.start);
 app.get("/shares", auth.ensure, controller.shares);
+app.post("/shares/add", auth.ensure, controller.addShare);

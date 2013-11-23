@@ -1,4 +1,5 @@
 var config = require("./../plugins/config"),
+    common = require("./../plugins/common"),
     creds = config.bitstamp_credentials,
     Bitstamp = require("./../plugins/bitstamp.js"),
     bitstamp = new Bitstamp(creds.client_id, creds.key, creds.secret),
@@ -24,13 +25,37 @@ exports.index = function(req, res) {
 };
 
 exports.shares = function(req, res) {
-  res.render('shares');
+  res.render('shares', {
+    title: "Stampede - Shares view",
+    current_user: req.current_user
+  });
+};
+
+exports.addShare = function(req, res) {
+  var holder = req.body.holder.trim();
+      investment = parseInt(req.body.investment),
+      input_valid = (
+        common.validateEmail(holder) &&
+        investment > 0
+      );
+
+  if (input_valid) Trader.addShare(holder, investment);
+
+  res.send({
+    message: (input_valid ? "Share submitted" : "Share NOT sumbitted, input invalid.")
+  });
+
 };
 
 exports.updateShares = function(shares) {
+  var share_hash = {};
+  shares.forEach(function(share) {
+    share_hash[share.holder] = share;
+  });
+
   console.log("Updating shares:", shares);
   var outgoing = {
-    data: shares,
+    data: share_hash,
     container: "live-shares"
   };
   live.sendToAll("stampede_updates", outgoing);  

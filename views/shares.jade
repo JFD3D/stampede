@@ -6,4 +6,19 @@ block navigation
 block content
   .block#live-shares
     h2 Live shares
+    - if (current_user.owner)
+      form.block-form(action="shares/add", method="post")
+        label(for="holder_name_input") Shareholder email
+          br
+          input#holder_name_input(type="text", name="holder", placeholder="@")
+        br
+        label(for="investment_input") Amount
+          br
+          input#investment_input(type="text", name="investment", placeholder="00.00")
+        br
+        button(type="Submit") Add
+    .content
+      p Loading shares information...
+  .block#live-sheets(class="#{class_for_status}")
+    h2 Current $ value change
     .content

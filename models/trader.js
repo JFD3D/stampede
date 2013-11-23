@@ -366,8 +366,8 @@ Trader.prototype = {
     deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= INITIAL_GREED;
+    wallet.current.investment += deal.buy_price;
     controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+".", permanent: true});
-    deal.buy_price = deal.buy_price;
     
     controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
@@ -634,6 +634,16 @@ function wakeAll(done) {
   });
 }
 
+function addShare(holder, investment) {
+  if (
+    wallet &&
+    holder.length > 1 &&
+    investment > 0
+  ) wallet.addShare(holder, investment, function(error, response) {
+    console.log("Added share ($"+investment+") for "+holder+". (..., error, response)", error, response);
+  });
+}
+
 function stopAll(done) {
   clearTimeout(timer);
   wallet = new Wallet();
@@ -657,3 +667,4 @@ exports.wakeAll = wakeAll;
 exports.instance = Trader;
 exports.updateAll = updateAll;
 exports.pullValueSheet = pullValueSheet;
+exports.addShare = addShare;

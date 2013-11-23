@@ -19,7 +19,6 @@ a {
 
 #navigation button {
   margin: 1em 1em 1em 1em;
-
 }
 
 #live-messages {
@@ -54,6 +53,10 @@ a {
 
 button {
   padding: 1em;
+}
+
+input {
+  padding: .5em;
 }
 
 .lefter {
@@ -110,7 +113,7 @@ table {
   background-color: #fff;
 }
 
-#live-traders .level_1 {
+#live-traders .level_1, #live-shares .level_1 {
   padding: .5em;
   margin-bottom: 1em;
   background-color: #eee;

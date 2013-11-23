@@ -3,10 +3,12 @@
 //   credentials (in this case, an OpenID identifier and profile), and invoke a
 //   callback with a user object.
 var GoogleStrategy = require("passport-google-oauth").OAuth2Strategy,
-
-
-    //$ = require('jQuery'),
+    
+    // Load config file to 
     config = require("./config"),
+
+    // Use redis to find share holders able to login
+    db = require("redis").createClient(6379),
     
     // get from: https://code.google.com/apis/console
 
@@ -98,10 +100,11 @@ exports.initiate = function(app) {
     passport.authenticate('google', { failureRedirect: '/login' }),
 
     function(req, res) {
-      allowedUser(req.user.emails[0].value, function(yes, user) {
+      allowedUser(req.path || "/", req.user.emails[0].value, function(yes, user) {
         if (yes) {
+          var redirect_to = req.session.redirect_to || "/";
           req.current_user = user;
-          res.redirect("/");
+          res.redirect(redirect_to);
         }
         else {
           res.render('noaccess');
@@ -137,7 +140,7 @@ exports.ensure = function (req, res, next) {
   // checked req.path before, now only user existence
   if (req.isAuthenticated()) {
     console.log(cl.g+"Access to:", req.path, "by:", req.user.emails[0].value+cl.res);
-    allowedUser(req.user.emails[0].value, function(yes, user) {
+    allowedUser(req.path || "/", req.user.emails[0].value, function(yes, user) {
       if (yes) {
         req.current_user = user;
         return next();
@@ -155,13 +158,29 @@ exports.ensure = function (req, res, next) {
 // REUSABLE ACTIONS
 // AUTHORIZATION PART
 // Custom check on the array of allowed users
-function allowedUser(email, callback) {
+function allowedUser(path, email, callback) {
   var loaded_user = {};
   if (config.allowed_user_emails.indexOf(email) > -1) {
     loaded_user.email = email;
+    loaded_user.owner = (email === config.owner.email);
     callback(true, loaded_user);
   }
   else {
-    callback(false, null);
+    // Check if shareholders have been added who should be able to login
+    db.smembers("stampede_shares", function(redis_errors, share_list) {
+      var allowed_paths = ["/value_sheet", "/shares"],
+          allowed_for_holder = (allowed_paths.indexOf(path) > -1);
+      if (
+        share_list && 
+        share_list.length > 0
+      ) {
+        share_list.forEach(function(share_string) {
+          var share_arrayed = share_string.split("|");
+          if (share_arrayed[0] === email) loaded_user.email = email;
+        });
+        console.log("authentication | per share holder | email, path, allowed_for_holder:", email, path, allowed_for_holder);
+      }
+      callback((loaded_user.email !== undefined && allowed_for_holder), loaded_user.email ? loaded_user : null);
+    });
   }
 }
