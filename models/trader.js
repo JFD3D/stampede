@@ -366,8 +366,8 @@ Trader.prototype = {
     deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= INITIAL_GREED;
+    wallet.current.investment += deal.buy_price;
     controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+".", permanent: true});
-    deal.buy_price = deal.buy_price;
     
     controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
