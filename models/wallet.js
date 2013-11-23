@@ -18,27 +18,20 @@ Wallet.prototype = {
     live_traders = current_traders;
     controller.balance(function(error, data) {
       if (
-        error && 
-        !error_email_sent
+        data && parseFloat(data.fee || 0) > 0
       ) {
-        email.send({
-          to: config.owner.email,
-          subject: "Stampede: Error getting balance from bitstamp API",
-          template: "error.jade",
-          data: {error:error}
-        }, function(success) {
-          console.log("ERROR Email sending success?:", success);
-          error_email_sent = true;
-        });        
-      } else if (!error) error_email_sent = null;
-      data = data || {};
-      ["btc_reserved", "fee", "btc_available", "usd_reserved", "btc_balance", "usd_balance", "usd_available"].forEach(function(property) {
-        data[property] = parseFloat(data[property] || 0);
-      });
-      data.timestamp = new Date();
-      me.current = data;
-      me.current.cool = me.cool;
-      me.summarizeDeals(callback);
+        ["btc_reserved", "fee", "btc_available", "usd_reserved", "btc_balance", "usd_balance", "usd_available"].forEach(function(property) {
+          me.current[property] = parseFloat(data[property] || 0);
+        });
+        data.timestamp = new Date();
+        //me.current = data;
+        me.current.cool = me.cool;
+        if (me.current.error) delete me.current.error;
+        me.summarizeDeals(callback);
+      }
+      else {
+        me.current.error = "Unable to load current balance ["+(new Date())+"].";
+      }
     });
   },
   summarizeDeals: function(callback) {
@@ -86,9 +79,11 @@ Wallet.prototype = {
 
         // Now assign part value
         me.shares.forEach(function(share) {
-          share.current_$_value = (
-            share.invested_$_amount / (me.current.initial_investment || 0.01)
-            ) * me.current.usd_value;
+          var piece = share.invested_$_amount / (me.current.initial_investment || 0.01);
+          var current_$_value = piece * me.current.usd_value;
+          share.current_$_value = current_$_value.toFixed(2);
+          share.pie_share = (piece*100).toFixed(1)+"%";
+          share.profit_loss = ((current_$_value - share.invested_$_amount) / share.invested_$_amount*100).toFixed(2)+"%";
         });
         if (callback) callback(errors, me.shares);
       } 
@@ -106,7 +101,7 @@ Wallet.prototype = {
   addShare: function(holder, amount_invested, callback) {
     var share = {
       holder: holder,
-      invested_$_amount: parseInt(amount_invested)
+      invested_$_amount: amount_invested
     };
     db.sadd("stampede_shares", share.holder+"|"+share.invested_$_amount, callback);
   }

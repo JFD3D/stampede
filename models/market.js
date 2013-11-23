@@ -24,37 +24,27 @@ Market.prototype = {
         !data
       ) {
         console.log("!!! There was error loading market data ("+error+") !!!");
-        if (!error_email_sent) {
-          email.send({
-            to: config.owner.email,
-            subject: "Stampede: Error getting MARKET details from bitstamp API",
-            template: "error.jade",
-            data: {error:error}
-          }, function(success) {
-            console.log("ERROR Email sending success?:", success);
-            error_email_sent = true;
-          });        
-        }
+        me.current.error = "Unable to load current balance ["+(new Date())+"].";
       }
       else {
 
-        me.current = data ? data : {};
         ["last", "bid", "low", "high", "volume", "ask"].forEach(function(property) {
-          data[property] = parseFloat(data[property] || 0);
+          me.current[property] = parseFloat(data[property] || 0);
         });
 
         // Further market calculations
-        ma.push(Date.now(), data.last);
-        data.EMA = ma.movingAverage();
-        data.moving_variance = ma.variance();
-        data.timestamp = new Date(parseInt(data.timestamp)*1000);
-        data.middle = (data.high + data.low) / 2;
-        data.top = me.top = (me.top && me.top > data.high) ? me.top : data.high;
-        data.shift_span = (data.high - data.low) / (data.high || 0 + 0.00001);
+        ma.push(Date.now(), me.current.last);
+        me.current.EMA = ma.movingAverage();
+        me.current.moving_variance = ma.variance();
+        me.current.timestamp = new Date(parseInt(data.timestamp)*1000);
+        me.current.middle = (me.current.high + me.current.low) / 2;
+        me.current.top = me.top = (me.top && me.top > me.current.high) ? me.top : me.current.high;
+        me.current.shift_span = (me.current.high - me.current.low) / (me.current.high || 0 + 0.00001);
+        if (me.current.error) delete me.current.error
         me.tick();
         error_email_sent = null;
       }
-      callback(error, data);      
+      callback(error, me.current);      
     }); 
   },
 

@@ -634,6 +634,16 @@ function wakeAll(done) {
   });
 }
 
+function addShare(holder, investment) {
+  if (
+    wallet &&
+    holder.length > 1 &&
+    investment > 0
+  ) wallet.addShare(holder, investment, function(error, response) {
+    console.log("Added share ($"+investment+") for "+holder+". (..., error, response)", error, response);
+  });
+}
+
 function stopAll(done) {
   clearTimeout(timer);
   wallet = new Wallet();
@@ -657,3 +667,4 @@ exports.wakeAll = wakeAll;
 exports.instance = Trader;
 exports.updateAll = updateAll;
 exports.pullValueSheet = pullValueSheet;
+exports.addShare = addShare;
