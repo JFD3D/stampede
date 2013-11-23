@@ -193,7 +193,7 @@ Trader.prototype = {
         profit_from_middle = trader_bid / market.current.middle,
         current_market_greed = (market.current.shift_span / 2),
         trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
-        weighted_heat = wallet.current.cool + (current_market_greed),
+        weighted_heat = wallet.current.cool + trader_greed,
         potential_better_than_heat = weighted_heat > 1,
         market_momentum_significant = (
           market.current.momentum_record_healthy &&
@@ -217,7 +217,7 @@ Trader.prototype = {
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
       // "\n|- Bid is below middle (..., market.current.last, market.current.middle):", bid_below_middle, market.current.last.toFixed(2), market.current.middle.toFixed(2),
       // "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span.toFixed(2),
-      "\n|- Projected profit is better than heat (..., wallet.current.cool, weighted_heat, profit_from_middle):", potential_better_than_heat, wallet.current.cool.toFixed(2), weighted_heat, profit_from_middle.toFixed(2),
+      "\n|- Projected profit is better than heat (..., wallet.current.cool, weighted_heat):", potential_better_than_heat, wallet.current.cool.toFixed(2), weighted_heat,
       "\n|- Market momentum is significant (..., momentum_indicator, momentum_healthy)", market_momentum_significant, market.current.momentum_indicator, market.current.momentum_record_healthy,
       "\n_BUY__ Decision:", decision ? "BUYING" : "HOLDING",
       "\n******"
@@ -576,6 +576,7 @@ function checkWallet(done) {
   // Initialize into global var, exposed on top
   console.log("* Checking wallet.");
   wallet.check(live_traders, function() {
+    controller.updateShares(wallet.shares);
     wallet.update_counter = 3;
     wallet.current.available_to_traders = 
       (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current.usd_available ? 
