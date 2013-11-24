@@ -31,6 +31,7 @@ Wallet.prototype = {
       }
       else {
         me.current.error = "Unable to load current balance ["+(new Date())+"].";
+        callback(me.current.error, me.current);
       }
     });
   },
