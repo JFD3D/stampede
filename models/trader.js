@@ -312,7 +312,7 @@ Trader.prototype = {
     deal.aligned_sell_price = (market.current.last * BID_ALIGN).toFixed(2);
     
     // Align current cool to avoid all sell / buy
-    wallet.current.cool -= INITIAL_GREED;
+    wallet.current.cool -= market.current.shift_span;
     
     controller.updateDecisions({
       message: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+".", 
@@ -365,7 +365,7 @@ Trader.prototype = {
     deal.amount = (MAX_PER_DEAL / deal.buy_price).toFixed(7);
     deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
     deal.heat = INITIAL_GREED;
-    wallet.current.cool -= INITIAL_GREED;
+    wallet.current.cool -= market.current.shift_span;
     wallet.current.investment += deal.buy_price;
     controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+".", permanent: true});
     
