@@ -75,7 +75,7 @@ Market.prototype = {
     });
 
     // Average by key is defined for all array prototype in /plugins/common.js
-    // me.current.momentum_average = me.momentum_array.averageByKey("market_shift");
+    me.current.momentum_average = me.momentum_array.averageByKey("market_shift");
     me.current.momentum_indicator = m_indicator / me.current.last;
     me.current.momentum_record_healthy = (me.momentum_array.length > 10);
     console.log("MOMENTUM tick | me.momentum_array.length, start_time, end_time, m_to_start:", me.momentum_array.length, start_time, end_time, m_to_start);

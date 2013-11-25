@@ -197,7 +197,7 @@ Trader.prototype = {
         potential_better_than_heat = weighted_heat > 1,
         market_momentum_significant = (
           market.current.momentum_record_healthy &&
-          market.current.momentum_indicator > 0
+          market.current.momentum_average > 0.1
         );
         
     // Decision process takes place on whether to buy
