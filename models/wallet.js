@@ -92,6 +92,7 @@ Wallet.prototype = {
         me.shares = [{
           holder: "Primary",
           invested_$_amount: 0,
+          pie_share: "100%",
           current_$_value: me.current.usd_value || 0
         }];
         if (callback) callback(null, me.shares);

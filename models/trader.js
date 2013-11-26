@@ -188,7 +188,7 @@ Trader.prototype = {
         has_free_hands = MAX_DEALS_HELD > me.deals.length,
         available_resources = (wallet.current.investment < MAX_SUM_INVESTMENT) && (wallet.current.usd_available > MAX_PER_DEAL),
         trader_bid = (market.current.last / BID_ALIGN),
-        // bid_below_middle = trader_bid < market.current.middle,
+        bid_below_middle = trader_bid < market.current.middle,
         // potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
         profit_from_middle = trader_bid / market.current.middle,
         current_market_greed = (market.current.shift_span / 2),
@@ -206,7 +206,7 @@ Trader.prototype = {
       has_free_hands &&
       available_resources &&
       market_momentum_significant &&
-      //bid_below_middle &&
+      bid_below_middle &&
       //potential_better_than_fee &&
       potential_better_than_heat
     ) decision = true;
@@ -215,7 +215,7 @@ Trader.prototype = {
       "*** Buying deal? ***",
       "\n|- Has hands available (..., me.deals.length):", has_free_hands, me.deals.length,
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
-      // "\n|- Bid is below middle (..., market.current.last, market.current.middle):", bid_below_middle, market.current.last.toFixed(2), market.current.middle.toFixed(2),
+      "\n|- Bid is below middle (..., market.current.last, market.current.middle):", bid_below_middle, market.current.last.toFixed(2), market.current.middle.toFixed(2),
       // "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span.toFixed(2),
       "\n|- Projected profit is better than heat (..., wallet.current.cool, weighted_heat):", potential_better_than_heat, wallet.current.cool.toFixed(2), weighted_heat,
       "\n|- Market momentum is significant (..., momentum_indicator, momentum_healthy)", market_momentum_significant, market.current.momentum_indicator, market.current.momentum_record_healthy,

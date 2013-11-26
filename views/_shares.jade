@@ -1,0 +1,14 @@
+table
+  tr
+    th Shareholder
+    th Share
+    th Initial investment
+    th Current value
+    th Profit / Loss
+  each share in shares
+    tr
+      td= share.holder
+      td= share.pie_share
+      td= "$"+share.invested_$_amount.toFixed(2)
+      td= "$"+share["current_$_value"]
+      td= share.profit_loss

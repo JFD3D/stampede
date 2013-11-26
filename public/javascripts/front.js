@@ -59,7 +59,10 @@ socket.on("stampede_updates", function(incoming) {
 
     $(".content","#"+incoming.container).html(incoming.html);
   }
-  else if (incoming.message) notify(incoming.message, (incoming.permanent ? null : 30000)); 
+  else if (incoming.message) {
+    notify(incoming.message, (incoming.permanent ? null : 30000));
+  }
+  else if (incoming.current_last_price) document.title = incoming.current_last_price;
 });
 
 
@@ -94,32 +97,24 @@ $(document).ready(function() {
     });
   });
 
-  $("body").on("click", "#live-traders .record", function() {
-    var trader_name = $(this).parent().attr("data-key"),
-        confirmation = confirm("Sure to remove trader ("+trader_name+")?");
-    if (confirmation) {
-      
-      $.get("/trader/"+trader_name+"/remove", function(response) {
-        notify(response.message || "Updated.", 10000);
-      });
-    }
-  });
-
-  $("body").on("click", "#live-traders .deals .name", function() {
-    var deal_name = $(".value", this).text(),
-        confirmation = confirm("Sure to remove deal ("+deal_name+")?");
-    if (confirmation) {
-      var record_container = $(this).parents(".deals");
-      //console.log("record_container", record_container);
-      var trader_name = $(record_container).parent().attr("data-key");
-      if (trader_name && deal_name) {
+  $("body").on("click", "#live-traders .removal", function() {
+    var trader_name = $(this).attr("data-trader"),
+        deal_name = $(this).attr("data-deal");
+        
+    if (trader_name) {
+      var confirmation = confirm("Sure to remove "+(trader_name && deal_name ? "deal: "+deal_name : "trader: "+trader_name)+"?");
+      if (deal_name && confirmation) {
         $.get("/trader/"+trader_name+"/deal/"+deal_name+"/remove", function(response) {
-          notify(response.message || "Updated.", 10000);
+          notify(response.message || "Removed deal.", 10000);
         });
       }
-      else notify("Unable to identify record names.");
+      else if (confirmation) {
+        $.get("/trader/"+trader_name+"/remove", function(response) {
+          notify(response.message || "Removed trader.", 10000);
+        });
+      }
     }
-  });  
+  });
 });
 
 

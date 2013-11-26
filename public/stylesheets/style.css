@@ -39,6 +39,7 @@ a {
 
 .block {
   float: left;
+  width: 600px;
   margin: 1em;
   padding: 1em;
   border: 1px solid #ccc;
@@ -82,10 +83,14 @@ table td {
 }
 
 table td, table th {
-  padding: .5em;
+  padding: .25em;
+}
+a.removal {
+  font-weight: normal;
 }
 
 table {
+  border-collapse: collapse;
   width: 100%;
   border: 1px solid #ccc;
   background-color: #eee;

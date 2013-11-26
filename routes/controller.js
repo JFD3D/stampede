@@ -50,17 +50,15 @@ exports.addShare = function(req, res) {
 };
 
 exports.updateShares = function(shares) {
-  var share_hash = {};
-  shares.forEach(function(share) {
-    share_hash[share.holder] = share;
+
+  jade.renderFile(__dirname + "/../views/_shares.jade", {shares: shares, helpers: helpers}, function(error, html) {
+    //console.log("rendering updateShares | error, html:", error, html);
+    if (html) live.sendToAll("stampede_updates", {
+      container: "live-shares",
+      html: html
+    });
   });
 
-  console.log("Updating shares:", shares);
-  var outgoing = {
-    data: share_hash,
-    container: "live-shares"
-  };
-  live.sendToAll("stampede_updates", outgoing);  
 }
 
 exports.addTrader = function(req, res) {
@@ -159,11 +157,12 @@ exports.updateMarket = function(market_data) {
     });
   });
 
+  if (market_data.last) live.sendToAll("stampede_updates", {current_last_price: "$"+market_data.last});
   
 };
 
 exports.drawSheets = function(data, update_type) {
-  console.log("Drawing sheets ("+(data.length || "incremental")+").");
+  //console.log("Drawing sheets ("+(data.length || "incremental")+").");
   var outgoing = {
     data: data,
     update_type: update_type,
@@ -187,14 +186,16 @@ exports.updateWallet = function(wallet_data, done) {
 };
 
 exports.updateTraders = function(traders, done) {
-  var outgoing = {
-    data: traders,
-    container: "live-traders"
-  };
-  
-  //console.log("^^^^^ Updating wallet with data.", data);
-  live.sendToAll("stampede_updates", outgoing);
-  if (done) done();
+
+  jade.renderFile(__dirname + "/../views/_traders.jade", {traders: traders, helpers: helpers}, function(error, html) {
+    if (error) console.log("updateTraders | renderFile | error:", error);
+    if (html) live.sendToAll("stampede_updates", {
+      container: "live-traders",
+      html: html
+    });
+    if (done) done();
+  });
+
 };
 
 exports.updateTradingConfig = function(done) {
