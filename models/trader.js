@@ -315,7 +315,7 @@ Trader.prototype = {
     wallet.current.cool -= market.current.shift_span;
     
     controller.updateDecisions({
-      message: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+".", 
+      message: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+"at"+deal.aligned_sell_price+"per BTC.", 
       permanent: true
     });
 
@@ -367,7 +367,7 @@ Trader.prototype = {
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= market.current.shift_span;
     wallet.current.investment += deal.buy_price;
-    controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+".", permanent: true});
+    controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+"at"+deal.buy_price+"per BTC.", permanent: true});
     
     controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
