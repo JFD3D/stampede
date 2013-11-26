@@ -1,10 +1,12 @@
 var config = require("./../plugins/config"),
     common = require("./../plugins/common"),
-    creds = config.bitstamp_credentials,
+    helpers = require("./../plugins/helpers"),
+    live = require("./../plugins/live"),
     Bitstamp = require("./../plugins/bitstamp.js"),
+    creds = config.bitstamp_credentials,
     bitstamp = new Bitstamp(creds.client_id, creds.key, creds.secret),
     Trader = require("./../models/trader"),
-    live = require("./../plugins/live"),
+    jade = require("jade"),
     traders_awake = false;
 
 /*
@@ -146,13 +148,18 @@ exports.sell = function(amount, price, callback) {
   bitstamp.sell(amount, price, callback);
 };
 
-exports.updateMarket = function(data) {
-  var outgoing = {
-    data: data,
-    container: "live-ticker"
-  };
+exports.updateMarket = function(market_data) {
   //console.log("Updating market with data.", data);
-  live.sendToAll("stampede_updates", outgoing);
+
+  jade.renderFile(__dirname + "/../views/_market.jade", {current_market: market_data, helpers: helpers}, function(error, html) {
+    //console.log("rendering updateMarket | error, html:", error, html);
+    if (html) live.sendToAll("stampede_updates", {
+      container: "live-ticker",
+      html: html
+    });
+  });
+
+  
 };
 
 exports.drawSheets = function(data, update_type) {
@@ -165,15 +172,18 @@ exports.drawSheets = function(data, update_type) {
   live.sendToAll("stampede_value_sheet_update", outgoing);
 };
 
-exports.updateWallet = function(data, done) {
-  var outgoing = {
-    data: data,
-    container: "live-balance"
-  };
-  
+exports.updateWallet = function(wallet_data, done) {
+
   //console.log("^^^^^ Updating wallet with data.", data);
-  live.sendToAll("stampede_updates", outgoing);
-  if (done) done();
+
+  jade.renderFile(__dirname + "/../views/_wallet.jade", {current_wallet: wallet_data, helpers: helpers}, function(error, html) {
+    if (html) live.sendToAll("stampede_updates", {
+      container: "live-balance",
+      html: html
+    });
+    if (done) done();
+  });
+  
 };
 
 exports.updateTraders = function(traders, done) {

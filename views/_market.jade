@@ -1,0 +1,28 @@
+h3 Current data
+- if (current_market.error)
+  p(class="error")= current_market.error
+table
+  tr
+    th Last
+    th High
+    th Middle
+    th Low
+    th Span
+  tr
+    td= "$"+current_market.last.toFixed(2)
+    td= "$"+current_market.high.toFixed(2)
+    td= "$"+current_market.middle.toFixed(2)
+    td= "$"+current_market.low.toFixed(2)
+    td= (current_market.shift_span*100).toFixed(2)+"%"
+h3 Calculations
+table
+  tr
+    th EMA
+    th Momentum average
+    th Momentum healthy
+    th Updated at
+  tr
+    td= "$"+current_market.EMA.toFixed(2)
+    td= current_market.momentum_average.toFixed(5)
+    td= current_market.momentum_record_healthy ? "Yes" : "No"
+    td= helpers.moment(current_market.timestamp).fromNow()

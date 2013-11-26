@@ -51,6 +51,10 @@ a {
   background-color: #eee;
 }
 
+.error {
+  color: red;
+}
+
 button {
   padding: 1em;
 }
@@ -73,12 +77,18 @@ p b {
 }
 
 table td {
-  padding: 1em;
-  border: 1px solid red;
+  border: 1px solid #ccc;
+  background-color: #fff;
+}
+
+table td, table th {
+  padding: .5em;
 }
 
 table {
-  border: 1px solid green;
+  width: 100%;
+  border: 1px solid #ccc;
+  background-color: #eee;
 }
 
 .container, .container b {

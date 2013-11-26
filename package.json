@@ -15,6 +15,7 @@
     "nodemailer": "*",
     "underscore": "*",
     "passport": "*",
-    "moving-average": "*"
+    "moving-average": "*",
+    "moment": "*"
   }
 }

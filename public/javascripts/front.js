@@ -51,8 +51,13 @@ socket.on('connect', function(){
 });
 
 socket.on("stampede_updates", function(incoming) {
-  if (incoming.container) {
+  //console.log("Incoming:", incoming);
+  if (incoming.container && incoming.data) {
     update(incoming.container, incoming.data, incoming.rendering || "html");  
+  }
+  else if (incoming.container && incoming.html) {
+
+    $(".content","#"+incoming.container).html(incoming.html);
   }
   else if (incoming.message) notify(incoming.message, (incoming.permanent ? null : 30000)); 
 });
