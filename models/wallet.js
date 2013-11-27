@@ -16,6 +16,8 @@ Wallet.prototype = {
   check: function(current_traders, callback) {
     var me = this;
     live_traders = current_traders;
+    me.current.cool = me.cool;
+
     controller.balance(function(error, data) {
       if (
         data && parseFloat(data.fee || 0) > 0
@@ -23,16 +25,13 @@ Wallet.prototype = {
         ["btc_reserved", "fee", "btc_available", "usd_reserved", "btc_balance", "usd_balance", "usd_available"].forEach(function(property) {
           me.current[property] = parseFloat(data[property] || 0);
         });
-        data.timestamp = new Date();
-        //me.current = data;
-        me.current.cool = me.cool;
+        me.current.timestamp = new Date();
         if (me.current.error) delete me.current.error;
-        me.summarizeDeals(callback);
       }
       else {
         me.current.error = "Unable to load current balance ["+(new Date())+"].";
-        callback(me.current.error, me.current);
       }
+      me.summarizeDeals(callback);
     });
   },
   summarizeDeals: function(callback) {
