@@ -20,10 +20,12 @@ exports.index = function(req, res) {
   res.render('index', {
     title: 'Stampede',
     traders_awake: traders_awake,
-    trading_config: config.trading
+    trading_config: config.trading,
+    trading_strategies: config.strategy,
+    helpers: helpers
   });
   console.log("Traders are awake:", traders_awake);
-  if (traders_awake) Trader.updateAll();
+  if (traders_awake) Trader.refreshAll();
 };
 
 exports.shares = function(req, res) {
@@ -49,7 +51,7 @@ exports.addShare = function(req, res) {
 
 };
 
-exports.updateShares = function(shares) {
+exports.refreshShares = function(shares) {
 
   jade.renderFile(__dirname + "/../views/_shares.jade", {shares: shares, helpers: helpers}, function(error, html) {
     //console.log("rendering updateShares | error, html:", error, html);
@@ -146,7 +148,7 @@ exports.sell = function(amount, price, callback) {
   bitstamp.sell(amount, price, callback);
 };
 
-exports.updateMarket = function(market_data) {
+exports.refreshMarket = function(market_data) {
   //console.log("Updating market with data.", data);
 
   jade.renderFile(__dirname + "/../views/_market.jade", {current_market: market_data, helpers: helpers}, function(error, html) {
@@ -171,7 +173,7 @@ exports.drawSheets = function(data, update_type) {
   live.sendToAll("stampede_value_sheet_update", outgoing);
 };
 
-exports.updateWallet = function(wallet_data, done) {
+exports.refreshWallet = function(wallet_data, done) {
 
   //console.log("^^^^^ Updating wallet with data.", data);
 
@@ -185,10 +187,10 @@ exports.updateWallet = function(wallet_data, done) {
   
 };
 
-exports.updateTraders = function(traders, done) {
+exports.refreshTraders = function(traders, done) {
 
   jade.renderFile(__dirname + "/../views/_traders.jade", {traders: traders, helpers: helpers}, function(error, html) {
-    if (error) console.log("updateTraders | renderFile | error:", error);
+    if (error) console.log("refreshTraders | renderFile | error:", error);
     if (html) live.sendToAll("stampede_updates", {
       container: "live-traders",
       html: html
@@ -198,9 +200,9 @@ exports.updateTraders = function(traders, done) {
 
 };
 
-exports.updateTradingConfig = function(done) {
+exports.refreshTradingConfig = function(trading_config, done) {
   var outgoing = {
-    data: config.trading,
+    data: trading_config,
     container: "live-trading-config"
   };
   
@@ -209,7 +211,45 @@ exports.updateTradingConfig = function(done) {
   if (done) done();
 };
 
-exports.updateDecisions = function(data, done) {
+
+exports.refreshDecisions = function(data) {
+  jade.renderFile(__dirname + "/../views/_decision_indicators.jade", {decisions: data, helpers: helpers}, function(error, html) {
+    if (error) console.log("refreshDecisions | renderFile | error:", error);
+    if (html) live.sendToAll("stampede_updates", {
+      container: "decision-indicators",
+      html: html
+    });
+  });  
+};
+
+
+exports.updateTradingStrategy = function(req, res) {
+  var update_body = req.body,
+      new_config = {};
+  for (var attribute in config.strategy) {
+    new_config[attribute] = (update_body[attribute] === "on" ? true : false);
+  }
+  Trader.updateStrategy(new_config);
+  res.redirect("/");
+};
+
+
+exports.updateTradingConfig = function(req, res) {
+  var update_body = req.body,
+      new_config = {};
+  for (var attribute in config.trading) {
+    new_config[attribute] = (parseFloat(update_body[attribute]) || config.trading[attribute]);
+  }
+  Trader.updateConfig(new_config);
+  res.redirect("/");
+};
+
+exports.resetTradingConfig = function(req, res) {
+  Trader.resetConfig();
+  res.redirect("/");
+}
+
+exports.notifyClient = function(data, done) {
   var outgoing = data;
   
   //console.log("^^^^^ Updating wallet with data.", data);

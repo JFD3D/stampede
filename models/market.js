@@ -17,6 +17,8 @@ function Market() {
 
 Market.prototype = {
   check: function(callback) {
+    //console.log("market | config.trading.momentum_time_span:", config.trading.momentum_time_span);
+
     var me = this;
     controller.ticker(function(error, data) {
       if (
