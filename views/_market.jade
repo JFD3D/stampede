@@ -5,12 +5,14 @@ table
   tr
     th Last
     th High
+    th Threshold
     th Middle
     th Low
     th Span
   tr
     td= "$"+current_market.last.toFixed(2)
     td= "$"+current_market.high.toFixed(2)
+    td= "$"+current_market.threshold.toFixed(2)
     td= "$"+current_market.middle.toFixed(2)
     td= "$"+current_market.low.toFixed(2)
     td= (current_market.shift_span*100).toFixed(2)+"%"

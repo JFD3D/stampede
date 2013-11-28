@@ -1,0 +1,11 @@
+form#trading-strategy-form(action="/trading_strategy/update", method="post")
+  mixin strategy_form_inputs(trading_strategies)
+  .spacer
+  button Submit changes
+
+mixin strategy_form_inputs(strategy_set)
+  each enabled, strategy in strategy_set
+    label(for="#{strategy}-input") #{helpers.sanitizeVariableName(strategy)}
+      br
+      input(type="checkbox", name="#{strategy}", checked=(enabled?"checked":undefined))
+      br

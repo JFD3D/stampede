@@ -1,0 +1,14 @@
+form#trading-config-form(action="/trading_config/update", method="post")
+  mixin config_form_inputs(trading_config)
+  .spacer
+  button Submit changes
+  a(href="/trading_config/reset")
+    button(type="button") Reset config
+
+
+mixin config_form_inputs(config_set)
+  each config, attribute in trading_config
+    label(for="#{attribute}-input") #{helpers.sanitizeVariableName(attribute)}
+      br
+      input(type="text", name="#{attribute}", value="#{config}")
+      br

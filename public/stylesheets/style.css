@@ -68,10 +68,15 @@ input {
   float: left;
 }
 
-.clearer {
+.clearer, .spacer {
   width: 100%;
   clear: both;
 }
+
+.spacer {
+  height: 1em;
+}
+
 
 p b {
   color: #444;
@@ -94,6 +99,18 @@ table {
   width: 100%;
   border: 1px solid #ccc;
   background-color: #eee;
+}
+
+.decision-table {
+  font-size: 90%;
+}
+
+.decision-table .decision_true {
+  background-color: green;
+}
+
+.decision-table .decision_false {
+  background-color: red;
 }
 
 .container, .container b {

@@ -29,6 +29,7 @@ Wallet.prototype = {
         if (me.current.error) delete me.current.error;
       }
       else {
+        console.log("!!!!!!!!!!!!!!!!ERROR Getting WALLET from API !!!!!!!!!!!!!!");
         me.current.error = "Unable to load current balance ["+(new Date())+"].";
       }
       me.summarizeDeals(callback);
@@ -59,13 +60,14 @@ Wallet.prototype = {
   summarizeShares: function(callback) {
     var me = this;
     me.shares = [];
+    me.current.initial_investment = 0;
     console.log("wallet | summarizeShares | usd_value:", me.current.usd_value);
     db.smembers("stampede_shares", function(errors, share_list) {
       if (
         share_list && 
         share_list.length > 0
       ) {
-        me.current.initial_investment = 0;
+        
         // Parse each recorded share
         share_list.forEach(function(share_string) {
           var share_arrayed = share_string.split("|"),

@@ -28,8 +28,9 @@ var db = require("redis").createClient(6379),
     trader_main_list = "stampede_traders",        // Main repository in redis for keeping list of traders
     stampede_value_sheet = "stampede_usd_value",  // Repository unsorted list for USD value history
     error_email_sent,
+    cycle_sell_decisions = [],
+    cycle_buy_decisions = [],
 
-    
     /*
      *
      * Constants for trading
@@ -37,14 +38,46 @@ var db = require("redis").createClient(6379),
      *
      *
      */
-     
-    MAX_INFO_AGE = 60000,                                           // Allowed age of information(prices) for decision making
-    MAX_SUM_INVESTMENT = config.trading.maximum_investment,         // Allowed max sum of investment
-    MAX_PER_DEAL = config.trading.maximum_$_per_deal,               // Allowed investment per trader's deal
-    MAX_DEALS_HELD = 
-      config.trading.max_number_of_deals_per_trader || 3,           // Number of trader deals
-    INITIAL_GREED = config.trading.greed || 0.05,                   // Greed (.05 means trader looks for 5% upside) XXX: As of now, this is calculated based on current market shift (difference btw low and high)
-    BID_ALIGN = config.trading.bid_alignment;                       // Align bid before buying to allow competitive price
+    
+    MAX_SUM_INVESTMENT,     // Allowed max sum of investment
+    MAX_PER_DEAL,           // Allowed investment per trader's deal
+    MAX_DEALS_HELD,         // Number of trader deals
+    INITIAL_GREED,          // Greed (.05 means trader looks for 5% upside) XXX: As of now, this is calculated based on current market shift (difference btw low and high)
+    BID_ALIGN,              // Align bid before buying to allow competitive price
+    IMPATIENCE,             // Where do I buy up from middle
+
+    /*
+     *
+     * Trading strategies
+     *
+     *
+     *
+     */    
+
+    MOMENTUM_ENABLED,       // Whether purchases will be happening on momentum up trend
+    TRAILING_STOP_ENABLED,  // Whether sales will happen only after trailing stop is reached
+
+
+
+// nasty variable declaration end
+    variable_declaration_ender;                     
+
+
+function initializeConfig() {
+
+  // Trading configuration variables
+  MAX_SUM_INVESTMENT = config.trading.maximum_investment;
+  MAX_PER_DEAL = config.trading.maximum_$_per_deal;         
+  MAX_DEALS_HELD = 
+    config.trading.max_number_of_deals_per_trader;
+  INITIAL_GREED = config.trading.greed;   
+  BID_ALIGN = config.trading.bid_alignment;
+  IMPATIENCE = config.trading.impatience;
+
+  // Strategies now
+  MOMENTUM_ENABLED = config.strategy.momentum_trading;
+  TRAILING_STOP_ENABLED = config.strategy.trailing_stop;
+}
 
 
 /*
@@ -188,7 +221,7 @@ Trader.prototype = {
         has_free_hands = MAX_DEALS_HELD > me.deals.length,
         available_resources = (wallet.current.investment < MAX_SUM_INVESTMENT) && (wallet.current.usd_available > MAX_PER_DEAL),
         trader_bid = (market.current.last / BID_ALIGN),
-        bid_below_middle = trader_bid < market.current.middle,
+        bid_below_threshold = trader_bid < market.current.threshold,
         // potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
         profit_from_middle = trader_bid / market.current.middle,
         current_market_greed = (market.current.shift_span / 2),
@@ -205,8 +238,8 @@ Trader.prototype = {
     if (
       has_free_hands &&
       available_resources &&
-      market_momentum_significant &&
-      bid_below_middle &&
+      (!MOMENTUM_ENABLED || market_momentum_significant) &&
+      bid_below_threshold &&
       //potential_better_than_fee &&
       potential_better_than_heat
     ) decision = true;
@@ -215,7 +248,7 @@ Trader.prototype = {
       "*** Buying deal? ***",
       "\n|- Has hands available (..., me.deals.length):", has_free_hands, me.deals.length,
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
-      "\n|- Bid is below middle (..., market.current.last, market.current.middle):", bid_below_middle, market.current.last.toFixed(2), market.current.middle.toFixed(2),
+      "\n|- Bid is below threshold (..., market.current.last, market.current.middle):", bid_below_threshold, market.current.last.toFixed(2), market.current.middle.toFixed(2),
       // "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span.toFixed(2),
       "\n|- Projected profit is better than heat (..., wallet.current.cool, weighted_heat):", potential_better_than_heat, wallet.current.cool.toFixed(2), weighted_heat,
       "\n|- Market momentum is significant (..., momentum_indicator, momentum_healthy)", market_momentum_significant, market.current.momentum_indicator, market.current.momentum_record_healthy,
@@ -223,6 +256,17 @@ Trader.prototype = {
       "\n******"
     );
     
+    var structured_decision = {
+      trader: me.name,
+      has_free_hands: has_free_hands,
+      available_resources: available_resources,
+      bid_below_threshold: bid_below_threshold,
+      wallet_cool: potential_better_than_heat,
+      final_decision: decision
+    };
+
+    cycle_buy_decisions.push(structured_decision);
+
     return decision;
   },
   
@@ -233,6 +277,8 @@ Trader.prototype = {
         current_market_greed = (market.current.shift_span / 2),
         current_sale_price = (market.current.last * BID_ALIGN),
         trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
+        weighted_heat = wallet.current.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN))),
+        potential_better_than_heat = (weighted_heat > 1),
         candidate_deals = me.deals.filter(function(deal_for_sale) {
           deal_for_sale.stop_price = market.current.high * (1 - (trader_greed/2));
           deal_for_sale.would_sell_at = deal_for_sale.buy_price * (1 + trader_greed + (1 - BID_ALIGN));
@@ -243,15 +289,23 @@ Trader.prototype = {
             //"trailing stop price reached? ($"+deal_for_sale.stop_price.toFixed(2)+"):", (deal_for_sale.stop_price >= current_sale_price),
             "frozen deal?:", (deal_for_sale.order_id === "freeze")
           );
-          
-          return (
-            deal_for_sale.would_sell_at < current_sale_price &&
-            //deal_for_sale.stop_price >= current_sale_price &&
-            deal_for_sale.order_id != "freeze"
+
+          var structured_decision = {
+            trader: me.name,
+            reached_would_sell_at: (deal_for_sale.would_sell_at < current_sale_price),
+            not_frozen: (deal_for_sale.order_id != "freeze"),
+            wallet_cool: potential_better_than_heat,
+            amount_managed: (deal_for_sale.amount < wallet.current.btc_balance)
+          };
+          if (TRAILING_STOP_ENABLED) structured_decision.below_trailing_stop = (deal_for_sale.stop_price >= current_sale_price);
+          cycle_sell_decisions.push(structured_decision);
+          var final_decision = (
+            structured_decision.reached_would_sell_at &&
+            structured_decision.below_trailing_stop &&
+            structured_decision.not_frozen
           );
-        }),
-        weighted_heat = wallet.current.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN))),
-        potential_better_than_heat = (weighted_heat > 1);
+          return final_decision;
+        });
     if (
       candidate_deals &&
       candidate_deals.length > 0 &&
@@ -270,7 +324,7 @@ Trader.prototype = {
     console.log(
       "*** Selling deal? ***",
       "\n|- candidate_deals:", candidate_deals,
-      "\n|- amount is managed (amount):", ((candidate_deals[0] || {}).amount < wallet.current.btc_balance), (candidate_deals[0] || {}).amount,
+      //"\n|- amount is managed (amount):", ((candidate_deals[0] || {}).amount < wallet.current.btc_balance), (candidate_deals[0] || {}).amount,
       "\n|- potential_better_than_heat:", potential_better_than_heat,
       "\n_SALE_ Decision:", decision ? "SELLING" : "HOLDING",
       "\n******",
@@ -295,7 +349,7 @@ Trader.prototype = {
       }
       else {
         console.log("("+me.name+"): Not selling, nor buying.");
-        controller.updateDecisions({message: "("+me.name+") HOLDING (last:$"+market.current.last+")."});
+        //controller.notifyClient({message: "("+me.name+") HOLDING (last:$"+market.current.last+")."});
         done();
       }
     }
@@ -314,7 +368,7 @@ Trader.prototype = {
     // Align current cool to avoid all sell / buy
     wallet.current.cool -= market.current.shift_span;
     
-    controller.updateDecisions({
+    controller.notifyClient({
       message: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+" at "+deal.aligned_sell_price+" per BTC.", 
       permanent: true
     });
@@ -367,7 +421,7 @@ Trader.prototype = {
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= market.current.shift_span;
     wallet.current.investment += deal.buy_price;
-    controller.updateDecisions({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+" at "+deal.buy_price+" per BTC.", permanent: true});
+    controller.notifyClient({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+" at "+deal.buy_price+" per BTC.", permanent: true});
     
     controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
@@ -449,28 +503,35 @@ function stringDeal(deal) {
 
 function cycle(done) {
   console.log("Cycle initiated.");
+  cycle_buy_decisions = [];
+  cycle_sell_decisions = [];
   // Initialize market and wallet data into global var, exposed on top
   async.series([
     checkWallet,
     checkMarket
   ], function(errors, results) {
-    controller.updateTradingConfig();
-    if (done) done(null, market.current)
+    //controller.refreshTradingConfig(config.trading);
+    if (done) done(null, market.current);
+    controller.refreshDecisions({
+      buy_decisions: cycle_buy_decisions,
+      sell_decisions: cycle_sell_decisions
+    });
   });
 } 
 
 function checkMarket(done) {
   market.check(function(error, market_current) {
-    // Update client side on current market data 
+    // refresh client side on current market data 
     // & current wallet data
-    controller.updateMarket(market.current);
+    controller.refreshMarket(market.current);
     // Check if traders are initialized
     if (live_traders) {
-      controller.updateTraders(live_traders);
+      controller.refreshTraders(live_traders);
       var i = 0, new_deal_count = 0;
+      market.current.threshold = IMPATIENCE * (market.current.high - market.current.middle) + market.current.middle;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
       wallet.current.usd_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current.usd_balance || 0);
-      controller.updateWallet(wallet.current); 
+      controller.refreshWallet(wallet.current); 
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
         
@@ -519,7 +580,7 @@ function checkMarket(done) {
           console.log("("+new_deal_count+") <-------------------------- New deals recorded, refreshing data.");
           wakeAll();
         }
-        updateSheets();
+        refreshSheets();
       }
     }
     else {
@@ -557,7 +618,7 @@ function pullValueSheet(callback) {
   callback(sheets);
 }
 
-function updateSheets() {
+function refreshSheets() {
   console.log("* Updating history sheets.");
   var now = new Date(),
       timestamp = now.getTime(),
@@ -576,14 +637,71 @@ function checkWallet(done) {
   // Initialize into global var, exposed on top
   console.log("* Checking wallet.");
   wallet.check(live_traders, function() {
-    controller.updateShares(wallet.shares);
-    wallet.update_counter = 3;
+    controller.refreshShares(wallet.shares);
     wallet.current.available_to_traders = 
       (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current.usd_available ? 
         MAX_SUM_INVESTMENT - wallet.current.investment : 
         wallet.current.usd_available;
     if (done) done(null, wallet.current);
   });
+}
+
+function updateConfig(new_config) {
+  if (configValid(new_config)) {
+  
+    for (var attribute in new_config) {
+      config.trading[attribute] = new_config[attribute] || config.trading[attribute];
+    }
+
+    initializeConfig();
+    
+    //controller.refreshTradingConfig(config.trading);
+
+    console.log(
+      "trader | updateConfig | comparison:",
+      "\n: MAX_SUM_INVESTMENT / config.trading.maximum_investment:", MAX_SUM_INVESTMENT, config.trading.maximum_investment,
+      "\n: INITIAL_GREED / config.trading.greed:", INITIAL_GREED, config.trading.greed
+    );
+  }
+  else {
+    controller.notifyClient({message: "Unable to update config, values are invalid."});
+  }
+};
+
+
+function updateStrategy(new_config) {
+  for (var attribute in new_config) {
+    config.strategy[attribute] = new_config[attribute];
+  }
+
+  initializeConfig();
+
+  console.log("updateStrategy | Configuration initialized | config.strategy:", config.strategy);
+}
+
+function resetConfig() {
+  var reset_config = require("./../plugins/config");
+  console.log("resetConfig | reset_config.trading:", reset_config.trading);
+  config = reset_config;
+  initializeConfig();
+  //controller.refreshTradingConfig(config.trading);
+}
+
+
+// Trading config validation!
+
+function configValid(trading_config) {
+  return (
+    !isNaN(trading_config.maximum_$_per_deal) &&
+    trading_config.maximum_$_per_deal > 1 &&
+    !isNaN(trading_config.maximum_investment) &&
+    trading_config.maximum_investment >= 0 &&
+    !isNaN(trading_config.bid_alignment) &&
+    trading_config.bid_alignment < 1 &&
+    trading_config.bid_alignment > 0.9 &&
+    !isNaN(trading_config.max_number_of_deals_per_trader) &&
+    trading_config.max_number_of_deals_per_trader > 0
+  );
 }
 
 function checkTraders(trader_list, done) {
@@ -604,6 +722,8 @@ function checkTraders(trader_list, done) {
 }
 
 function wakeAll(done) {
+
+  initializeConfig();
 
   db.smembers(trader_main_list, function(error, trader_list) {
     console.log("wakeAll, Waking ("+trader_list.length+") traders...");
@@ -653,18 +773,22 @@ function stopAll(done) {
   done();
 }
 
-function updateAll() {
-  controller.updateTraders(live_traders);
-  controller.updateMarket(market.current);
-  controller.updateWallet(wallet.current);
+function refreshAll() {
+  controller.refreshTraders(live_traders);
+  controller.refreshMarket(market.current);
+  controller.refreshWallet(wallet.current);
+  //controller.refreshTradingConfig(config.trading);
 
-  console.log("trader | updateAll | sheets.length :", sheets.length);
+  console.log("trader | refreshAll | sheets.length :", sheets.length);
   setTimeout(controller.drawSheets(sheets, "full"), 5000);
 }
 
 exports.stopAll = stopAll;
 exports.wakeAll = wakeAll;
 exports.instance = Trader;
-exports.updateAll = updateAll;
+exports.refreshAll = refreshAll;
 exports.pullValueSheet = pullValueSheet;
 exports.addShare = addShare;
+exports.updateConfig = updateConfig;
+exports.updateStrategy = updateStrategy;
+exports.resetConfig = resetConfig;

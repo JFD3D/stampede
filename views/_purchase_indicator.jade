@@ -1,0 +1,4 @@
+table.decision-indicator
+  tr
+    each value, aspect in decision
+      td(data-aspect-value="#{value}")= helpers.sanitizeVariableName(aspect)
