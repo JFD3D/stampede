@@ -1,10 +1,10 @@
 var config = require("./../plugins/config"),
     common = require("./../plugins/common"),
     helpers = require("./../plugins/helpers"),
+    Exchange = require("./../plugins/"+config.exchange.selected+".js"),
     live = require("./../plugins/live"),
-    Bitstamp = require("./../plugins/bitstamp.js"),
-    creds = config.bitstamp_credentials,
-    bitstamp = new Bitstamp(creds.key, creds.secret, creds.client_id),
+    creds = config.credentials[config.exchange.selected],
+    exchange = new Exchange(creds.key, creds.secret, creds.client_id),
     Trader = require("./../models/trader"),
     jade = require("jade"),
     traders_awake = false;
@@ -15,6 +15,8 @@ var config = require("./../plugins/config"),
  *
  *
  */
+
+
 
 exports.index = function(req, res) {
   res.render('index', {
@@ -117,8 +119,8 @@ exports.start = function(req, res) {
 };
 
 exports.balance = function(done) {
-  console.log("Getting ballance for user.");
-  bitstamp.balance(done);
+  //console.log("Getting ballance for user.");
+  exchange.balance(done);
 };
 
 exports.getValueSheet = function(req, res) {
@@ -134,18 +136,18 @@ exports.getValueSheet = function(req, res) {
 
 
 exports.ticker = function(callback) {
-  console.log("Getting ticker for user.");
-  bitstamp.ticker(callback);
+  //console.log("Getting ticker for user.");
+  exchange.ticker(callback);
 };
 
 exports.buy = function(amount, price, callback) {
   console.log("Buying bitcoins | amount, price:", amount, price);
-  bitstamp.buy(amount, price, callback);
+  exchange.buy(amount, price, callback);
 };
 
 exports.sell = function(amount, price, callback) {
   console.log("Selling bitcoins | amount, price:", amount, price);
-  bitstamp.sell(amount, price, callback);
+  exchange.sell(amount, price, callback);
 };
 
 exports.refreshMarket = function(market_data) {
@@ -178,6 +180,7 @@ exports.refreshWallet = function(wallet_data, done) {
   //console.log("^^^^^ Updating wallet with data.", data);
 
   jade.renderFile(__dirname + "/../views/_wallet.jade", {current_wallet: wallet_data, helpers: helpers}, function(error, html) {
+    if (error) console.log("!!!! refreshWallet error:", error);
     if (html) live.sendToAll("stampede_updates", {
       container: "live-balance",
       html: html
@@ -259,9 +262,9 @@ exports.notifyClient = function(data, done) {
 
 
 exports.transactions = function(callback) {
-  bitstamp.transactions(callback);
+  exchange.transactions(callback);
 };
 
 exports.user_transactions = function(callback) {
-  bitstamp.user_transactions(callback);
+  exchange.user_transactions(callback);
 };

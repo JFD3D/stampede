@@ -9,10 +9,10 @@ table
     th Available
     th Reserved
   tr
-    td= "USD"
-    td= "$"+current_wallet.usd_balance.toFixed(2)
-    td= "$"+current_wallet.usd_available.toFixed(2)
-    td= "$"+current_wallet.usd_reserved.toFixed(2)
+    td= helpers.current_currency.toUpperCase()
+    td= current_wallet[helpers.current_currency+"_balance"].toFixed(2)
+    td= current_wallet[helpers.current_currency+"_available"].toFixed(2)
+    td= current_wallet[helpers.current_currency+"_reserved"].toFixed(2)
   tr
     td= "BTC"
     td= current_wallet.btc_balance.toFixed(2)
@@ -23,14 +23,14 @@ table
   tr
     th Cool
     th Initial investment
-    th $ available to traders
-    th $ value
+    th #{helpers.current_currency.toUpperCase()} available to traders
+    th #{helpers.current_currency.toUpperCase()} value
     th Fee
     th Updated at
   tr
     td= parseInt(current_wallet.cool*100) + "%"
-    td= "$"+current_wallet.initial_investment
-    td= "$"+current_wallet.available_to_traders.toFixed(2)
-    td= "$"+current_wallet.usd_value.toFixed(2)
+    td= current_wallet.initial_investment
+    td= current_wallet.available_to_traders.toFixed(2)
+    td= current_wallet.currency_value.toFixed(2)
     td= parseFloat(current_wallet.fee)+"%"
     td= helpers.moment(current_wallet.timestamp).fromNow()

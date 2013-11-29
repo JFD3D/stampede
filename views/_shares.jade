@@ -9,6 +9,6 @@ table
     tr
       td= share.holder
       td= share.pie_share
-      td= "$"+share.invested_$_amount.toFixed(2)
-      td= "$"+share["current_$_value"]
+      td= helpers.current_curency+share.invested_$_amount.toFixed(2)
+      td= helpers.current_curency+share["current_$_value"]
       td= share.profit_loss
