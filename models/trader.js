@@ -531,7 +531,7 @@ function checkMarket(done) {
       var i = 0, new_deal_count = 0;
       market.current.threshold = IMPATIENCE * (market.current.high - market.current.middle) + market.current.middle;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
-      wallet.current.currency_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current[config.exchange.currency+"+balance"] || 0);
+      wallet.current.currency_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current[config.exchange.currency+"_balance"] || 0);
       controller.refreshWallet(wallet.current); 
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
