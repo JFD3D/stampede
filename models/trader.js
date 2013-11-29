@@ -258,11 +258,12 @@ Trader.prototype = {
     
     var structured_decision = {
       trader: me.name,
-      has_free_hands: has_free_hands,
-      available_resources: available_resources,
-      bid_below_threshold: bid_below_threshold,
-      wallet_cool: potential_better_than_heat,
-      final_decision: decision
+      free_hands: has_free_hands,
+      resources: available_resources,
+      threshold: bid_below_threshold,
+      momentum: (!MOMENTUM_ENABLED || market_momentum_significant),
+      cool: potential_better_than_heat,
+      decision: decision
     };
 
     cycle_buy_decisions.push(structured_decision);
@@ -292,18 +293,19 @@ Trader.prototype = {
 
           var structured_decision = {
             trader: me.name,
-            reached_would_sell_at: (deal_for_sale.would_sell_at < current_sale_price),
+            would_sell_price: (deal_for_sale.would_sell_at < current_sale_price),
             not_frozen: (deal_for_sale.order_id != "freeze"),
-            wallet_cool: potential_better_than_heat,
-            amount_managed: (deal_for_sale.amount < wallet.current.btc_balance)
+            cool: potential_better_than_heat,
+            managed: (deal_for_sale.amount < wallet.current.btc_balance)
           };
-          if (TRAILING_STOP_ENABLED) structured_decision.below_trailing_stop = (deal_for_sale.stop_price >= current_sale_price);
+          if (TRAILING_STOP_ENABLED) structured_decision.trailing_stop = (deal_for_sale.stop_price >= current_sale_price);
           cycle_sell_decisions.push(structured_decision);
           var final_decision = (
-            structured_decision.reached_would_sell_at &&
-            structured_decision.below_trailing_stop &&
+            structured_decision.would_sell_price &&
+            structured_decision.trailing_stop &&
             structured_decision.not_frozen
           );
+          structured_decision.decision = final_decision;
           return final_decision;
         });
     if (
@@ -505,11 +507,14 @@ function cycle(done) {
   console.log("Cycle initiated.");
   cycle_buy_decisions = [];
   cycle_sell_decisions = [];
-  // Initialize market and wallet data into global var, exposed on top
-  async.series([
+  var actions = [
     checkWallet,
     checkMarket
-  ], function(errors, results) {
+  ];
+
+  // Initialize market and wallet data into global var, exposed on top
+  async.series(actions, function(errors, results) {
+    //console.log("Unknown variable:", unknown_variable);
     //controller.refreshTradingConfig(config.trading);
     if (done) done(null, market.current);
     controller.refreshDecisions({
