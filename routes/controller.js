@@ -57,7 +57,7 @@ exports.addShare = function(req, res) {
 exports.refreshShares = function(shares) {
 
   jade.renderFile(__dirname + "/../views/_shares.jade", {shares: shares, helpers: helpers}, function(error, html) {
-    //console.log("rendering updateShares | error, html:", error, html);
+    if (error) console.log("rendering updateShares | error, html:", error, html);
     if (html) live.sendToAll("stampede_updates", {
       container: "live-shares",
       html: html

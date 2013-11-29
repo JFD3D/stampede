@@ -563,7 +563,7 @@ function checkMarket(done) {
 
       q.drain = function() {
         var cool_up = INITIAL_GREED,
-            next_check = (market.check_frequency);
+            next_check = (4000 + (Math.random()*5000));
 
         wallet.current.cool = (
           wallet.current.cool < 1 && 
