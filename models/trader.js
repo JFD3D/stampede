@@ -283,13 +283,6 @@ Trader.prototype = {
         candidate_deals = me.deals.filter(function(deal_for_sale) {
           deal_for_sale.stop_price = market.current.high * (1 - (trader_greed/2));
           deal_for_sale.would_sell_at = deal_for_sale.buy_price * (1 + trader_greed + (1 - BID_ALIGN));
-          
-          console.log(
-            "||| trader | isSelling? | would sell at:", deal_for_sale.would_sell_at.toFixed(2), 
-            "NOW could sell at:", current_sale_price.toFixed(2), 
-            //"trailing stop price reached? ($"+deal_for_sale.stop_price.toFixed(2)+"):", (deal_for_sale.stop_price >= current_sale_price),
-            "frozen deal?:", (deal_for_sale.order_id === "freeze")
-          );
 
           var structured_decision = {
             trader: me.name,
@@ -299,13 +292,16 @@ Trader.prototype = {
             managed: (deal_for_sale.amount < wallet.current.btc_balance)
           };
           if (TRAILING_STOP_ENABLED) structured_decision.trailing_stop = (deal_for_sale.stop_price >= current_sale_price);
-          cycle_sell_decisions.push(structured_decision);
+          
           var final_decision = (
             structured_decision.would_sell_price &&
             structured_decision.trailing_stop &&
             structured_decision.not_frozen
           );
+
           structured_decision.decision = final_decision;
+          cycle_sell_decisions.push(structured_decision);
+          console.log("||| trader | isSelling? | structured_decision:", structured_decision);
           return final_decision;
         });
     if (
