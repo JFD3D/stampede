@@ -225,12 +225,12 @@ Trader.prototype = {
         // potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
         profit_from_middle = trader_bid / market.current.middle,
         current_market_greed = (market.current.shift_span / 2),
-        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
+        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
         weighted_heat = wallet.current.cool + trader_greed,
-        potential_better_than_heat = weighted_heat > 1,
+        potential_better_than_heat = (weighted_heat > 1),
         market_momentum_significant = (
           market.current.momentum_record_healthy &&
-          market.current.momentum_average > 0.1
+          market.current.momentum_average > 0
         );
         
     // Decision process takes place on whether to buy
@@ -258,11 +258,12 @@ Trader.prototype = {
     
     var structured_decision = {
       trader: me.name,
-      has_free_hands: has_free_hands,
-      available_resources: available_resources,
-      bid_below_threshold: bid_below_threshold,
-      wallet_cool: potential_better_than_heat,
-      final_decision: decision
+      free_hands: has_free_hands,
+      resources: available_resources,
+      threshold: bid_below_threshold,
+      momentum: (!MOMENTUM_ENABLED || market_momentum_significant),
+      cool: potential_better_than_heat,
+      decision: decision
     };
 
     cycle_buy_decisions.push(structured_decision);
@@ -276,34 +277,31 @@ Trader.prototype = {
         // decide if selling, how much
         current_market_greed = (market.current.shift_span / 2),
         current_sale_price = (market.current.last * BID_ALIGN),
-        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
-        weighted_heat = wallet.current.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN))),
+        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
+        weighted_heat = wallet.current.cool + trader_greed,
         potential_better_than_heat = (weighted_heat > 1),
         candidate_deals = me.deals.filter(function(deal_for_sale) {
           deal_for_sale.stop_price = market.current.high * (1 - (trader_greed/2));
           deal_for_sale.would_sell_at = deal_for_sale.buy_price * (1 + trader_greed + (1 - BID_ALIGN));
-          
-          console.log(
-            "||| trader | isSelling? | would sell at:", deal_for_sale.would_sell_at.toFixed(2), 
-            "NOW could sell at:", current_sale_price.toFixed(2), 
-            //"trailing stop price reached? ($"+deal_for_sale.stop_price.toFixed(2)+"):", (deal_for_sale.stop_price >= current_sale_price),
-            "frozen deal?:", (deal_for_sale.order_id === "freeze")
-          );
 
           var structured_decision = {
             trader: me.name,
-            reached_would_sell_at: (deal_for_sale.would_sell_at < current_sale_price),
+            would_sell_price: (deal_for_sale.would_sell_at < current_sale_price),
             not_frozen: (deal_for_sale.order_id != "freeze"),
-            wallet_cool: potential_better_than_heat,
-            amount_managed: (deal_for_sale.amount < wallet.current.btc_balance)
+            cool: potential_better_than_heat,
+            managed: (deal_for_sale.amount < wallet.current.btc_balance)
           };
-          if (TRAILING_STOP_ENABLED) structured_decision.below_trailing_stop = (deal_for_sale.stop_price >= current_sale_price);
-          cycle_sell_decisions.push(structured_decision);
+          if (TRAILING_STOP_ENABLED) structured_decision.trailing_stop = (deal_for_sale.stop_price >= current_sale_price);
+          
           var final_decision = (
-            structured_decision.reached_would_sell_at &&
-            structured_decision.below_trailing_stop &&
+            structured_decision.would_sell_price &&
+            (!TRAILING_STOP_ENABLED || (deal_for_sale.stop_price >= current_sale_price)) &&
             structured_decision.not_frozen
           );
+
+          structured_decision.decision = final_decision;
+          cycle_sell_decisions.push(structured_decision);
+          console.log("||| trader | isSelling? | structured_decision:", structured_decision);
           return final_decision;
         });
     if (
@@ -505,11 +503,14 @@ function cycle(done) {
   console.log("Cycle initiated.");
   cycle_buy_decisions = [];
   cycle_sell_decisions = [];
-  // Initialize market and wallet data into global var, exposed on top
-  async.series([
+  var actions = [
     checkWallet,
     checkMarket
-  ], function(errors, results) {
+  ];
+
+  // Initialize market and wallet data into global var, exposed on top
+  async.series(actions, function(errors, results) {
+    //console.log("Unknown variable:", unknown_variable);
     //controller.refreshTradingConfig(config.trading);
     if (done) done(null, market.current);
     controller.refreshDecisions({

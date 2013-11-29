@@ -16,7 +16,7 @@ Wallet.prototype = {
   check: function(current_traders, callback) {
     var me = this;
     live_traders = current_traders;
-    me.current.cool = me.cool;
+    me.current.cool = (me.current.cool || me.cool);
 
     controller.balance(function(error, data) {
       if (
