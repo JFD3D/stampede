@@ -225,9 +225,9 @@ Trader.prototype = {
         // potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
         profit_from_middle = trader_bid / market.current.middle,
         current_market_greed = (market.current.shift_span / 2),
-        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
+        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
         weighted_heat = wallet.current.cool + trader_greed,
-        potential_better_than_heat = weighted_heat > 1,
+        potential_better_than_heat = (weighted_heat > 1),
         market_momentum_significant = (
           market.current.momentum_record_healthy &&
           market.current.momentum_average > 0
@@ -277,8 +277,8 @@ Trader.prototype = {
         // decide if selling, how much
         current_market_greed = (market.current.shift_span / 2),
         current_sale_price = (market.current.last * BID_ALIGN),
-        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + (wallet.current.fee / (2*100)),
-        weighted_heat = wallet.current.cool + (1 - (market.current.middle / (market.current.last * BID_ALIGN))),
+        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
+        weighted_heat = wallet.current.cool + trader_greed,
         potential_better_than_heat = (weighted_heat > 1),
         candidate_deals = me.deals.filter(function(deal_for_sale) {
           deal_for_sale.stop_price = market.current.high * (1 - (trader_greed/2));

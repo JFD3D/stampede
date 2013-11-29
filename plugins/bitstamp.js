@@ -1,26 +1,24 @@
 var querystring = require("querystring");
 var https = require('https');
 var _ = require('underscore');
-var crypto = require("crypto");
-
+var crypto = require('crypto');
 
 _.mixin({
   // compact for objects
   compactObject: function(to_clean) {
     _.map(to_clean, function(value, key, to_clean) {
-      if (value === undefined) {
+      if (value === undefined)
         delete to_clean[key];
-      }
     });
     return to_clean;
   }
-});
+});  
 
-var Bitstamp = function(client_id, key, secret) {
+var Bitstamp = function(key, secret, client_id) {
   this.client_id = client_id;
   this.key = key;
   this.secret = secret;
-  self = this
+  var self = this
   _.each(_.functions(self), function(f) {
     self[f] = _.bind(self[f], self);
   });
@@ -124,8 +122,8 @@ Bitstamp.prototype.eur_usd = function(callback) {
 }
 
 // 
-// Trading API
-// (you need to have user / password set)
+// Private API
+// (you need to have key / secret / client ID set)
 // 
 
 Bitstamp.prototype.balance = function(callback) {
@@ -149,28 +147,11 @@ Bitstamp.prototype.cancel_order = function(id, callback) {
 }
 
 Bitstamp.prototype.buy = function(amount, price, callback) {
-  var parameters = {amount: amount, price: price};
-  this._post('buy', callback, parameters);
+  this._post('buy', callback, {amount: amount, price: price});
 }
 
 Bitstamp.prototype.sell = function(amount, price, callback) {
   this._post('sell', callback, {amount: amount, price: price});
-}
-
-Bitstamp.prototype.create_code = function(usd, btc, callback) {
-  this._post('create_code', callback, {usd: usd, btc: btc});
-}
-
-Bitstamp.prototype.check_code = function(code, callback) {
-  this._post('check_code', callback, {code: code});
-}
-
-Bitstamp.prototype.redeem_code = function(code, callback) {
-  this._post('redeem_code', callback, {code: code});
-}
-
-Bitstamp.prototype.sendtouser = function(customer_id, currency, amount, callback) {
-  this._post('sendtouser', callback, {customer_id: customer_id, currency: currency, amount: amount});
 }
 
 Bitstamp.prototype.withdrawal_requests = function(callback) {
@@ -183,6 +164,30 @@ Bitstamp.prototype.bitcoin_withdrawal = function(amount, address, callback) {
 
 Bitstamp.prototype.bitcoin_deposit_address = function(callback) {
   this._post('bitcoin_deposit_address', callback);
+}
+
+Bitstamp.prototype.unconfirmed_btc = function(callback) {
+  this._post('unconfirmed_btc', callback);
+}
+
+Bitstamp.prototype.ripple_withdrawal = function(amount, address, currency, callback) {
+  this._post('ripple_withdrawal', callback, {amount: amount, address: address, currency: currency});
+}
+
+Bitstamp.prototype.ripple_address = function(callback) {
+  this._post('ripple_address', callback);
+}
+
+// These API calls return a 404 as of `Thu Oct 31 13:54:19 CET 2013`
+// even though they are still in the API documentation
+Bitstamp.prototype.create_code = function(usd, btc, callback) {
+  this._post('create_code', callback, {usd: usd, btc: btc});
+}
+Bitstamp.prototype.check_code = function(code, callback) {
+  this._post('check_code', callback, {code: code});
+}
+Bitstamp.prototype.redeem_code = function(code, callback) {
+  this._post('redeem_code', callback, {code: code});
 }
 
 module.exports = Bitstamp;

@@ -1,4 +1,4 @@
-h3 Current $
+h3 Money
 - if (current_wallet.error)
   p(class="error")= current_wallet.error
 
@@ -18,17 +18,19 @@ table
     td= current_wallet.btc_balance.toFixed(2)
     td= current_wallet.btc_available.toFixed(2)
     td= current_wallet.btc_reserved.toFixed(2)
-h3 Calculations
+h3 Information
 table
   tr
     th Cool
     th Initial investment
     th $ available to traders
     th $ value
+    th Fee
     th Updated at
   tr
     td= parseInt(current_wallet.cool*100) + "%"
     td= "$"+current_wallet.initial_investment
     td= "$"+current_wallet.available_to_traders.toFixed(2)
     td= "$"+current_wallet.usd_value.toFixed(2)
+    td= parseFloat(current_wallet.fee)+"%"
     td= helpers.moment(current_wallet.timestamp).fromNow()
