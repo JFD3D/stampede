@@ -33,6 +33,7 @@ exports.index = function(req, res) {
 exports.shares = function(req, res) {
   res.render('shares', {
     title: "Stampede - Shares view",
+    helpers: helpers,
     current_user: req.current_user
   });
 };
