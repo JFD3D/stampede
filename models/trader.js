@@ -295,9 +295,9 @@ Trader.prototype = {
           
           var final_decision = (
             structured_decision.would_sell_price &&
-            structured_decision.trailing_stop &&
+            (!TRAILING_STOP_ENABLED || (deal_for_sale.stop_price >= current_sale_price)) &&
             structured_decision.not_frozen
-          ) ? true : false;
+          );
 
           structured_decision.decision = final_decision;
           cycle_sell_decisions.push(structured_decision);
