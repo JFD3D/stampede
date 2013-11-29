@@ -297,7 +297,7 @@ Trader.prototype = {
             structured_decision.would_sell_price &&
             structured_decision.trailing_stop &&
             structured_decision.not_frozen
-          );
+          ) ? true : false;
 
           structured_decision.decision = final_decision;
           cycle_sell_decisions.push(structured_decision);
