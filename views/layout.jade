@@ -2,6 +2,11 @@ doctype 5
 html
   head
     title= title
+
+    // Favicon
+    link#stampede-favicon(href="/images/favicon.ico", rel="shortcut icon", type="image/x-icon")
+
+    // Base CSS
     link(rel='stylesheet', href='/stylesheets/style.css')
     
     // External libraries
@@ -18,8 +23,6 @@ html
   
   body
     #navigation
-      //.lefter
-        span= title
       block navigation
     .clearer
     #content

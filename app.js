@@ -13,8 +13,10 @@ var express = require('express'),
     sessionStore = new RedisStore(),
     app = express(),
     environment = process.env.NODE_ENV || 'development',
-    auth = require('./plugins/authentication')
-;
+    auth = require('./plugins/authentication'),
+
+    //nasty
+    variable_ender;
 
 // all environments
 app.configure(function(){

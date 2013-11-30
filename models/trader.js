@@ -1,6 +1,6 @@
-var db = require("redis").createClient(6379),
+var config = require("./../plugins/config"),
     async = require("async"),
-    config = require("./../plugins/config"),
+    db = require("redis").createClient(config.redis_port || 6379),
     email = require("./../plugins/email"),
     live_traders = {},
     controller = require("./../routes/controller"),
@@ -67,7 +67,7 @@ function initializeConfig() {
 
   // Trading configuration variables
   MAX_SUM_INVESTMENT = config.trading.maximum_investment;
-  MAX_PER_DEAL = config.trading.maximum_$_per_deal;         
+  MAX_PER_DEAL = config.trading.maximum_currency_per_deal;         
   MAX_DEALS_HELD = 
     config.trading.max_number_of_deals_per_trader;
   INITIAL_GREED = config.trading.greed;   
@@ -219,7 +219,7 @@ Trader.prototype = {
     var me = this,
         decision = false,
         has_free_hands = MAX_DEALS_HELD > me.deals.length,
-        available_resources = (wallet.current.investment < MAX_SUM_INVESTMENT) && (wallet.current.usd_available > MAX_PER_DEAL),
+        available_resources = (wallet.current.investment < MAX_SUM_INVESTMENT) && (wallet.current[config.exchange.currency+"_available"] > MAX_PER_DEAL),
         trader_bid = (market.current.last / BID_ALIGN),
         bid_below_threshold = trader_bid < market.current.threshold,
         // potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
@@ -244,7 +244,7 @@ Trader.prototype = {
       potential_better_than_heat
     ) decision = true;
     
-    console.log(
+    if (decision) console.log(
       "*** Buying deal? ***",
       "\n|- Has hands available (..., me.deals.length):", has_free_hands, me.deals.length,
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
@@ -301,7 +301,7 @@ Trader.prototype = {
 
           structured_decision.decision = final_decision;
           cycle_sell_decisions.push(structured_decision);
-          console.log("||| trader | isSelling? | structured_decision:", structured_decision);
+          if (final_decision) console.log("||| trader | isSelling? | structured_decision:", structured_decision);
           return final_decision;
         });
     if (
@@ -319,7 +319,7 @@ Trader.prototype = {
       decision = true;
     }
 
-    console.log(
+    if (decision) console.log(
       "*** Selling deal? ***",
       "\n|- candidate_deals:", candidate_deals,
       //"\n|- amount is managed (amount):", ((candidate_deals[0] || {}).amount < wallet.current.btc_balance), (candidate_deals[0] || {}).amount,
@@ -347,7 +347,7 @@ Trader.prototype = {
       }
       else {
         console.log("("+me.name+"): Not selling, nor buying.");
-        //controller.notifyClient({message: "("+me.name+") HOLDING (last:$"+market.current.last+")."});
+        //controller.notifyClient({message: "("+me.name+") HOLDING (last:"+config.exchange.currency++market.current.last+")."});
         done();
       }
     }
@@ -367,7 +367,7 @@ Trader.prototype = {
     wallet.current.cool -= market.current.shift_span;
     
     controller.notifyClient({
-      message: "Decided to sell "+deal.amount+"BTC for $"+((market.current.last * BID_ALIGN)*deal.amount)+" at "+deal.aligned_sell_price+" per BTC.", 
+      message: "Decided to sell "+deal.amount+"BTC for "+config.exchange.currency+((market.current.last * BID_ALIGN)*deal.amount)+" at "+config.exchange.currency+deal.aligned_sell_price+" per BTC.", 
       permanent: true
     });
 
@@ -419,7 +419,7 @@ Trader.prototype = {
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= market.current.shift_span;
     wallet.current.investment += deal.buy_price;
-    controller.notifyClient({message: "Decided to buy "+deal.amount+"BTC for $"+MAX_PER_DEAL+" at "+deal.buy_price+" per BTC.", permanent: true});
+    controller.notifyClient({message: "Decided to buy "+deal.amount+"BTC for "+config.exchange.currency+MAX_PER_DEAL+" at "+config.exchange.currency+deal.buy_price+" per BTC.", permanent: true});
     
     controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
@@ -531,7 +531,7 @@ function checkMarket(done) {
       var i = 0, new_deal_count = 0;
       market.current.threshold = IMPATIENCE * (market.current.high - market.current.middle) + market.current.middle;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
-      wallet.current.usd_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current.usd_balance || 0);
+      wallet.current.currency_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current[config.exchange.currency+"_balance"] || 0);
       controller.refreshWallet(wallet.current); 
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
@@ -563,7 +563,7 @@ function checkMarket(done) {
 
       q.drain = function() {
         var cool_up = INITIAL_GREED,
-            next_check = (market.check_frequency);
+            next_check = (4000 + (Math.random()*5000));
 
         wallet.current.cool = (
           wallet.current.cool < 1 && 
@@ -623,10 +623,10 @@ function refreshSheets() {
   console.log("* Updating history sheets.");
   var now = new Date(),
       timestamp = now.getTime(),
-      current_usd_value = wallet.current.usd_value;
-  if (wallet.current.usd_value > 10) {
-    db.sadd(stampede_value_sheet, timestamp+"|"+current_usd_value, function(error, response) {
-      var new_value = {time: timestamp, value: current_usd_value};
+      current_currency_value = wallet.current.currency_value;
+  if (wallet.current.currency_value > 10) {
+    db.sadd(stampede_value_sheet, timestamp+"|"+current_currency_value, function(error, response) {
+      var new_value = {time: timestamp, value: current_currency_value};
       sheets.push(new_value);
       controller.drawSheets(new_value, "incremental");
     });
@@ -640,9 +640,9 @@ function checkWallet(done) {
   wallet.check(live_traders, function() {
     controller.refreshShares(wallet.shares);
     wallet.current.available_to_traders = 
-      (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current.usd_available ? 
+      (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current[config.exchange.currency+"_available"] ? 
         MAX_SUM_INVESTMENT - wallet.current.investment : 
-        wallet.current.usd_available;
+        wallet.current[config.exchange.currency+"_available"];
     if (done) done(null, wallet.current);
   });
 }
@@ -693,8 +693,8 @@ function resetConfig() {
 
 function configValid(trading_config) {
   return (
-    !isNaN(trading_config.maximum_$_per_deal) &&
-    trading_config.maximum_$_per_deal > 1 &&
+    !isNaN(trading_config.maximum_currency_per_deal) &&
+    trading_config.maximum_currency_per_deal > 1 &&
     !isNaN(trading_config.maximum_investment) &&
     trading_config.maximum_investment >= 0 &&
     !isNaN(trading_config.bid_alignment) &&
@@ -709,7 +709,7 @@ function checkTraders(trader_list, done) {
   var q = async.queue(function(trader_name, internal_callback) {
     var trader = new Trader(trader_name);
     trader.wake(function(error, trader_record) {
-      console.log("Trader wakeup: ", trader_name)
+      //console.log("Trader wakeup: ", trader_name)
       internal_callback(error);
     });
   }, 2);
@@ -761,7 +761,7 @@ function addShare(holder, investment) {
     holder.length > 1 &&
     investment > 0
   ) wallet.addShare(holder, investment, function(error, response) {
-    console.log("Added share ($"+investment+") for "+holder+". (..., error, response)", error, response);
+    console.log("Added share ("+config.exchange.currency+investment+") for "+holder+". (..., error, response)", error, response);
   });
 }
 

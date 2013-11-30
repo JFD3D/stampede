@@ -1,9 +1,8 @@
 each trader, trader_name in traders
   .trader(id="#{trader_name}")
-    h4 Deals (#{trader_name}) (#{trader.record.current_deals} / #{"$"+trader.record.current_investment.toFixed(2)})
+    h4 Deals (#{trader_name}) (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase()+" "+trader.record.current_investment.toFixed(2)})
       span  | 
       a.removal(href="#", data-trader="#{trader_name}") Remove
-      .indicators(id="#{trader_name}_indicator") ...
     table
       tr
         //th Deal name
@@ -14,9 +13,9 @@ each trader, trader_name in traders
         th
       each deal in trader.deals
         tr
-          td= "$"+deal.buy_price.toFixed(2)
-          td= "$"+(deal.would_sell_at || 0).toFixed(2)
+          td= deal.buy_price.toFixed(2)
+          td= (deal.would_sell_at || 0).toFixed(2)
           td= deal.amount+" BTC"
-          td= "$"+(deal.stop_price || 0).toFixed(2)
+          td= (deal.stop_price || 0).toFixed(2)
           td
             a.removal(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}") Remove
