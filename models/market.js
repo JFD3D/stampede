@@ -1,6 +1,6 @@
-var db = require("redis").createClient(6379),
-    async = require("async"),
+var async = require("async"),
     config = require("./../plugins/config"),
+    db = require("redis").createClient(config.redis_port || 6379),
     common = require("./../plugins/common"),
     email = require("./../plugins/email"),
     controller = require("./../routes/controller"),

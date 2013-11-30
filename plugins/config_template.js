@@ -51,6 +51,8 @@ exports.auth = {
 
 // Port the app will be running at
 exports.port = 3111;
+// Port for redis store
+exports.redis_port = 6379;
 
 // Hosts, also used for authentication realm
 exports.hosts = {
@@ -60,3 +62,4 @@ exports.hosts = {
 
 // Email addresses of ppl allowed to access this app (needs to be google authenticable)
 exports.allowed_user_emails = ["email@address.com", "email2@address.com"]; 
+
