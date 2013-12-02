@@ -15,6 +15,7 @@
     "nodemailer": "*",
     "underscore": "*",
     "passport": "*",
+    "passport-google-oauth": "*",
     "moving-average": "*",
     "moment": "*",
     "btcchina": "*"
