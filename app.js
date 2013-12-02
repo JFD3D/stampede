@@ -27,8 +27,8 @@ app.configure(function(){
   app.use(express.favicon());
   app.use(express.bodyParser());
   app.use(express.methodOverride());
-  app.use(express.cookieParser('d9aue0c2uq0euc0aw90daspjaxs'));
-  app.use(express.session({ secret: 'ss9809s0a0s0s99s8d9s8a9d8s9ad0s98'+environment, store: sessionStore, key: 'stampede-'+environment+'.sid' }));
+  app.use(express.cookieParser('d9aue0c2uq0euc0aw90daspjaxs'+environment+config.exchange.selected));
+  app.use(express.session({ secret: 'ss9809s0a0s0s99s8d9s8a9d8s9ad0s98'+environment+config.exchange.selected, store: sessionStore, key: 'stampede-'+environment+config.exchange.selected+'.sid' }));
   
   // Authentication module injection
   auth.initiate(app);

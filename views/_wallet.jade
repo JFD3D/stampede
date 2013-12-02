@@ -10,14 +10,14 @@ table
     th Reserved
   tr
     td= helpers.current_currency.toUpperCase()
-    td= current_wallet[helpers.current_currency+"_balance"].toFixed(2)
-    td= current_wallet[helpers.current_currency+"_available"].toFixed(2)
-    td= current_wallet[helpers.current_currency+"_reserved"].toFixed(2)
+    td= (current_wallet[helpers.current_currency+"_balance"] || 0).toFixed(2)
+    td= (current_wallet[helpers.current_currency+"_available"] || 0).toFixed(2)
+    td= (current_wallet[helpers.current_currency+"_reserved"] || 0).toFixed(2)
   tr
     td= "BTC"
-    td= current_wallet.btc_balance.toFixed(2)
-    td= current_wallet.btc_available.toFixed(2)
-    td= current_wallet.btc_reserved.toFixed(2)
+    td= (current_wallet.btc_balance || 0).toFixed(2)
+    td= (current_wallet.btc_available || 0).toFixed(2)
+    td= (current_wallet.btc_reserved || 0).toFixed(2)
 h3 Information
 table
   tr
@@ -30,7 +30,7 @@ table
   tr
     td= parseInt(current_wallet.cool*100) + "%"
     td= current_wallet.initial_investment
-    td= current_wallet.available_to_traders.toFixed(2)
-    td= current_wallet.currency_value.toFixed(2)
+    td= (current_wallet.available_to_traders || 0).toFixed(2)
+    td= (current_wallet.currency_value || 0).toFixed(2)
     td= parseFloat(current_wallet.fee)+"%"
     td= helpers.moment(current_wallet.timestamp).fromNow()
