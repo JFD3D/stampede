@@ -311,7 +311,7 @@ Trader.prototype = {
       potential_better_than_heat
     ) {
       var deal_for_sale = candidate_deals[0];
-      deal.amount = deal_for_sale.amount.toFixed(6);
+      deal.amount = parseFloat(deal_for_sale.amount || 0).toFixed(6);
       deal.name = deal_for_sale.name;
       deal.sell_price = current_sale_price;
       deal.buy_price = deal_for_sale.buy_price;
