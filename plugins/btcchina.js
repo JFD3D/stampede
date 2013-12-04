@@ -109,7 +109,7 @@ Exchange.prototype = {
           };
         }
 
-        callback(null, response);
+        callback(null, response || json);
       });
     });
     req.on('error', function(err) {
