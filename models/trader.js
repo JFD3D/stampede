@@ -379,7 +379,7 @@ Trader.prototype = {
       ) {
         me.removeDeal(deal, function(redis_errors, redis_response) {
           console.log("trader | sell | removeDeal | deal, redis_errors, redis_response:", deal, redis_errors, redis_response);
-          wakeAll(done);
+          done();
         });
         email.send({
           subject: "Stampede - Selling: "+deal.name,

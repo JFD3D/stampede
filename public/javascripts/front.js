@@ -30,7 +30,7 @@ function Stampede() {
         _me.value_sheet.push(incoming.data);
         renderValueSheet(_me.cache.value_sheet);
       } else {
-        console.log("Waiting for full cache update to value_sheet");
+        //console.log("Waiting for full cache update to value_sheet");
         $.get("/value_sheet", function(incoming) {
           if (incoming.value_sheet) {
             _me.cache.value_sheet = incoming.value_sheet;
@@ -51,7 +51,7 @@ socket.on('connect', function(){
 });
 
 socket.on("stampede_updates", function(incoming) {
-  console.log("Incoming:", incoming);
+  //console.log("Incoming:", incoming);
   if (incoming.container && incoming.data) {
     update(incoming.container, incoming.data, incoming.rendering || "html");  
   }
