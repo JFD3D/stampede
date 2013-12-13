@@ -1,0 +1,10 @@
+extends layout
+
+block navigation
+  #live-messages
+    .content
+block content
+  include _shares
+  .block#live-sheets(class="#{class_for_status}")
+    h2 Current #{helpers.current_currency.toUpperCase()} value change
+    .content

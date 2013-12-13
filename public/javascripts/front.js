@@ -36,14 +36,14 @@ function Stampede() {
             _me.cache.value_sheet = incoming.value_sheet;
             renderValueSheet(_me.value_sheet);
           }
-        })
+        });
       }
       
     }
     else {
       console.log("Cache problem.");
     }
-  }
+  };
 }
     
 socket.on('connect', function(){
@@ -56,7 +56,7 @@ socket.on("stampede_updates", function(incoming) {
     update(incoming.container, incoming.data, incoming.rendering || "html");  
   }
   else if (incoming.target && incoming.html) {
-    var target_container = $(incoming.target)
+    var target_container = $(incoming.target);
     target_container.html(incoming.html);
   }
   else if (incoming.container && incoming.html) {
@@ -83,7 +83,6 @@ $(document).ready(function() {
     var action = $(this).attr("data-action") || "/stop",
         button = this;
     
-    //console.log("Triggering action:", action);
     $(button).text((action === "/stop") ? "Stopping trade..." : "Starting trade...");
     $(button).disabled = true;
     $.get(action, function(response) {
@@ -96,7 +95,6 @@ $(document).ready(function() {
       else {
         $(button).text((action === "/stop") ? "STOP" : "START");
       }
-      //console.log("Wakeup response:", response);
       $(button).disabled = false;
     });
   });
@@ -125,7 +123,7 @@ $(document).ready(function() {
 function notify(message, decay) {
   var date = new Date(),
       message_id = "notification_"+parseInt(+date);
-  //console.log("notify | message_id, decay, message:", message_id, decay, message);
+
   $(".content", "#live-messages").prepend("<p class='notification' id='"+message_id+"''><i>"+message+"</i><span style='color:grey'> | "+date+"</span></p>");
   if (decay) {
     $("#"+message_id).fadeOut(decay, function() {
@@ -145,7 +143,6 @@ function update(container, data, rendering) {
   else {
     html += render(data);
   }
-  //notify("Updated "+container+", "+rendering, 4000);
   $(".content", "#"+container)[rendering](html);
 }
 
@@ -155,7 +152,7 @@ function render(data, level) {
   var inner_html= "";
   for (var key in data) {
     if (key === "last") document.title = "$"+data[key];
-    inner_html += (typeof(data[key]) === "object" && data[key] != null) ?
+    inner_html += (typeof(data[key]) === "object" && data[key] !== null) ?
       "<div class='level_"+level+" sub-block "+key+"' data-key='"+key+"'>"+render(data[key], level)+"</div>" :
       ("<p class='"+key+"' data-key='"+key+"'><b>"+capitaliseFirstLetter(key.replace(/_/g, " "))+": </b><span class='value'>"+(data[key] || "None")+"</span></p>");
   }

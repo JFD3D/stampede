@@ -1,14 +1,16 @@
-table
-  tr
-    th Shareholder
-    th Share
-    th Initial investment
-    th Current value
-    th Profit / Loss
-  each share in shares
-    tr
-      td= share.holder
-      td= share.pie_share
-      td= helpers.current_currency.toUpperCase()+" "+share.invested_currency_amount.toFixed(2)
-      td= helpers.current_currency.toUpperCase()+" "+share["current_currency_value"]
-      td= share.profit_loss
+.block#live-shares
+  h2 Live shares
+  - if (current_user.owner)
+    form.block-form(action="shares/add", method="post")
+      label(for="holder_name_input") Shareholder email
+        br
+        input#holder_name_input(type="text", name="holder", placeholder="@")
+      br
+      label(for="investment_input") Amount
+        br
+        input#investment_input(type="text", name="investment", placeholder="00.00")
+      br
+      button(type="Submit") Add
+      .spacer
+  .content
+    p Loading shares information...

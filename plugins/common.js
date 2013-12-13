@@ -44,7 +44,20 @@ Array.prototype.averageByKey = function(key) {
   }  
 };
 
+
+Array.prototype.extremesByKey = function(key) {
+  var copy = this.slice(0);
+  copy.sort(function(a, b) {
+    return (a[key] - b[key]);
+  });
+  return {
+    min: copy[0],
+    max: copy[copy.length - 1]
+  };
+
+};
+
 exports.validateEmail = function(email) { 
   var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(email);
-}
+};
