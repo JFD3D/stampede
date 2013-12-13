@@ -151,7 +151,7 @@ Trader.prototype = {
         db.del(me.name, function() {
           delete live_traders[me.name];
           wakeAll(done);
-        })
+        });
       });
     });
   },
@@ -222,7 +222,7 @@ Trader.prototype = {
         available_resources = (wallet.current.investment < MAX_SUM_INVESTMENT) && (wallet.current[config.exchange.currency+"_available"] > MAX_PER_DEAL),
         trader_bid = (market.current.last / BID_ALIGN),
         bid_below_threshold = trader_bid < market.current.threshold,
-        // potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
+        potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
         profit_from_middle = trader_bid / market.current.middle,
         current_market_greed = (market.current.shift_span / 2),
         trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
@@ -240,7 +240,7 @@ Trader.prototype = {
       available_resources &&
       (!MOMENTUM_ENABLED || market_momentum_significant) &&
       bid_below_threshold &&
-      //potential_better_than_fee &&
+      potential_better_than_fee &&
       potential_better_than_heat
     ) decision = true;
     
@@ -249,7 +249,7 @@ Trader.prototype = {
       "\n|- Has hands available (..., me.deals.length):", has_free_hands, me.deals.length,
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
       "\n|- Bid is below threshold (..., market.current.last, market.current.middle):", bid_below_threshold, market.current.last.toFixed(2), market.current.middle.toFixed(2),
-      // "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span.toFixed(2),
+      "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span.toFixed(2),
       "\n|- Projected profit is better than heat (..., wallet.current.cool, weighted_heat):", potential_better_than_heat, wallet.current.cool.toFixed(2), weighted_heat,
       "\n|- Market momentum is significant (..., momentum_indicator, momentum_healthy)", market_momentum_significant, market.current.momentum_indicator, market.current.momentum_record_healthy,
       "\n_BUY__ Decision:", decision ? "BUYING" : "HOLDING",
@@ -261,6 +261,7 @@ Trader.prototype = {
       free_hands: has_free_hands,
       resources: available_resources,
       threshold: bid_below_threshold,
+      potential: potential_better_than_heat,
       momentum: (!MOMENTUM_ENABLED || market_momentum_significant),
       cool: potential_better_than_heat,
       decision: decision
@@ -268,67 +269,6 @@ Trader.prototype = {
 
     cycle_buy_decisions.push(structured_decision);
 
-    return decision;
-  },
-  
-  isSelling: function(deal) {
-    var me = this,
-        decision = false,
-        // decide if selling, how much
-        current_market_greed = (market.current.shift_span / 2),
-        current_sale_price = (market.current.last * BID_ALIGN),
-        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
-        weighted_heat = wallet.current.cool + trader_greed,
-        potential_better_than_heat = (weighted_heat > 1),
-        candidate_deals = me.deals.filter(function(deal_for_sale) {
-          deal_for_sale.stop_price = market.current.high * (1 - (trader_greed/2));
-          deal_for_sale.would_sell_at = deal_for_sale.buy_price * (1 + trader_greed + (1 - BID_ALIGN));
-
-          var structured_decision = {
-            trader: me.name,
-            would_sell_price: (deal_for_sale.would_sell_at < current_sale_price),
-            not_frozen: (deal_for_sale.order_id != "freeze"),
-            cool: potential_better_than_heat,
-            managed: (deal_for_sale.amount < wallet.current.btc_balance)
-          };
-          if (TRAILING_STOP_ENABLED) structured_decision.trailing_stop = (deal_for_sale.stop_price >= current_sale_price);
-          
-          var final_decision = (
-            structured_decision.would_sell_price &&
-            (!TRAILING_STOP_ENABLED || (deal_for_sale.stop_price >= current_sale_price)) &&
-            structured_decision.not_frozen
-          );
-
-          structured_decision.decision = final_decision;
-          cycle_sell_decisions.push(structured_decision);
-          if (final_decision) console.log("||| trader | isSelling? | structured_decision:", structured_decision);
-          return final_decision;
-        });
-    if (
-      candidate_deals &&
-      candidate_deals.length > 0 &&
-      candidate_deals[0].amount < wallet.current.btc_balance &&
-      potential_better_than_heat
-    ) {
-      var deal_for_sale = candidate_deals[0];
-      deal.amount = parseFloat(deal_for_sale.amount || 0).toFixed(6);
-      deal.name = deal_for_sale.name;
-      deal.sell_price = current_sale_price;
-      deal.buy_price = deal_for_sale.buy_price;
-      deal.order_id = deal_for_sale.order_id;
-      decision = true;
-    }
-
-    if (decision) console.log(
-      "*** Selling deal? ***",
-      "\n|- candidate_deals:", candidate_deals,
-      //"\n|- amount is managed (amount):", ((candidate_deals[0] || {}).amount < wallet.current.btc_balance), (candidate_deals[0] || {}).amount,
-      "\n|- potential_better_than_heat:", potential_better_than_heat,
-      "\n_SALE_ Decision:", decision ? "SELLING" : "HOLDING",
-      "\n******",
-      "\nDeal for sale details:", deal
-    );
-    
     return decision;
   },
   
@@ -342,11 +282,8 @@ Trader.prototype = {
       if (me.isBuying()) {
         me.buy(deal, done);
       }
-      else if (me.isSelling(deal)) {
-        me.sell(deal, done);
-      }
       else {
-        console.log("("+me.name+"): Not selling, nor buying.");
+        //console.log("("+me.name+"): Not buying.");
         //controller.notifyClient({message: "("+me.name+") HOLDING (last:"+config.exchange.currency++market.current.last+")."});
         done();
       }
@@ -357,60 +294,6 @@ Trader.prototype = {
     }
   },
   
-  sell: function(deal, done) {
-    var me = this;
-
-    deal.heat = deal.buy_price / MAX_SUM_INVESTMENT;
-    deal.aligned_sell_price = (market.current.last * BID_ALIGN).toFixed(2);
-    
-    // Align current cool to avoid all sell / buy
-    wallet.current.cool -= market.current.shift_span;
-    
-    controller.notifyClient({
-      message: "Decided to sell "+deal.amount+"BTC for "+config.exchange.currency+((market.current.last * BID_ALIGN)*deal.amount)+" at "+config.exchange.currency+deal.aligned_sell_price+" per BTC.", 
-      permanent: true
-    });
-
-    controller.sell(deal.amount, deal.aligned_sell_price, function(error, order) {
-      console.log("BITSTAMP: Response after attempt to sell | error, order:", error, order);
-      if (
-        order && 
-        order.id
-      ) {
-        me.removeDeal(deal, function(redis_errors, redis_response) {
-          console.log("trader | sell | removeDeal | deal, redis_errors, redis_response:", deal, redis_errors, redis_response);
-          done();
-        });
-        email.send({
-          subject: "Stampede - Selling: "+deal.name,
-          template: "sale.jade",
-          data: {
-            deal: deal,
-            market: market,
-            wallet: wallet
-          }
-        }, function(success) {
-          console.log("Email sending success?:", success);
-          if (error_email_sent) error_email_sent = null;
-        });
-      }
-      else {
-        deal.order_id = "freeze";
-
-        email.send({
-          subject: "Stampede: Error SELLING deal through bitstamp API",
-          template: "error.jade",
-          data: {error:error}
-        }, function(success) {
-          console.log("ERROR Email sending success?:", success);
-          error_email_sent = true;
-        });   
-        done();
-      }
-    });
-    
-  },
-  
   buy: function(deal, done) {
     var me = this;
     deal.buy_price = (market.current.last / BID_ALIGN);
@@ -418,7 +301,7 @@ Trader.prototype = {
     deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= market.current.shift_span;
-    wallet.current.investment += deal.buy_price;
+    //wallet.current.investment += deal.buy_price;
     controller.notifyClient({message: "Decided to buy "+deal.amount+"BTC for "+config.exchange.currency+MAX_PER_DEAL+" at "+config.exchange.currency+deal.buy_price+" per BTC.", permanent: true});
     
     controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
@@ -479,6 +362,204 @@ Trader.prototype = {
   }
 };
 
+// Create a hash by deal name to lookup deals and their traders
+function findByDeal(deal_name) {
+  var deal_sheet = {};
+
+  for (var trader_name in live_traders) {
+    var trader_deals = live_traders[trader_name].deals;
+    if (trader_deals && trader_deals.length > 0) {
+      trader_deals.forEach(function(deal) {
+        deal_sheet[deal.name] = trader_name;
+      });
+    }
+  }
+
+  return live_traders[deal_sheet[deal_name]];
+
+}
+
+
+function checkSelling(done) {
+
+  var all_deals = [];
+
+  for (var trader_name in live_traders) {
+    var trader_deals = live_traders[trader_name].deals;
+    if (trader_deals && trader_deals.length > 0) {
+      all_deals = all_deals.concat(trader_deals);
+    }
+    else {
+      console.log("sellingCheck | "+trader_name+" has no deals.");
+    }
+  }
+
+  // Get min and max deal from all, initialize a combined deal for further calc
+  var borders = all_deals.extremesByKey("buy_price"),
+      combined_deal = {
+        currency_amount: 0,
+        amount: 0,
+        names: []
+      };
+
+  //console.log("sellingCheck | borders:", borders);
+
+
+  // Calculate weighted price for deals from extremes (lowes and highest)
+  // We will sell them at once if the weighted average + fees and profit is below market last
+
+  ["min", "max"].forEach(function(extreme) {
+    var current = borders[extreme];
+    if (
+      current && 
+      combined_deal.names.indexOf(current.name) === -1
+    ) {
+      combined_deal.currency_amount += (current.buy_price * current.amount);
+      combined_deal.amount += current.amount;
+      combined_deal.names.push(current.name);
+      //console.log("sellingCheck | testing trader findByDeal (trader_name):", findByDeal(current.name).name);
+    }
+    else {
+      console.log("sellingCheck | deal combination skip | current, combined_deal.names:", current, combined_deal);
+    }
+  });
+
+  // decide if selling, and adjust the current price
+  var decision = false,
+
+      // Deal independent calculations
+      current_market_greed = (market.current.shift_span / 2),
+      current_sale_price = (market.current.last * BID_ALIGN),
+      trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
+      weighted_heat = wallet.current.cool + trader_greed,
+      potential_better_than_heat = (weighted_heat > 1);
+
+  // Deal dependent calculations
+  combined_deal.stop_price = market.current.high * (1 - (trader_greed/2));
+  if (combined_deal.amount > 0) combined_deal.would_sell_at = (combined_deal.currency_amount / combined_deal.amount) * (1 + trader_greed + (1 - BID_ALIGN));
+
+  // Create structured decision object (rendered on client), used for consolidated decision check
+  var structured_decision = {
+    trader: "Combined sell at ("+(combined_deal.would_sell_at || 0).toFixed(2)+")",
+    would_sell_price: (combined_deal.would_sell_at < current_sale_price),
+    cool: potential_better_than_heat,
+    managed: (combined_deal.amount < wallet.current.btc_balance)
+  };
+
+  // If trailing stop enabled, add to structured decision
+  if (TRAILING_STOP_ENABLED) structured_decision.trailing_stop = (combined_deal.stop_price >= current_sale_price);
+        
+
+  // Check trailing stop, if enabled affect decision
+  structured_decision.decision = (
+    structured_decision.would_sell_price &&
+    (!TRAILING_STOP_ENABLED || (combined_deal.stop_price >= current_sale_price))
+  );
+
+  // Add the decision to array which will be rendered on client
+  cycle_sell_decisions.push(structured_decision);
+
+  // Log the success!
+  if (structured_decision.decision) console.log("||| trader | sellingCheck | isSelling? | structured_decision:", structured_decision);
+
+  // Check all outstanding factors and make final decision
+  if (
+    structured_decision.decision &&
+    combined_deal.names.length > 0 &&
+    combined_deal.amount < wallet.current.btc_balance &&
+    potential_better_than_heat
+  ) {
+    // var deal_for_sale = candidate_deals[0];
+    // deal.amount = parseFloat(deal_for_sale.amount || 0).toFixed(6);
+    // deal.name = deal_for_sale.name;
+    // deal.sell_price = current_sale_price;
+    // deal.buy_price = deal_for_sale.buy_price;
+    // deal.order_id = deal_for_sale.order_id;
+    decision = true;
+    sell(combined_deal, done);
+  } else done(null, "Not selling.");
+
+  if (decision) console.log(
+    "*** Selling deal? ***",
+    "\n|- amount is managed (amount):", (combined_deal.amount < wallet.current.btc_balance), combined_deal.amount,
+    "\n|- potential_better_than_heat:", potential_better_than_heat,
+    "\n_SALE_ Decision:", decision ? "SELLING" : "HOLDING",
+    "\n******",
+    "\nDeal evaluated details:", combined_deal
+  );
+}
+
+function sell(deal, done) {
+
+  deal.heat = deal.buy_price / MAX_SUM_INVESTMENT;
+  deal.aligned_sell_price = (market.current.last * BID_ALIGN).toFixed(2);
+  
+  // Align current cool to avoid all sell / buy
+  wallet.current.cool -= market.current.shift_span;
+  
+  controller.notifyClient({
+    message: "Decided to sell "+deal.amount+"BTC for "+config.exchange.currency+((market.current.last * BID_ALIGN)*deal.amount)+" at "+config.exchange.currency+deal.aligned_sell_price+" per BTC.", 
+    permanent: true
+  });
+
+  controller.sell(deal.amount, deal.aligned_sell_price, function(error, order) {
+    console.log("BITSTAMP: Response after attempt to sell | error, order:", error, order);
+    if (
+      order && 
+      order.id
+    ) {
+      // Create asynchronous queue that will purge sold deals from redis and live traders
+      var queue = async.queue(function(deal_name, internal_callback) {
+        var trader = findByDeal(deal_name);
+        if (trader) {
+          trader.removeDeal({name: deal_name}, internal_callback);
+        } 
+        else {
+          console.log("!! Associated trader not found for:"+deal_name);
+          internal_callback("Unable to find the trader for deal: "+deal_name, null);
+        }
+      }, 2);
+
+      // Populate the async queue with deals to process
+      deal.names.forEach(function(deal_name) { queue.push(deal_name); });
+
+      email.send({
+        subject: "Stampede - Selling: "+deal.name,
+        template: "sale.jade",
+        data: {
+          deal: deal,
+          market: market,
+          wallet: wallet
+        }
+      }, function(success) {
+        console.log("Email sending success?:", success);
+        if (error_email_sent) error_email_sent = null;
+      });
+
+      // Once queue drained call the last callback
+      queue.drain = function() {
+        done();
+      };
+
+    }
+    else {
+      deal.order_id = "freeze";
+
+      email.send({
+        subject: "Stampede: Error SELLING deal through bitstamp API",
+        template: "error.jade",
+        data: {error:error}
+      }, function(success) {
+        console.log("ERROR Email sending success?:", success);
+        error_email_sent = true;
+      });   
+      done();
+    }
+  });
+  
+}
+
+
 //"deal|1.1|332|338"
 function parseDeal(deal) {
   var original = ""+deal,
@@ -505,7 +586,8 @@ function cycle(done) {
   cycle_sell_decisions = [];
   var actions = [
     checkWallet,
-    checkMarket
+    checkMarket,
+    checkSelling
   ];
 
   // Initialize market and wallet data into global var, exposed on top
@@ -536,53 +618,30 @@ function checkMarket(done) {
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
         
-        // Create ad hoc deals for amount bought manually
-        if (
-          //btc_to_distribute > 0.01 &&
-          1 > 2 && // knocking off ad hoc deal creation for now
-          live_traders[trader_name].deals.length < MAX_DEALS_HELD &&
-          wallet.current.available_to_traders > MAX_PER_DEAL
-        ) {
-          var new_deal = {
-            buy_price: market.current.last,
-            amount: btc_to_distribute < (MAX_PER_DEAL / market.current.last) ? btc_to_distribute : (MAX_PER_DEAL / market.current.last),
-            sell_price: market.current.last * (1 + (market.current.shift_span / 2)),
-            order_id: "ad_hoc"
-          };
-          btc_to_distribute -= new_deal.amount;
-          wallet.current.btc_amount_managed += new_deal.amount;
-          trader.recordDeal(new_deal, function(redis_error, redis_response) {
-            new_deal_count++;
-            //console.log("trader | recordDeal | Ad hoc deal recorded | new_deal, redis_error, redis_response:", new_deal, redis_error, redis_response);
-          });
-        }
+        // Decide if buying
         trader.decide(internal_callback);
-      }, 2);
+      }, 1);
 
       for (var trader_name in live_traders) q.push(trader_name);
 
       q.drain = function() {
         var cool_up = INITIAL_GREED,
-            next_check = (4000 + (Math.random()*5000));
+            next_check = (6000 + (Math.random()*5000));
 
         wallet.current.cool = (
           wallet.current.cool < 1 && 
           cool_up < (1 - wallet.current.cool)
         ) ? wallet.current.cool + cool_up : 1;
 
-        console.log("... Cycle(wallet, market) CHECK again in:", (next_check / 1000).toFixed(2), "seconds.");
-        
+        console.log("... Cycle(wallet, market) CHECK again in:", (next_check / 1000).toFixed(2), "seconds. - "+(new Date())+".");
+            
         if (timer) clearTimeout(timer);
         timer = setTimeout(cycle, next_check);
 
         if (done) done(null, market.current);
 
-        if (new_deal_count > 0) {
-          console.log("("+new_deal_count+") <-------------------------- New deals recorded, refreshing data.");
-          wakeAll();
-        }
         refreshSheets();
-      }
+      };
     }
     else {
       console.log("No traders present.");
@@ -609,7 +668,7 @@ function checkSheets(done) {
         parseFloat(current[1]) > 10
       ) sheets.push({time: parseInt(current[0]), value: parseFloat(current[1])});
     });
-    sheets.sort(function(a, b) {return a.time - b.time});
+    sheets.sort(function(a, b) {return a.time - b.time;});
     controller.drawSheets(sheets, "full");
     done(error, sheets);
   });
@@ -667,7 +726,7 @@ function updateConfig(new_config) {
   else {
     controller.notifyClient({message: "Unable to update config, values are invalid."});
   }
-};
+}
 
 
 function updateStrategy(new_config) {
@@ -716,7 +775,7 @@ function checkTraders(trader_list, done) {
   q.drain = function() {
     console.log("Queue drained in checkTraders.");
     done(null, live_traders);
-  }
+  };
   trader_list.forEach(function(trader_name) {
     q.push(trader_name);
   });

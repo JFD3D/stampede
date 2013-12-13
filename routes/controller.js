@@ -251,7 +251,7 @@ exports.updateTradingConfig = function(req, res) {
 exports.resetTradingConfig = function(req, res) {
   Trader.resetConfig();
   res.redirect("/");
-}
+};
 
 exports.notifyClient = function(data, done) {
   var outgoing = data;

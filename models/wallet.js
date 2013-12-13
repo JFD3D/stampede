@@ -9,7 +9,6 @@ function Wallet() {
   this.current = {};
   this.shares = [];
   this.cool = 1;
-  this.check_frequency = 5000;
 }
 
 Wallet.prototype = {
@@ -61,7 +60,7 @@ Wallet.prototype = {
     var me = this;
     me.shares = [];
     me.current.initial_investment = 0;
-    console.log("wallet | summarizeShares | currency_value:", me.current.currency_value);
+    //console.log("wallet | summarizeShares | currency_value:", me.current.currency_value);
     db.smembers("stampede_shares", function(errors, share_list) {
       if (
         share_list && 
