@@ -21,6 +21,7 @@ var config = require("./../plugins/config"),
 exports.index = function(req, res) {
   res.render('index', {
     title: 'Stampede',
+    current_user: req.current_user,
     traders_awake: traders_awake,
     trading_config: config.trading,
     trading_strategies: config.strategy,
@@ -31,7 +32,7 @@ exports.index = function(req, res) {
 };
 
 exports.shares = function(req, res) {
-  res.render('shares', {
+  res.render('share_index', {
     title: "Stampede - Shares view",
     helpers: helpers,
     current_user: req.current_user
@@ -48,15 +49,13 @@ exports.addShare = function(req, res) {
 
   if (input_valid) Trader.addShare(holder, investment);
 
-  res.send({
-    message: (input_valid ? "Share submitted" : "Share NOT sumbitted, input invalid.")
-  });
+  res.redirect("/shares");
 
 };
 
 exports.refreshShares = function(shares) {
 
-  jade.renderFile(__dirname + "/../views/_shares.jade", {shares: shares, helpers: helpers}, function(error, html) {
+  jade.renderFile(__dirname + "/../views/_shares_table.jade", {shares: shares, helpers: helpers}, function(error, html) {
     if (error) console.log("rendering updateShares | error, html:", error, html);
     if (html) live.sendToAll("stampede_updates", {
       container: "live-shares",

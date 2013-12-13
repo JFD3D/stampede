@@ -43,7 +43,7 @@ Wallet.prototype = {
       (live_traders[trader_name].record || {}).current_investment = 0;
       (live_traders[trader_name].record || {}).current_deals = current_trader_deals.length;
       current_trader_deals.forEach(function(current_trader_deal) {
-            deal_buy_price = current_trader_deal.buy_price,
+        var deal_buy_price = current_trader_deal.buy_price,
             deal_amount = current_trader_deal.amount;
         me.current.btc_amount_managed += parseFloat(deal_amount);
         if (
@@ -52,6 +52,8 @@ Wallet.prototype = {
         live_traders[trader_name].record.current_investment += 
           isNaN(deal_amount * deal_buy_price) ? 0 : (deal_amount * deal_buy_price);
       });
+
+      me.current.average_buy_price = (me.current.investment) / (me.current.btc_amount_managed);
     }
     me.summarizeShares(callback);
   },

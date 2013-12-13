@@ -7,7 +7,7 @@ block content
   - var class_for_status = (traders_awake == true ? "active" : "inactive")
   .clearer  
   .block#live-traders(class="#{class_for_status}")
-    h2 Traders
+    h2 &#9801; Traders
     .clearer
     button.trader-switch.lefter(data-action=(traders_awake == true ? "/stop" : "/start"))= (traders_awake == true ? "STOP" : "START")
     form.lefter(action="trader/create", method="post", style="margin-bottom: 10px;")
@@ -15,10 +15,10 @@ block content
     .clearer
     .content
   .block#live-balance(class="#{class_for_status}")
-    h2 Wallet
+    h2 &#2947; Wallet
     .content
   .block#live-ticker(class="#{class_for_status}")
-    h2 Market
+    h2 &cap; Market
     .content
   .block#decision-indicators(class="#{class_for_status}")
     h2 Trading indicators
@@ -26,6 +26,22 @@ block content
   .block#live-sheets(class="#{class_for_status}")
     h2 Current value change
     .content
+  .block#live-shares
+    h2 Live shares
+    - if (current_user && current_user.owner)
+      form.block-form(action="shares/add", method="post")
+        label(for="holder_name_input") Shareholder email
+          br
+          input#holder_name_input(type="text", name="holder", placeholder="@")
+        br
+        label(for="investment_input") Amount
+          br
+          input#investment_input(type="text", name="investment", placeholder="00.00")
+        br
+        button(type="Submit") Add
+        .spacer
+    .content
+      p Loading shares information...
   .block#live-trading-config(class="#{class_for_status}")
     h2 Trading configuration
     include _trading_config

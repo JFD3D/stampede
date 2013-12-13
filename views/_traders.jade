@@ -7,15 +7,15 @@ each trader, trader_name in traders
       tr
         //th Deal name
         th Buy price
-        th Would sell at
+        //- th Would sell at
         th Amount
-        th Trailing stop
+        //- th Trailing stop
         th
       each deal in trader.deals
         tr
           td= deal.buy_price.toFixed(2)
-          td= (deal.would_sell_at || 0).toFixed(2)
+          //- td= (deal.would_sell_at || 0).toFixed(2)
           td= deal.amount+" BTC"
-          td= (deal.stop_price || 0).toFixed(2)
+          //- td= (deal.stop_price || 0).toFixed(2)
           td
             a.removal(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}") Remove

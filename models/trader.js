@@ -625,8 +625,13 @@ function checkMarket(done) {
       for (var trader_name in live_traders) q.push(trader_name);
 
       q.drain = function() {
+        //console.log("Current env:", process.env);
         var cool_up = INITIAL_GREED,
-            next_check = (6000 + (Math.random()*3000));
+            next_check = (
+              (
+                (process.env.NODE_ENV || "development") === "development" ? 10000 : 4000) +
+                (Math.random()*3000)
+            );
 
         wallet.current.cool = (
           wallet.current.cool < 1 && 
