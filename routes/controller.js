@@ -63,7 +63,7 @@ exports.refreshShares = function(shares) {
     });
   });
 
-}
+};
 
 exports.addTrader = function(req, res) {
   var trader = new Trader.instance();

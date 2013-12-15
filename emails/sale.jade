@@ -1,10 +1,12 @@
 h2 Deal sale
 p
-  - if (deal)
-    h3= deal.name
+  - if (deal && deal.names)
+    h3 Sale combined from:
+    each deal_name in deal.names
+      p= deal_name
     p Amount: #{deal.amount} BTC
     p Bought for: $#{(deal.amount * deal.buy_price)}
-    p Sold (Aligned sale price): $#{deal.aligned_sell_price}
+    p Sold for (Aligned sale price): $#{deal.amount * deal.aligned_sell_price}
 p
   - if (market.current)
     h3 Current market details
