@@ -54,7 +54,6 @@ Array.prototype.extremesByKey = function(key) {
     min: copy[0],
     max: copy[copy.length - 1]
   };
-
 };
 
 exports.validateEmail = function(email) { 

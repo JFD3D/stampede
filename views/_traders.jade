@@ -3,7 +3,7 @@ each trader, trader_name in traders
     h4 Deals (#{trader_name}) (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase()+" "+trader.record.current_investment.toFixed(2)})
       span  | 
       a.removal(href="#", data-trader="#{trader_name}") Remove
-    table
+    table.deals
       tr
         //th Deal name
         th Buy price
@@ -14,6 +14,10 @@ each trader, trader_name in traders
       each deal in trader.deals
         tr
           td= deal.buy_price.toFixed(2)
+            - if (deal.is_lowest)
+              span.lowest  (Min)
+            - if (deal.is_highest)
+              span.highest  (Max)
           //- td= (deal.would_sell_at || 0).toFixed(2)
           td= deal.amount+" BTC"
           //- td= (deal.stop_price || 0).toFixed(2)
