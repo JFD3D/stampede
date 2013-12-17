@@ -218,28 +218,57 @@ Trader.prototype = {
   isBuying: function() {
     var me = this,
         decision = false,
+
+        // Get the lowest price of deal bought
+        all_deals = getAllDeals(),
+        borders = all_deals.extremesByKey("buy_price"),
+        lowest_buy_price = borders.min.buy_price || 0,
+
+        // Check if trader has available spot for another deal
         has_free_hands = MAX_DEALS_HELD > me.deals.length,
-        available_resources = (wallet.current.investment < MAX_SUM_INVESTMENT) && (wallet.current[config.exchange.currency+"_available"] > MAX_PER_DEAL),
+        
+        // Available resources, compare investment and current available in wallet
+        available_resources = 
+          (wallet.current.investment < MAX_SUM_INVESTMENT) && 
+          (wallet.current[config.exchange.currency+"_available"] > MAX_PER_DEAL),
+
+        // Calculate trader bid (aligned by bid alignment to make us competitive when bidding)
         trader_bid = (market.current.last / BID_ALIGN),
+
+        // Check if aligned bid is below threshold (which combines the impatience variable)
         bid_below_threshold = trader_bid < market.current.threshold,
+
+        // EXPERIMENTAL: If existing deals, check that I am buying for price lower than the lowest existing
+        bid_below_lowest = (lowest_buy_price > 0) ? (trader_bid < lowest_buy_price) : bid_below_threshold,
+
+        // Check if current market span (high - low / last) is favorable and wider than fee
         potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
-        profit_from_middle = trader_bid / market.current.middle,
+
+        // What is the current market acceleration
         current_market_greed = (market.current.shift_span / 2),
+
+        // What upside is the trader looking for
         trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
+
+        // If current wallet cool combined with greed exceeds 1
         weighted_heat = wallet.current.cool + trader_greed,
         potential_better_than_heat = (weighted_heat > 1),
+
+        // Check if market has positive momentum
         market_momentum_significant = (
           market.current.momentum_record_healthy &&
           market.current.momentum_average > 0
         );
-        
+    
+    // console.log("isBuying | all_deals.length, borders:", all_deals.length, borders);
+
     // Decision process takes place on whether to buy
-    // 
     if (
       has_free_hands &&
       available_resources &&
       (!MOMENTUM_ENABLED || market_momentum_significant) &&
       bid_below_threshold &&
+      bid_below_lowest &&
       potential_better_than_fee &&
       potential_better_than_heat
     ) decision = true;
@@ -249,6 +278,7 @@ Trader.prototype = {
       "\n|- Has hands available (..., me.deals.length):", has_free_hands, me.deals.length,
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
       "\n|- Bid is below threshold (..., market.current.last, market.current.middle):", bid_below_threshold, market.current.last.toFixed(2), market.current.middle.toFixed(2),
+      "\n|- Bid is lowest among deals (..., lowest_buy_price):", bid_below_lowest, lowest_buy_price.toFixed(2),
       "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span.toFixed(2),
       "\n|- Projected profit is better than heat (..., wallet.current.cool, weighted_heat):", potential_better_than_heat, wallet.current.cool.toFixed(2), weighted_heat,
       "\n|- Market momentum is significant (..., momentum_indicator, momentum_healthy)", market_momentum_significant, market.current.momentum_indicator, market.current.momentum_record_healthy,
@@ -261,6 +291,7 @@ Trader.prototype = {
       free_hands: has_free_hands,
       resources: available_resources,
       threshold: bid_below_threshold,
+      lowest: bid_below_lowest,
       potential: potential_better_than_heat,
       momentum: (!MOMENTUM_ENABLED || market_momentum_significant),
       cool: potential_better_than_heat,
@@ -297,14 +328,14 @@ Trader.prototype = {
   buy: function(deal, done) {
     var me = this;
     deal.buy_price = (market.current.last / BID_ALIGN);
-    deal.amount = (MAX_PER_DEAL / deal.buy_price).toFixed(7);
+    deal.amount = (MAX_PER_DEAL / deal.buy_price);
     deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= market.current.shift_span;
     //wallet.current.investment += deal.buy_price;
     controller.notifyClient({message: "Decided to buy "+deal.amount+"BTC for "+config.exchange.currency+MAX_PER_DEAL+" at "+config.exchange.currency+deal.buy_price+" per BTC.", permanent: true});
     
-    controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
+    controller.buy(deal.amount.toFixed(7), (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
       if (
         order &&
@@ -314,7 +345,7 @@ Trader.prototype = {
         me.recordDeal(deal, done);
         email.send({
           to: config.owner.email,
-          subject: "Stampede - Buying: "+deal.amount+"BTC",
+          subject: "Stampede - Buying: "+deal.amount.toFixed(7)+"BTC",
           template: "purchase.jade",
           data: {
             deal: deal,
@@ -382,23 +413,28 @@ function findByDeal(deal_name) {
 
 }
 
+function highlightExtremeDeals() {
+  var all_deals = getAllDeals(),
+      borders = all_deals.extremesByKey("buy_price");
+
+  if (
+    borders.min && 
+    borders.max &&
+    borders.min.name !== borders.max.name
+  ) all_deals.forEach(function(deal) {
+    deal.is_highest = (deal.name === borders.max.name);    
+    deal.is_lowest = (deal.name === borders.min.name);
+  });
+}
 
 function checkSelling(done) {
 
-  var all_deals = [];
+  var all_deals = getAllDeals(),
 
-  for (var trader_name in live_traders) {
-    var trader_deals = live_traders[trader_name].deals;
-    if (trader_deals && trader_deals.length > 0) {
-      all_deals = all_deals.concat(trader_deals);
-    }
-    else {
-      console.log("sellingCheck | "+trader_name+" has no deals.");
-    }
-  }
+      // Get min and max deal from all, initialize a combined deal for further calc
+      borders = all_deals.extremesByKey("buy_price"),
 
-  // Get min and max deal from all, initialize a combined deal for further calc
-  var borders = all_deals.extremesByKey("buy_price"),
+
       combined_deal = {
         currency_amount: 0,
         amount: 0,
@@ -564,6 +600,21 @@ function sell(deal, done) {
 }
 
 
+function getAllDeals() {
+  var all_deals = [];
+
+  for (var trader_name in live_traders) {
+    var trader_deals = live_traders[trader_name].deals;
+    if (trader_deals && trader_deals.length > 0) {
+      all_deals = all_deals.concat(trader_deals);
+    }
+    else {
+      console.log("sellingCheck | "+trader_name+" has no deals.");
+    }
+  }
+  return all_deals;  
+}
+
 //"deal|1.1|332|338"
 function parseDeal(deal) {
   var original = ""+deal,
@@ -596,9 +647,14 @@ function cycle(done) {
 
   // Initialize market and wallet data into global var, exposed on top
   async.series(actions, function(errors, results) {
-    //console.log("Unknown variable:", unknown_variable);
-    //controller.refreshTradingConfig(config.trading);
+
+    // Add attributes to lowest and highest deals to show up in view
+    highlightExtremeDeals();
+
+    // Final callback returning default market.current
     if (done) done(null, market.current);
+    
+    // Update client on performed decisions
     controller.refreshDecisions({
       buy_decisions: cycle_buy_decisions,
       sell_decisions: cycle_sell_decisions

@@ -113,36 +113,17 @@ table {
   background-color: red;
 }
 
+.deals .highest {
+  color: red;
+}
+
+.deals .lowest {
+  color: seagreen;
+}
+
 .container, .container b {
   font-size: 70%;
   color: #ccc;
-}
-
-#live-traders .record, #live-traders .deals .name {
-  cursor: pointer;
-}
-
-#live-traders .record:hover, #live-traders .deals .name:hover {
-  background-color: #FF5300;
-}
-
-#live-traders .book, 
-#live-traders .title b, 
-#live-traders .id_counter, 
-#live-traders .book_prefix, 
-#live-traders .trader_prefix,
-#live-traders .main_list 
-{
-  display: none;
-}
-
-.deals .sub-block {
-  font-size: 90%;
-  color: #333;
-  border: 1px solid #ccc;
-  padding: .5em;
-  margin-bottom: .5em;
-  background-color: #fff;
 }
 
 #live-traders .level_1, #live-shares .level_1 {
