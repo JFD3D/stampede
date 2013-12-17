@@ -328,14 +328,14 @@ Trader.prototype = {
   buy: function(deal, done) {
     var me = this;
     deal.buy_price = (market.current.last / BID_ALIGN);
-    deal.amount = (MAX_PER_DEAL / deal.buy_price).toFixed(7);
+    deal.amount = (MAX_PER_DEAL / deal.buy_price);
     deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= market.current.shift_span;
     //wallet.current.investment += deal.buy_price;
     controller.notifyClient({message: "Decided to buy "+deal.amount+"BTC for "+config.exchange.currency+MAX_PER_DEAL+" at "+config.exchange.currency+deal.buy_price+" per BTC.", permanent: true});
     
-    controller.buy(deal.amount, (deal.buy_price).toFixed(2), function(error, order) {
+    controller.buy(deal.amount.toFixed(7), (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
       if (
         order &&
@@ -345,7 +345,7 @@ Trader.prototype = {
         me.recordDeal(deal, done);
         email.send({
           to: config.owner.email,
-          subject: "Stampede - Buying: "+deal.amount+"BTC",
+          subject: "Stampede - Buying: "+deal.amount.toFixed(7)+"BTC",
           template: "purchase.jade",
           data: {
             deal: deal,
