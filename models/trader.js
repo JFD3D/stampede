@@ -540,7 +540,7 @@ function sell(deal, done) {
     permanent: true
   });
 
-  controller.sell(deal.amount, deal.aligned_sell_price, function(error, order) {
+  controller.sell(deal.amount.toFixed(7), deal.aligned_sell_price, function(error, order) {
     console.log("BITSTAMP: Response after attempt to sell | error, order:", error, order);
     if (
       order && 
