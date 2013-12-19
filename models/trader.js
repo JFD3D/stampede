@@ -28,6 +28,8 @@ var config = require("./../plugins/config"),
     trader_main_list = "stampede_traders",        // Main repository in redis for keeping list of traders
     stampede_value_sheet = "stampede_usd_value",  // Repository unsorted list for USD value history
     error_email_sent,
+    cycle_counter = 0,    // For simulation purposes so that notification is only emitted
+    broadcast_time,       // Will compute leftover on this
     cycle_sell_decisions = [],
     cycle_buy_decisions = [],
 
@@ -105,6 +107,7 @@ function Trader(name) {
   this.trader_prefix = "trader_";
   this.book_prefix = "book_for_";
   this.main_list = trader_main_list;
+  this.deals = [];
 
 }
 
@@ -286,6 +289,8 @@ Trader.prototype = {
       "\n******"
     );
     
+    //console.log("Market from isBuying:", market.current);
+
     var structured_decision = {
       trader: me.name,
       free_hands: has_free_hands,
@@ -310,7 +315,10 @@ Trader.prototype = {
       market.current.last > 10
     ) {
       var deal = {};
-      if (me.isBuying()) {
+      if (
+        me.isBuying() && 
+        !me.simulated
+      ) {
         me.buy(deal, done);
       }
       else {
@@ -333,7 +341,10 @@ Trader.prototype = {
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= market.current.shift_span;
     //wallet.current.investment += deal.buy_price;
-    controller.notifyClient({message: "Decided to buy "+deal.amount+"BTC for "+config.exchange.currency+MAX_PER_DEAL+" at "+config.exchange.currency+deal.buy_price+" per BTC.", permanent: true});
+    controller.notifyClient({
+      message: "Decided to buy "+deal.amount.toFixed(7)+"BTC for "+config.exchange.currency.toUpperCase()+" "+MAX_PER_DEAL+" at "+config.exchange.currency.toUpperCase()+" "+deal.buy_price.toFixed(2)+" per BTC.", 
+      permanent: true
+    });
     
     controller.buy(deal.amount.toFixed(7), (deal.buy_price).toFixed(2), function(error, order) {
       console.log("trader | buy | order, error:", order, error);
@@ -343,7 +354,7 @@ Trader.prototype = {
       ) {
         deal.order_id = order.id;
         me.recordDeal(deal, done);
-        email.send({
+        if (!config.simulation) email.send({
           to: config.owner.email,
           subject: "Stampede - Buying: "+deal.amount.toFixed(7)+"BTC",
           template: "purchase.jade",
@@ -358,7 +369,7 @@ Trader.prototype = {
         });        
       }
       else {
-        email.send({
+        if (!config.simulation) email.send({
           to: config.owner.email,
           subject: "Stampede: Error BUYING deal through bitstamp API",
           template: "error.jade",
@@ -381,10 +392,11 @@ Trader.prototype = {
   
   removeDeal: function(deal, callback) {
     var me = this,
-        deal_position = me.deals.lookupIndex("name", deal.name);
+        deal_name = deal.name,
+        deal_position = me.deals.lookupIndex("name", deal_name);
     if (deal_position > -1) {
       me.deals.splice(deal_position, 1);
-      db.srem(me.record.book, deal.name, callback);
+      db.srem(me.record.book, deal_name, callback);
     }
     else {
       console.log("!!! trader | removeDeal | Unable to find deal for removal | deal", deal);
@@ -459,7 +471,7 @@ function checkSelling(done) {
       //console.log("sellingCheck | testing trader findByDeal (trader_name):", findByDeal(current.name).name);
     }
     else {
-      console.log("sellingCheck | deal combination skip | current, combined_deal.names:", current, combined_deal);
+      if (!config.simulation) console.log("sellingCheck | deal combination skip | current, combined_deal.names:", current, combined_deal);
     }
   });
 
@@ -495,6 +507,8 @@ function checkSelling(done) {
   // Check trailing stop, if enabled affect decision
   structured_decision.decision = (
     structured_decision.would_sell_price &&
+    structured_decision.managed &&
+    structured_decision.cool &&
     (!TRAILING_STOP_ENABLED || (combined_deal.stop_price >= current_sale_price))
   );
 
@@ -507,9 +521,7 @@ function checkSelling(done) {
   // Check all outstanding factors and make final decision
   if (
     structured_decision.decision &&
-    combined_deal.names.length > 0 &&
-    combined_deal.amount < wallet.current.btc_balance &&
-    potential_better_than_heat
+    combined_deal.names.length > 0
   ) {
     decision = true;
     sell(combined_deal, done);
@@ -541,7 +553,7 @@ function sell(deal, done) {
   });
 
   controller.sell(deal.amount.toFixed(7), deal.aligned_sell_price, function(error, order) {
-    console.log("BITSTAMP: Response after attempt to sell | error, order:", error, order);
+    console.log("EXCHANGE: Response after attempt to sell | error, order:", error, order);
     if (
       order && 
       order.id
@@ -563,7 +575,7 @@ function sell(deal, done) {
         queue.push(deal_name); 
       });
 
-      email.send({
+      if (!config.simulation) email.send({
         subject: "Stampede - Selling: "+deal.name,
         template: "sale.jade",
         data: {
@@ -585,7 +597,7 @@ function sell(deal, done) {
     else {
       deal.order_id = "freeze";
 
-      email.send({
+      if (!config.simulation) email.send({
         subject: "Stampede: Error SELLING deal through bitstamp API",
         template: "error.jade",
         data: {error:error}
@@ -609,10 +621,10 @@ function getAllDeals() {
       all_deals = all_deals.concat(trader_deals);
     }
     else {
-      console.log("sellingCheck | "+trader_name+" has no deals.");
+      //console.log("getAllDeals | "+trader_name+" has no deals.");
     }
   }
-  return all_deals;  
+  return all_deals;
 }
 
 //"deal|1.1|332|338"
@@ -636,7 +648,9 @@ function stringDeal(deal) {
 }
 
 function cycle(done) {
-  console.log("Cycle initiated.");
+  cycle_counter++;
+  broadcast_time = (!config.simulation || cycle_counter % 1000 === 0);
+  if (!config.simulation) console.log("Cycle initiated.");
   cycle_buy_decisions = [];
   cycle_sell_decisions = [];
   var actions = [
@@ -655,7 +669,7 @@ function cycle(done) {
     if (done) done(null, market.current);
     
     // Update client on performed decisions
-    controller.refreshDecisions({
+    if (broadcast_time) controller.refreshDecisions({
       buy_decisions: cycle_buy_decisions,
       sell_decisions: cycle_sell_decisions
     });
@@ -664,17 +678,15 @@ function cycle(done) {
 
 function checkMarket(done) {
   market.check(function(error, market_current) {
-    // refresh client side on current market data 
-    // & current wallet data
-    controller.refreshMarket(market.current);
+    var stop_simulation = (config.simulation && error && error.stop);
     // Check if traders are initialized
-    if (live_traders) {
-      controller.refreshTraders(live_traders);
+    if (live_traders && !stop_simulation) {
+      if (broadcast_time) controller.refreshTraders(live_traders);
       var i = 0, new_deal_count = 0;
       market.current.threshold = IMPATIENCE * (market.current.high - market.current.middle) + market.current.middle;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
       wallet.current.currency_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current[config.exchange.currency+"_balance"] || 0);
-      controller.refreshWallet(wallet.current); 
+      if (broadcast_time) controller.refreshWallet(wallet.current); 
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
         
@@ -682,13 +694,16 @@ function checkMarket(done) {
         trader.decide(internal_callback);
       }, 1);
 
+      // refresh client side on current market data 
+      // & current wallet data
+      if (broadcast_time) controller.refreshMarket(market.current);
+
       for (var trader_name in live_traders) q.push(trader_name);
 
       q.drain = function() {
         //console.log("Current env:", process.env);
         var cool_up = INITIAL_GREED,
-            next_check = (
-              (
+            next_check = (market.simulation ? 2 : ( 
                 (process.env.NODE_ENV || "development") === "development" ? 10000 : 4000) +
                 (Math.random()*3000)
             );
@@ -698,7 +713,7 @@ function checkMarket(done) {
           cool_up < (1 - wallet.current.cool)
         ) ? wallet.current.cool + cool_up : 1;
 
-        console.log("... Cycle(wallet, market) CHECK again in:", (next_check / 1000).toFixed(2), "seconds. - "+(new Date())+".");
+        if (!config.simulation) console.log("... Cycle(wallet, market) CHECK again in:", (next_check / 1000).toFixed(2), "seconds. - "+(new Date())+".");
             
         if (timer) clearTimeout(timer);
         timer = setTimeout(cycle, next_check);
@@ -709,7 +724,7 @@ function checkMarket(done) {
       };
     }
     else {
-      console.log("No traders present.");
+      console.log("No traders present or market simulation stopped.");
       if (done) done(null, market.current);
     }
   });  
@@ -734,7 +749,7 @@ function checkSheets(done) {
       ) sheets.push({time: parseInt(current[0]), value: parseFloat(current[1])});
     });
     sheets.sort(function(a, b) {return a.time - b.time;});
-    controller.drawSheets(sheets, "full");
+    if (!config.simulation) controller.drawSheets(sheets, "full");
     done(error, sheets);
   });
 }
@@ -744,7 +759,7 @@ function pullValueSheet(callback) {
 }
 
 function refreshSheets() {
-  console.log("* Updating history sheets.");
+  //console.log("* Updating history sheets.");
   var now = new Date(),
       timestamp = now.getTime(),
       current_currency_value = wallet.current.currency_value;
@@ -752,7 +767,7 @@ function refreshSheets() {
     db.sadd(stampede_value_sheet, timestamp+"|"+current_currency_value, function(error, response) {
       var new_value = {time: timestamp, value: current_currency_value};
       sheets.push(new_value);
-      controller.drawSheets(new_value, "incremental");
+      if (broadcast_time) controller.drawSheets(new_value, "incremental");
     });
   }
 }
@@ -760,20 +775,16 @@ function refreshSheets() {
 
 function checkWallet(done) {
   // Initialize into global var, exposed on top
-  console.log("* Checking wallet.");
+  if (!config.simulation) console.log("* Checking wallet.");
   wallet.check(live_traders, function() {
-    controller.refreshShares(wallet.shares);
-    wallet.current.available_to_traders = 
-      (MAX_SUM_INVESTMENT - wallet.current.investment) < wallet.current[config.exchange.currency+"_available"] ? 
-        MAX_SUM_INVESTMENT - wallet.current.investment : 
-        wallet.current[config.exchange.currency+"_available"];
+    if (broadcast_time) controller.refreshShares(wallet.shares);
+    wallet.assignAvailableResources(MAX_SUM_INVESTMENT);
     if (done) done(null, wallet.current);
   });
 }
 
 function updateConfig(new_config) {
   if (configValid(new_config)) {
-  
     for (var attribute in new_config) {
       config.trading[attribute] = new_config[attribute] || config.trading[attribute];
     }
@@ -839,7 +850,8 @@ function checkTraders(trader_list, done) {
   }, 2);
   q.drain = function() {
     console.log("Queue drained in checkTraders.");
-    done(null, live_traders);
+    controller.refreshTraders(live_traders);
+    if (done) done(null, live_traders);
   };
   trader_list.forEach(function(trader_name) {
     q.push(trader_name);
@@ -879,6 +891,40 @@ function wakeAll(done) {
   });
 }
 
+function viewTraders(done) {
+  db.smembers(trader_main_list, function(error, trader_list) {
+    console.log("viewTraders, Viewing ("+trader_list.length+") traders...");
+    trader_count = trader_list.length;
+    if (
+      trader_list &&
+      trader_list.length > 0
+    ) {
+      checkTraders(trader_list, done);
+    }
+  });
+}
+
+function prepareForSimulation() {
+  //initializeConfig();
+  config.simulation = true;
+  market.simulation = true;
+  db.del("stampede_usd_value");
+
+}
+
+function removeAllDeals() {
+  for (var name in live_traders) {
+    var trader = live_traders[name];
+    var trader_deals_copy = trader.deals.slice(0);
+    trader_deals_copy.forEach(function(deal) {
+      var deal_name = deal.name;
+      trader.removeDeal(deal, function() {
+        console.log("removeAllDeals | deal:", deal_name);
+      });
+    });
+  }
+}
+
 function addShare(holder, investment) {
   if (
     wallet &&
@@ -915,3 +961,12 @@ exports.addShare = addShare;
 exports.updateConfig = updateConfig;
 exports.updateStrategy = updateStrategy;
 exports.resetConfig = resetConfig;
+
+// Open variables (simulation required)
+exports.live_traders = live_traders;
+exports.market = market;
+exports.wallet = wallet;
+exports.config = config;
+exports.prepareForSimulation = prepareForSimulation;
+exports.removeAllDeals = removeAllDeals;
+exports.viewTraders = viewTraders;

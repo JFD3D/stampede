@@ -74,10 +74,24 @@ socket.on("stampede_value_sheet_update", stampede.updateValueSheet);
 
 
 $(document).ready(function() {
+  
   $("body").on("click", ".switch", function() {
     var target = $(this).attr("data-target");
     $(target).toggle();
   });
+
+
+  $(".async-form").submit(function(event) {
+    var form = $(this),
+        parent_sub_block = $(this).parents(".sub-block"),
+        data = form.serialize(),
+        path = this.action;
+    event.preventDefault();
+    $.post(path, data, function(response) {
+      notify(response.message || "No response.");
+      $(".submittal-operators", parent_sub_block).hide();
+    });
+  });  
 
   $("body").on("click", ".trader-switch", function() {
     var action = $(this).attr("data-action") || "/stop",

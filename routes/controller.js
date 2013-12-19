@@ -7,6 +7,7 @@ var config = require("./../plugins/config"),
     exchange = new Exchange(creds.key, creds.secret, creds.client_id),
     Trader = require("./../models/trader"),
     jade = require("jade"),
+    generated_data = [],
     traders_awake = false;
 
 /*
@@ -23,6 +24,7 @@ exports.index = function(req, res) {
     title: 'Stampede',
     current_user: req.current_user,
     traders_awake: traders_awake,
+    simulator_enabled: false,
     trading_config: config.trading,
     trading_strategies: config.strategy,
     helpers: helpers
@@ -154,14 +156,14 @@ exports.refreshMarket = function(market_data) {
   //console.log("Updating market with data.", data);
 
   jade.renderFile(__dirname + "/../views/_market.jade", {current_market: market_data, helpers: helpers}, function(error, html) {
-    //console.log("rendering updateMarket | error, html:", error, html);
+    //console.log("rendering updateMarket | error:", error);
     if (html) live.sendToAll("stampede_updates", {
       container: "live-ticker",
       html: html
     });
   });
 
-  if (market_data.last) live.sendToAll("stampede_updates", {current_last_price: "$"+market_data.last});
+  if (market_data.last) live.sendToAll("stampede_updates", {current_last_price: "$"+market_data.last.toFixed(2)});
   
 };
 
@@ -267,4 +269,54 @@ exports.transactions = function(callback) {
 
 exports.user_transactions = function(callback) {
   exchange.user_transactions(callback);
+};
+
+
+
+
+// GENERATOR SPECific
+
+exports.simulatorHome = function(req, res) {
+
+  res.render('index', {
+    title: 'Stampede: Generator',
+    current_user: req.current_user,
+    simulator_enabled: true,
+    trading_config: config.trading,
+    traders_awake: true,
+    trading_strategies: config.strategy,
+    helpers: helpers
+  });
+
+
+  setTimeout(Trader.viewTraders, 3000);
+};
+
+exports.simulatorGenerate = function(req, res) {
+  var generator = require("./../plugins/generator");
+  generated_data = generator.launch();
+
+  var binned_data = generator.bin(generated_data, 10000);
+
+  res.send({
+    message: "Generated data.",
+    data: binned_data
+  });
+};
+
+exports.simulatorRemoveDeals = function(req, res) {
+  Trader.removeAllDeals();
+  res.redirect("/simulator");
+};
+
+exports.simulatorRun = function(req, res) {
+  console.log("Simulator warming up (data length - "+generated_data.length+").");
+
+  var simulator = require("./../plugins/simulator");
+  
+  exchange.load(generated_data, 1000);
+
+  simulator.run(function(data) {
+    res.send({message: data.message});
+  });
 };
