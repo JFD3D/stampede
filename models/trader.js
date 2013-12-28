@@ -222,7 +222,7 @@ Trader.prototype = {
         // Get the lowest price of deal bought
         all_deals = getAllDeals(),
         borders = all_deals.extremesByKey("buy_price"),
-        //lowest_buy_price = borders.min.buy_price || 0,
+        lowest_buy_price = borders.min.buy_price || 0,
 
         // Check if trader has available spot for another deal
         has_free_hands = MAX_DEALS_HELD > me.deals.length,
@@ -239,7 +239,7 @@ Trader.prototype = {
         bid_below_threshold = trader_bid < market.current.threshold,
 
         // EXPERIMENTAL: If existing deals, check that I am buying for price lower than the lowest existing
-        //bid_below_lowest = (lowest_buy_price > 0) ? (trader_bid < lowest_buy_price) : bid_below_threshold,
+        bid_below_lowest = (lowest_buy_price > 0) ? (trader_bid < lowest_buy_price) : bid_below_threshold,
 
         // Check if current market span (high - low / last) is favorable and wider than fee
         potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
@@ -268,7 +268,7 @@ Trader.prototype = {
       available_resources &&
       (!MOMENTUM_ENABLED || market_momentum_significant) &&
       bid_below_threshold &&
-      //bid_below_lowest &&
+      bid_below_lowest &&
       potential_better_than_fee &&
       potential_better_than_heat
     ) decision = true;
@@ -278,7 +278,7 @@ Trader.prototype = {
       "\n|- Has hands available (..., me.deals.length):", has_free_hands, me.deals.length,
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
       "\n|- Bid is below threshold (..., market.current.last, market.current.middle):", bid_below_threshold, market.current.last.toFixed(2), market.current.middle.toFixed(2),
-      //"\n|- Bid is lowest among deals (..., lowest_buy_price):", bid_below_lowest, lowest_buy_price.toFixed(2),
+      "\n|- Bid is lowest among deals (..., lowest_buy_price):", bid_below_lowest, lowest_buy_price.toFixed(2),
       "\n|- Projected profit is better than fee (..., market.current.shift_span):", potential_better_than_fee, market.current.shift_span.toFixed(2),
       "\n|- Projected profit is better than heat (..., wallet.current.cool, weighted_heat):", potential_better_than_heat, wallet.current.cool.toFixed(2), weighted_heat,
       "\n|- Market momentum is significant (..., momentum_indicator, momentum_healthy)", market_momentum_significant, market.current.momentum_indicator, market.current.momentum_record_healthy,
@@ -291,7 +291,7 @@ Trader.prototype = {
       free_hands: has_free_hands,
       resources: available_resources,
       threshold: bid_below_threshold,
-      //lowest: bid_below_lowest,
+      lowest: bid_below_lowest,
       potential: potential_better_than_heat,
       momentum: (!MOMENTUM_ENABLED || market_momentum_significant),
       cool: potential_better_than_heat,
