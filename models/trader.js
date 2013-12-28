@@ -268,7 +268,7 @@ Trader.prototype = {
       available_resources &&
       (!MOMENTUM_ENABLED || market_momentum_significant) &&
       bid_below_threshold &&
-      bid_below_lowest &&
+      //bid_below_lowest &&
       potential_better_than_fee &&
       potential_better_than_heat
     ) decision = true;
