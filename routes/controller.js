@@ -277,16 +277,20 @@ exports.user_transactions = function(callback) {
 // GENERATOR SPECific
 
 exports.simulatorHome = function(req, res) {
+  if (config.exchange.selected === "simulated_exchange") {
+    res.render('index', {
+      title: 'Stampede: Simulator',
+      current_user: req.current_user,
+      simulator_enabled: true,
+      trading_config: config.trading,
+      traders_awake: true,
+      trading_strategies: config.strategy,
+      helpers: helpers
+    });  }
+  else {
+    res.redirect("/");
+  }
 
-  res.render('index', {
-    title: 'Stampede: Generator',
-    current_user: req.current_user,
-    simulator_enabled: true,
-    trading_config: config.trading,
-    traders_awake: true,
-    trading_strategies: config.strategy,
-    helpers: helpers
-  });
 
 
   setTimeout(Trader.viewTraders, 3000);
@@ -306,7 +310,7 @@ exports.simulatorGenerate = function(req, res) {
 
 exports.simulatorRemoveDeals = function(req, res) {
   Trader.removeAllDeals();
-  res.redirect("/simulator");
+
 };
 
 exports.simulatorRun = function(req, res) {
@@ -316,7 +320,9 @@ exports.simulatorRun = function(req, res) {
   
   exchange.load(generated_data, 1000);
 
-  simulator.run(function(data) {
+
+  // MAKE SURE we run simulation on virtual exchange !!!
+  if (config.exchage.selected === "simulated_exchange") simulator.run(function(data) {
     res.send({message: data.message});
   });
 };

@@ -46,7 +46,10 @@ var controller = require('./routes/controller'),
     live = require('./plugins/live'),
     server = app.listen(app.get('port'), function() {
       console.log('Stampeding at ' + app.get('port') + ' feet.');
-      if (environment !== "development") controller.wakeTraders();
+      if (
+        environment !== "development" && 
+        config.exchange.selected !== "simulated_exchange"
+      ) controller.wakeTraders();
     });
 
 if (server) {

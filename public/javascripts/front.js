@@ -186,7 +186,9 @@ function capitaliseFirstLetter(string) {
 }
 
 function renderValueSheet(data, container) {
-  d3.select("svg").remove();
+  container = container || "#live-sheets";
+  // d3.select("svg").remove();
+  $(container).empty();
   var min_value = d3.min(data.map(function(d) { return d.value; }));
   //console.log("Minimum value for drawing is:", min_value);
 
@@ -229,7 +231,7 @@ function renderValueSheet(data, container) {
       .y0(height2)
       .y1(function(d) { return y2(d.delta); });
 
-  var svg = d3.select(container || "#live-sheets").append("svg")
+  var svg = d3.select(container).append("svg")
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom);
 

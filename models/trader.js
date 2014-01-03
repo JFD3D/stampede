@@ -250,8 +250,8 @@ Trader.prototype = {
         // What is the current market acceleration
         current_market_greed = (market.current.shift_span / 2),
 
-        // What upside is the trader looking for
-        trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
+        // What potential is the trader looking at
+        trader_greed = INITIAL_GREED + ((wallet.current.fee || 0.5) / (2*100)),
 
         // If current wallet cool combined with greed exceeds 1
         weighted_heat = wallet.current.cool + trader_greed,
@@ -481,7 +481,7 @@ function checkSelling(done) {
       // Deal independent calculations
       current_market_greed = (market.current.shift_span / 2),
       current_sale_price = (market.current.last * BID_ALIGN),
-      trader_greed = ((current_market_greed > INITIAL_GREED) ? INITIAL_GREED : current_market_greed) + ((wallet.current.fee || 0.5) / (2*100)),
+      trader_greed = INITIAL_GREED + ((wallet.current.fee || 0.5) / (2*100)),
       weighted_heat = wallet.current.cool + trader_greed,
       potential_better_than_heat = (weighted_heat > 1);
 
@@ -497,7 +497,7 @@ function checkSelling(done) {
     trader: "Combined sell at ("+(combined_deal.would_sell_at || 0).toFixed(2)+")",
     would_sell_price: (combined_deal.would_sell_at < current_sale_price),
     cool: potential_better_than_heat,
-    managed: (combined_deal.amount < wallet.current.btc_balance)
+    managed: (combined_deal.amount <= wallet.current.btc_balance)
   };
 
   // If trailing stop enabled, add to structured decision
@@ -532,7 +532,7 @@ function checkSelling(done) {
 
   if (decision) console.log(
     "*** Selling deal? ***",
-    "\n|- amount is managed (amount):", (combined_deal.amount < wallet.current.btc_balance), combined_deal.amount,
+    "\n|- amount is managed (amount):", (combined_deal.amount <= wallet.current.btc_balance), combined_deal.amount,
     "\n|- potential_better_than_heat:", potential_better_than_heat,
     "\n_SALE_ Decision:", decision ? "SELLING" : "HOLDING",
     "\nDeal evaluated details:", combined_deal
@@ -589,9 +589,7 @@ function sell(deal, done) {
       });
 
       // Once queue drained call the last callback
-      queue.drain = function() {
-        done();
-      };
+      queue.drain = done;
 
     }
     else {
@@ -713,14 +711,15 @@ function checkMarket(done) {
           cool_up < (1 - wallet.current.cool)
         ) ? wallet.current.cool + cool_up : 1;
 
-        if (!config.simulation) console.log("... Cycle(wallet, market) CHECK again in:", (next_check / 1000).toFixed(2), "seconds. - "+(new Date())+".");
+        if (!config.simulation) {
+          console.log("... Cycle(wallet, market) CHECK again in:", (next_check / 1000).toFixed(2), "seconds. - "+(new Date())+".");
+          refreshSheets();
+        }
             
         if (timer) clearTimeout(timer);
         timer = setTimeout(cycle, next_check);
 
         if (done) done(null, market.current);
-
-        refreshSheets();
       };
     }
     else {
@@ -749,7 +748,7 @@ function checkSheets(done) {
       ) sheets.push({time: parseInt(current[0]), value: parseFloat(current[1])});
     });
     sheets.sort(function(a, b) {return a.time - b.time;});
-    if (!config.simulation) controller.drawSheets(sheets, "full");
+    controller.drawSheets(sheets, "full");
     done(error, sheets);
   });
 }
@@ -763,7 +762,7 @@ function refreshSheets() {
   var now = new Date(),
       timestamp = now.getTime(),
       current_currency_value = wallet.current.currency_value;
-  if (wallet.current.currency_value > 10) {
+  if (wallet.current.currency_value > 10 && !config.simulation) {
     db.sadd(stampede_value_sheet, timestamp+"|"+current_currency_value, function(error, response) {
       var new_value = {time: timestamp, value: current_currency_value};
       sheets.push(new_value);
@@ -906,6 +905,7 @@ function viewTraders(done) {
 
 function prepareForSimulation() {
   //initializeConfig();
+  stopAll();
   config.simulation = true;
   market.simulation = true;
   db.del("stampede_usd_value");
@@ -941,7 +941,7 @@ function stopAll(done) {
   market = new Market();
   sheets = [];
   live_traders = {};
-  done();
+  if (done) done();
 }
 
 function refreshAll() {

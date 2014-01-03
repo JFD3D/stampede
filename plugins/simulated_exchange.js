@@ -14,21 +14,7 @@ function Exchange() {
 
   console.log("Initializing Simulated Exchange wrapper...");
 
-  this.current_balance = {
-    btc_reserved: 0,
-    fee: 0.4,
-    btc_available: 0,
-    btc_balance: 0,
-  };
 
-
-  this.current_balance[xc+"_reserved"] = 0;
-  this.current_balance[xc+"_balance"] = this.current_balance[xc+"_available"] = config.trading.maximum_investment;
-
-  // Initialize container for future ticker data, that will be supplied by generator
-  this.ticks = [];
-  this.current_tick = 0;
-  this.volume = 10000;
 }
 
 
@@ -37,7 +23,20 @@ Exchange.prototype = {
   load: function(market_data, start_amount) {
     this.ticks = market_data;
     this.current_tick = 0;
-    if (start_amount) this.current_balance[xc+"_balance"] = this.current_balance[xc+"_available"] = start_amount;
+    this.ticks[0].starting_point = true;
+    this.current_balance = {
+      btc_reserved: 0,
+      fee: 0.4,
+      btc_available: 0,
+      btc_balance: 0,
+    };
+
+
+    this.current_balance[xc+"_reserved"] = 0;
+    this.current_balance[xc+"_balance"] = this.current_balance[xc+"_available"] = config.trading.maximum_investment;
+
+    // Initialize container for future ticker data, that will be supplied by generator
+    this.volume = 10000;
   },
 
 
@@ -72,7 +71,7 @@ Exchange.prototype = {
     var me = this,
         adjusted_amount_price = (amount*price)*(1+(me.current_balance.fee/100));
 
-    if (me.current_balance[xc+"_available"] > adjusted_amount_price) {
+    if (me.current_balance[xc+"_available"] >= adjusted_amount_price) {
       me.current_balance.btc_available += amount;
       me.current_balance.btc_balance = me.current_balance.btc_available;
       me.current_balance[xc+"_available"] -= adjusted_amount_price;
@@ -91,7 +90,7 @@ Exchange.prototype = {
     var me = this,
         adjusted_amount_price = (amount*price)*(1-(me.current_balance.fee/100));
 
-    if (me.current_balance.btc_available > amount) {
+    if (me.current_balance.btc_available >= amount) {
       me.current_balance.btc_available -= amount;
       me.current_balance.btc_balance = me.current_balance.btc_available;
       me.current_balance[xc+"_available"] += adjusted_amount_price;
