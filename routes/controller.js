@@ -322,7 +322,7 @@ exports.simulatorRun = function(req, res) {
 
 
   // MAKE SURE we run simulation on virtual exchange !!!
-  if (config.exchage.selected === "simulated_exchange") simulator.run(function(data) {
+  if (config.exchange.selected === "simulated_exchange") simulator.run(function(data) {
     res.send({message: data.message});
   });
 };
