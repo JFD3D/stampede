@@ -15,26 +15,52 @@ Wallet.prototype = {
   check: function(current_traders, callback) {
     var me = this;
     live_traders = current_traders;
-    me.current.cool = (me.current.cool || me.cool);
-
     controller.balance(function(error, data) {
       if (
-        data && !isNaN(parseFloat(data.fee))
+        data && 
+        !isNaN(parseFloat(data.fee))
       ) {
-        ["btc_reserved", "fee", "btc_available", config.exchange.currency+"_reserved", "btc_balance", config.exchange.currency+"_balance", config.exchange.currency+"_available"].forEach(function(property) {
-          me.current[property] = parseFloat(data[property] || 0);
-        });
-        me.current.timestamp = new Date();
+        me.assign(data);
         if (me.current.error) delete me.current.error;
       }
       else {
-        console.log("!!!!!!!!!!!!!!!!ERROR Getting WALLET from API !!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!ERROR Getting WALLET from API !!!!!!!!!!!!!!", error, data);;
         me.current.error = "Unable to load current balance ["+(new Date())+"].";
       }
-      me.summarizeDeals(callback);
+      
+      me.summarizeShares(callback);
     });
   },
-  summarizeDeals: function(callback) {
+  assign: function(data) {
+    var me = this;
+    [
+      "btc_reserved", 
+      "fee", 
+      "btc_available", 
+      config.exchange.currency+"_reserved", 
+      "btc_balance", 
+      config.exchange.currency+"_balance", 
+      config.exchange.currency+"_available"
+    ].forEach(function(property) {
+      me.current[property] = parseFloat(data[property] || 0);
+    });
+    me.current.cool = (me.current.cool || me.cool);
+    me.current.timestamp = new Date();
+    me.summarizeDeals();
+    return me;
+  },
+
+  assignAvailableResources: function(MAX_SUM_INVESTMENT) {
+    var me = this;
+    me.current.available_to_traders = 
+      (MAX_SUM_INVESTMENT - me.current.investment) < me.current[config.exchange.currency+"_available"] ? 
+        MAX_SUM_INVESTMENT - me.current.investment : 
+        me.current[config.exchange.currency+"_available"];
+
+    //console.log("assignAvailableResources | me.current.available_to_traders:", me.current.available_to_traders);
+  },
+
+  summarizeDeals: function() {
     var me = this;
     me.current.investment = 0;
     me.current.btc_amount_managed = 0;
@@ -52,10 +78,9 @@ Wallet.prototype = {
         live_traders[trader_name].record.current_investment += 
           isNaN(deal_amount * deal_buy_price) ? 0 : (deal_amount * deal_buy_price);
       });
-
       me.current.average_buy_price = (me.current.investment) / (me.current.btc_amount_managed);
     }
-    me.summarizeShares(callback);
+    
   },
 
   summarizeShares: function(callback) {

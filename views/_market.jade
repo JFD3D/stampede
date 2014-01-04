@@ -27,4 +27,4 @@ table
     td= current_market.EMA.toFixed(2)
     td= current_market.momentum_average.toFixed(5)
     td= current_market.momentum_record_healthy ? "Yes" : "No"
-    td= helpers.moment(current_market.timestamp).fromNow()
+    td= (current_market.time ? new Date(current_market.time) : helpers.moment(current_market.timestamp).fromNow())

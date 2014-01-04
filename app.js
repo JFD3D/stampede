@@ -46,7 +46,10 @@ var controller = require('./routes/controller'),
     live = require('./plugins/live'),
     server = app.listen(app.get('port'), function() {
       console.log('Stampeding at ' + app.get('port') + ' feet.');
-      controller.wakeTraders();
+      if (
+        environment !== "development" && 
+        config.exchange.selected !== "simulated_exchange"
+      ) controller.wakeTraders();
     });
 
 if (server) {
@@ -65,3 +68,9 @@ app.get("/value_sheet", auth.ensure, controller.getValueSheet);
 app.get("/start", auth.ensure, controller.start);
 app.get("/shares", auth.ensure, controller.shares);
 app.post("/shares/add", auth.ensure, controller.addShare);
+
+
+app.get("/simulator", auth.ensure, controller.simulatorHome);
+app.get("/simulator/generate", auth.ensure, controller.simulatorGenerate);
+app.get("/simulator/run", auth.ensure, controller.simulatorRun);
+app.get("/remove_all_simulator_deals", auth.ensure, controller.simulatorRemoveDeals);

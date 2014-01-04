@@ -1,17 +1,32 @@
 extends layout
 
+- if (simulator_enabled)
+  block head
+    script(type='text/javascript', src='/javascripts/front-simulator.js')
+
 block navigation
   #live-messages
     .content
 block content
   - var class_for_status = (traders_awake == true ? "active" : "inactive")
-  .clearer  
+  - if (simulator_enabled)
+    .block#live-simulation
+      .content
+        button#generator-launch Generate data
+        .spacer
+        #chart
+        .spacer
+        button#simulator-run(style="display: none;") Simulate trading
   .block#live-traders(class="#{class_for_status}")
     h2 &#9801; Traders
     .clearer
-    button.trader-switch.lefter(data-action=(traders_awake == true ? "/stop" : "/start"))= (traders_awake == true ? "STOP" : "START")
-    form.lefter(action="trader/create", method="post", style="margin-bottom: 10px;")
-      button Add trader        
+    - if (simulator_enabled)
+      a(href="/remove_all_simulator_deals")
+        button Remove all deals  
+    - else
+      button.trader-switch.lefter(data-action=(traders_awake == true ? "/stop" : "/start"))= (traders_awake == true ? "STOP" : "START")
+    form.async-form.lefter(action="trader/create", method="post", style="margin-bottom: 10px;")
+      button Add trader
     .clearer
     .content
   .block#live-balance(class="#{class_for_status}")

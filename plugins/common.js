@@ -51,8 +51,8 @@ Array.prototype.extremesByKey = function(key) {
     return (a[key] - b[key]);
   });
   return {
-    min: copy[0],
-    max: copy[copy.length - 1]
+    min: copy[0] || {},
+    max: copy[copy.length - 1] || {}
   };
 };
 
