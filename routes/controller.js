@@ -91,7 +91,7 @@ exports.removeDeal = function(req, res) {
       trader_name = req.params.trader_name,
       trader = new Trader.instance(trader_name);
   trader.wake(function(error, record) {
-    trader.removeDeal(deal, function() {
+    trader.removeDeal(deal_name, function() {
       res.send({message: "Deal removed."});
     });
   });

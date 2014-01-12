@@ -554,6 +554,8 @@ Trader.prototype = {
   removeDeal: function(deal_name, callback) {
     var me = this,
         deal_position = me.deals.lookupIndex("name", deal_name);
+
+    //console.log("removeDeal | me.deals, deal_name:", me.deals, deal_name);
     if (deal_position > -1) {
       me.deals.splice(deal_position, 1);
       db.srem(me.record.book, deal_name, callback);
