@@ -559,7 +559,7 @@ Trader.prototype = {
       db.srem(me.record.book, deal_name, callback);
     }
     else {
-      console.log("!!! trader | removeDeal | Unable to find deal for removal | deal", deal);
+      console.log("!!! trader | removeDeal | Unable to find deal for removal | deal_name", deal_name);
       callback("Problems finding deal.", null);
     }
   },
@@ -722,7 +722,7 @@ function checkSheets(done) {
   console.log("* Checking history sheets.");
   var now = new Date(),
       timestamp = now.getTime();
-  db.smembers("stampede_usd_value", function(error, sheet_records) {
+  db.smembers(stampede_value_sheet, function(error, sheet_records) {
     //console.log("checkSheets | done | error, response:", error, sheet_records);
     var step = Math.round(sheet_records.length / 1000);
     sheet_records.forEach(function(record, index) {
@@ -897,7 +897,7 @@ function prepareForSimulation() {
   stopAll();
   config.simulation = true;
   market.simulation = true;
-  db.del("stampede_usd_value");
+  db.del(stampede_value_sheet);
 
 }
 
