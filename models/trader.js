@@ -58,7 +58,7 @@ var config = require("./../plugins/config"),
 
     MOMENTUM_ENABLED,       // Whether purchases will be happening on momentum up trend
     TRAILING_STOP_ENABLED,  // Whether sales will happen only after trailing stop is reached
-
+    BELL_BOTTOM_ENABLED,    // Whether purchases will be sized up going down the price per trader
 
 
 // nasty variable declaration end
@@ -70,8 +70,7 @@ function initializeConfig() {
   // Trading configuration variables
   MAX_SUM_INVESTMENT = config.trading.maximum_investment;
   MAX_PER_DEAL = config.trading.maximum_currency_per_deal;         
-  MAX_DEALS_HELD = 
-    config.trading.max_number_of_deals_per_trader;
+  MAX_DEALS_HELD = config.trading.max_number_of_deals_per_trader;
   INITIAL_GREED = config.trading.greed;   
   BID_ALIGN = config.trading.bid_alignment;
   IMPATIENCE = config.trading.impatience;
@@ -79,6 +78,8 @@ function initializeConfig() {
   // Strategies now
   MOMENTUM_ENABLED = config.strategy.momentum_trading;
   TRAILING_STOP_ENABLED = config.strategy.trailing_stop;
+  BELL_BOTTOM_ENABLED = config.strategy.bell_bottom;
+
 }
 
 
@@ -219,6 +220,7 @@ Trader.prototype = {
   // decide if buying, define candidate deal
 
   isBuying: function() {
+
     var me = this,
         decision = false,
 
@@ -226,6 +228,7 @@ Trader.prototype = {
         deals = me.deals,
         borders = deals.extremesByKey("buy_price"),
         lowest_buy_price = borders.min.buy_price || 0,
+        currency_buy_amount = BELL_BOTTOM_ENABLED ? (((deals.length / MAX_DEALS_HELD) + 1) * MAX_PER_DEAL) : MAX_PER_DEAL,
 
         // Check if trader has available spot for another deal
         has_free_hands = MAX_DEALS_HELD > me.deals.length,
@@ -233,7 +236,7 @@ Trader.prototype = {
         // Available resources, compare investment and current available in wallet
         available_resources = 
           (wallet.current.investment < MAX_SUM_INVESTMENT) && 
-          (wallet.current[config.exchange.currency+"_available"] > MAX_PER_DEAL),
+          (wallet.current[config.exchange.currency+"_available"] > currency_buy_amount),
 
         // Calculate trader bid (aligned by bid alignment to make us competitive when bidding)
         trader_bid = (market.current.last / BID_ALIGN),
@@ -320,8 +323,6 @@ Trader.prototype = {
     combined_deal.names = [];
 
     //console.log("sellingCheck | borders:", borders);
-
-
     // Calculate weighted price for deals from extremes (lowes and highest)
     // We will sell them at once if the weighted average + fees and profit is below market last
 
@@ -432,15 +433,18 @@ Trader.prototype = {
   },
   
   buy: function(deal, done) {
-    var me = this;
+    var me = this,
+        currency_buy_amount = BELL_BOTTOM_ENABLED ? (((me.deals.length / MAX_DEALS_HELD) + 1) * MAX_PER_DEAL) : MAX_PER_DEAL;
+
     deal.buy_price = (market.current.last / BID_ALIGN);
-    deal.amount = (MAX_PER_DEAL / deal.buy_price);
+
+    deal.amount = (currency_buy_amount / deal.buy_price);
     deal.sell_price = (deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100)));
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= market.current.shift_span;
     //wallet.current.investment += deal.buy_price;
     controller.notifyClient({
-      message: "Decided to buy "+deal.amount.toFixed(7)+"BTC for "+config.exchange.currency.toUpperCase()+" "+MAX_PER_DEAL+" at "+config.exchange.currency.toUpperCase()+" "+deal.buy_price.toFixed(2)+" per BTC.", 
+      message: "Decided to buy "+deal.amount.toFixed(5)+"BTC for "+config.exchange.currency.toUpperCase()+" "+currency_buy_amount.toFixed(2)+" at "+config.exchange.currency.toUpperCase()+" "+deal.buy_price.toFixed(2)+" per BTC.", 
       permanent: true
     });
     
@@ -490,7 +494,7 @@ Trader.prototype = {
     wallet.current.cool -= market.current.shift_span;
     
     controller.notifyClient({
-      message: "Decided to sell "+deal.amount+"BTC for "+config.exchange.currency.toUpperCase()+((market.current.last * BID_ALIGN)*deal.amount).toFixed(2)+" at "+config.exchange.currency.toUpperCase()+deal.aligned_sell_price+" per BTC.", 
+      message: "Decided to sell "+deal.amount.toFixed(5)+"BTC for "+config.exchange.currency.toUpperCase()+((market.current.last * BID_ALIGN)*deal.amount).toFixed(2)+" at "+config.exchange.currency.toUpperCase()+deal.aligned_sell_price+" per BTC.", 
       permanent: true
     });
 
@@ -726,7 +730,7 @@ function checkSheets(done) {
       timestamp = now.getTime();
   db.smembers(stampede_value_sheet, function(error, sheet_records) {
     //console.log("checkSheets | done | error, response:", error, sheet_records);
-    var step = Math.round(sheet_records.length / 1000);
+    var step = Math.round(sheet_records.length / 100);
     sheet_records.forEach(function(record, index) {
       var current = record.split("|");
       if (
@@ -756,6 +760,7 @@ function refreshSheets() {
   if (wallet.current.currency_value > 10 && !config.simulation) {
     db.sadd(stampede_value_sheet, timestamp+"|"+current_currency_value, function(error, response) {
       var new_value = {time: timestamp, value: current_currency_value};
+      sheets.shift();
       sheets.push(new_value);
       if (broadcast_time) controller.drawSheets(new_value, "incremental");
     });

@@ -26,21 +26,22 @@ exports.email = {
 };
 
 exports.trading = {
-  maximum_currency_per_deal: 20,               // Maximum allowed $ per deal / trade / hand
+  maximum_currency_per_deal: 20,        // Maximum allowed $ per deal / trade / hand
   maximum_investment: 0,                // Maximum total $ allowed to invest in BTC
   bid_alignment: 0.999,                 // Bid align for competitive edge when placing bids 
                                         // EXAMPLE: BTC price is $600, to buy, we would place order at: 600 / 0.999 = 600.6
   max_number_of_deals_per_trader: 3,    // How many deals can a trader manage
   momentum_time_span: 5*60*1000,        // Set momentum time span to x minutes (change the first number, that is minutes)
-  greed: 0.02,                           // What upside does the trader look for?
+  greed: 0.05,                          // What upside does the trader look for?
                                         // EXAMPLE: If bought 1 BTC for $600, with greed at 0.05, it will sell for 600*(1+0.05) = 630
-  impatience: 0.1                       // When do I buy, for how much over current middle 
+  impatience: 0.01                      // When do I buy, for how much over current middle 
                                         // (Example: Middle is at $600, hight at $700, impatience 0.2, I would buy at (700 - 600)*0.2 + 600 = 620
 };
 
 exports.strategy = {
-  momentum_trading: true,
-  trailing_stop: true
+  momentum_trading: true, // Purchases will be happening on momentum up trend
+  trailing_stop: true,    // Sales will happen only after trailing stop is reached
+  bell_bottom: true       // Purchases will be sized up going down the price per trader
 };
 
 // Google authentication keys

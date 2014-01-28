@@ -1,20 +1,18 @@
 // This is a redirection to exchange object under Simulator > exchange
 
-
 var config = require("./config"),
     simulator = require("./simulator"),
     xc = config.exchange.currency;
 
+
+// The exchange instance will create an object that provides ticker data and simulates exchange apis
 function Exchange() {
   /*  Serves to simulate exchange adapter
    *  Initialize object for trading simulation
    *
    *
    */
-
   console.log("Initializing Simulated Exchange wrapper...");
-
-
 }
 
 

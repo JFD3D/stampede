@@ -310,7 +310,7 @@ exports.simulatorGenerate = function(req, res) {
 
 exports.simulatorRemoveDeals = function(req, res) {
   Trader.removeAllDeals();
-
+  res.redirect("/simulator");
 };
 
 exports.simulatorRun = function(req, res) {
