@@ -138,7 +138,6 @@ function generateData() {
         current_extremes.low = data_point.last;
         current_extremes.time_low = data_point.time;
       }
-
     }
     
     data_point.low = current_extremes.low;

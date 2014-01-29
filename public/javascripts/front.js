@@ -138,7 +138,7 @@ function notify(message, decay) {
   var date = new Date(),
       message_id = "notification_"+parseInt(+date);
 
-  $(".content", "#live-messages").prepend("<p class='notification' id='"+message_id+"''><i>"+message+"</i><span style='color:grey'> | "+date+"</span></p>");
+  $(".content", "#live-messages").prepend("<p class='notification' id='"+message_id+"''><i>"+message+"</i><span style='color:grey'></span></p>");
   if (decay) {
     $("#"+message_id).fadeOut(decay, function() {
       $(this).remove();
@@ -217,7 +217,6 @@ function renderValueSheet(data, container) {
   var brush = d3.svg.brush()
       .x(x2)
       .on("brush", brushed);
-
 
   var area = d3.svg.area()
       .interpolate("monotone")
