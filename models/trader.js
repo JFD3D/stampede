@@ -247,7 +247,7 @@ Trader.prototype = {
         bid_below_threshold = trader_bid < market.current.threshold,
 
         //define altitude drop
-        altitude_drop_perc = ALTITUDE_DROP,
+        altitude_drop_perc = ALTITUDE_DROP || 0,
 
         // EXPERIMENTAL: If existing deals, check that I am buying for price lower than the lowest existing
         bid_below_lowest = (lowest_buy_price > 0) ? (trader_bid < lowest_buy_price * (1 - (altitude_drop_perc / 100))) : bid_below_threshold,
