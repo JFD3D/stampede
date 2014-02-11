@@ -47,6 +47,7 @@ var config = require("./../plugins/config"),
     INITIAL_GREED,          // Greed (.05 means trader looks for 5% upside) XXX: As of now, this is calculated based on current market shift (difference btw low and high)
     BID_ALIGN,              // Align bid before buying to allow competitive price
     IMPATIENCE,             // Where do I buy up from middle
+    ALTITUDE_DROP,          //Defined lower price percentage to buy at
 
     /*
      *
@@ -245,8 +246,11 @@ Trader.prototype = {
         // Check if aligned bid is below threshold (which combines the impatience variable)
         bid_below_threshold = trader_bid < market.current.threshold,
 
+        //define altitude drop
+        altitude_drop_perc = ALTITUDE_DROP
+
         // EXPERIMENTAL: If existing deals, check that I am buying for price lower than the lowest existing
-        bid_below_lowest = (lowest_buy_price > 0) ? (trader_bid < lowest_buy_price * altitude_drop) : bid_below_threshold,
+        bid_below_lowest = (lowest_buy_price > 0) ? (trader_bid < lowest_buy_price * altitude_drop_perc) : bid_below_threshold,
 
         // Check if current market span (high - low / last) is favorable and wider than fee
         potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
