@@ -1,4 +1,4 @@
-// Use as 'node transfer_deals.js NUMBEROFTRADERFROM NUMBEROFTRADERTO
+// Use as 'node transfer_deals.js NUMBEROFTRADERFROM NUMBEROFTRADERTO'
 
 var rdb = require("redis").createClient(6379),
     transfer_from = process.argv[2],
@@ -20,7 +20,7 @@ function transferDeals(from, to, callback) {
       rdb.srem(book_from, deal_name, function(error, response) { 
         if (!error) 
           rdb.sadd(book_to, deal_name, function(error, response) { 
-            console.log("Assigned deal from "+trader_from+" to "+trader_to+" ("+deal_name+").")
+            console.log("Assigned deal from "+trader_from+" to "+trader_to+" ("+deal_name+").");
           });
         else
           console.log("Error removing deal ("+deal_name+"):", error, "from", trader_from);
