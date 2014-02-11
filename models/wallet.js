@@ -45,7 +45,7 @@ Wallet.prototype = {
       me.current[property] = parseFloat(data[property] || 0);
     });
     me.current.cool = (me.current.cool || me.cool);
-    me.current.timestamp = new Date();
+    me.current.time = data.time || Date.now();
     me.summarizeDeals();
     return me;
   },

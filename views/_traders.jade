@@ -5,11 +5,8 @@ each trader, trader_name in traders
       a.removal(href="#", data-trader="#{trader_name}") Remove
     table.deals
       tr
-        //th Deal name
         th Buy price
-        //- th Would sell at
         th Amount
-        //- th Trailing stop
         th
       each deal in trader.deals
         tr
@@ -18,8 +15,6 @@ each trader, trader_name in traders
               span.lowest  (Min)
             - if (deal.is_highest)
               span.highest  (Max)
-          //- td= (deal.would_sell_at || 0).toFixed(2)
           td= (deal.amount || 0).toFixed(7)+" BTC"
-          //- td= (deal.stop_price || 0).toFixed(2)
           td
             a.removal(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}") Remove

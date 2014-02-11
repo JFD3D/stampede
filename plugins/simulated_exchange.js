@@ -20,13 +20,16 @@ Exchange.prototype = {
   
   load: function(market_data, start_amount) {
     this.ticks = market_data;
+    this.ticks_length = market_data.length;
     this.current_tick = 0;
-    this.ticks[0].starting_point = true;
+    var start_tick = this.ticks[this.current_tick];
+    start_tick.starting_point = true;
     this.current_balance = {
       btc_reserved: 0,
       fee: 0.4,
       btc_available: 0,
       btc_balance: 0,
+      time: start_tick.time
     };
 
 
@@ -39,6 +42,7 @@ Exchange.prototype = {
 
 
   balance: function(callback) {
+    this.current_balance.time = (this.ticks[this.current_tick] || {}).time;
     callback(null, this.current_balance);
   },
 
@@ -52,7 +56,8 @@ Exchange.prototype = {
       //["last", "bid", "low", "high", "volume", "ask"]
       market_current.bid = market_current.last;
       market_current.ask = market_current.last;
-      market_current.volume = me.volume;      
+      market_current.volume = me.volume;
+      market_current.simulation_progress = me.current_tick / me.ticks_length;
 
       callback(null, market_current);
     }

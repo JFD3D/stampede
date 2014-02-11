@@ -34,8 +34,9 @@ exports.trading = {
   momentum_time_span: 5*60*1000,        // Set momentum time span to x minutes (change the first number, that is minutes)
   greed: 0.05,                          // What upside does the trader look for?
                                         // EXAMPLE: If bought 1 BTC for $600, with greed at 0.05, it will sell for 600*(1+0.05) = 630
-  impatience: 0.01                      // When do I buy, for how much over current middle 
+  impatience: 0.01,                     // When do I buy, for how much over current middle 
                                         // (Example: Middle is at $600, hight at $700, impatience 0.2, I would buy at (700 - 600)*0.2 + 600 = 620
+  altitude_drop: 1                      // (%) If I buy at the lowest price, only buy at a price X % lower then the lowest
 };
 
 exports.strategy = {
