@@ -17,7 +17,7 @@ var SimulatedTrader = Trader.instance,
 exports.run = function(callback) {
   Trader.prepareForSimulation();
   Trader.viewTraders(Trader.removeAllDeals);
-  setTimeout(Trader.wakeAll, 5000);
+  setTimeout(Trader.wakeAll, 3000);
   callback({
     message: "Started Market simulation."
   });

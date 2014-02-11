@@ -47,6 +47,8 @@ Market.prototype = {
       me.current[property] = parseFloat(data[property] || 0);
     });
 
+    if (data.simulation_progress) me.current.simulation_progress = data.simulation_progress;
+
     // Further market calculations
     me.current.time = data.time || Date.now();
 

@@ -43,4 +43,4 @@ table
   tr
     td= (current_wallet.initial_investment || 0).toFixed(2)
     td= parseFloat(current_wallet.fee)+"%"
-    td= helpers.moment(current_wallet.timestamp).fromNow()
+    td= new Date(current_wallet.time)

@@ -27,4 +27,10 @@ table
     td= current_market.EMA.toFixed(2)
     td= current_market.momentum_average.toFixed(5)
     td= current_market.momentum_record_healthy ? "Yes" : "No"
-    td= (current_market.time ? new Date(current_market.time) : helpers.moment(current_market.timestamp).fromNow())
+    td= new Date(current_market.time)
+- if (current_market.simulation_progress)
+  #live-simulation-progress
+    h3 Simulation progress
+    .simulation-progress-bar-container
+      #simulation-progress-bar(style="width: #{parseInt(current_market.simulation_progress * 100)}%;")
+      #simulation-progress-indicator(style="float: left; position: absolute; padding: .1em;")= parseInt(current_market.simulation_progress * 100) + "%"

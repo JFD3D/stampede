@@ -246,11 +246,14 @@ Trader.prototype = {
         // Check if aligned bid is below threshold (which combines the impatience variable)
         bid_below_threshold = trader_bid < market.current.threshold,
 
-        //define altitude drop
+        // Define altitude drop
         altitude_drop_perc = ALTITUDE_DROP || 0,
 
-        // EXPERIMENTAL: If existing deals, check that I am buying for price lower than the lowest existing
-        bid_below_lowest = (lowest_buy_price > 0) ? (trader_bid < lowest_buy_price * (1 - (altitude_drop_perc / 100))) : bid_below_threshold,
+        // Projected buy price (dependent on existing lowest buy price, otherwise trader bid is selected)
+        projected_buy_price = (lowest_buy_price > 0) ? (lowest_buy_price * (1 - (altitude_drop_perc / 100))) : trader_bid,
+
+        // If existing deals, check that I am buying for price lower than the lowest existing
+        bid_below_lowest = (lowest_buy_price > 0) ? (trader_bid < projected_buy_price) : bid_below_threshold,
 
         // Check if current market span (high - low / last) is favorable and wider than fee
         potential_better_than_fee = (market.current.shift_span / 2) > (2 * (wallet.current.fee / 100)),
@@ -300,7 +303,7 @@ Trader.prototype = {
     //console.log("Market from isBuying:", market.current);
 
     var structured_decision = {
-      trader: me.name,
+      trader: "("+me.name.split("_")[1]+") buy ("+(projected_buy_price).toFixed(2)+")",
       free_hands: has_free_hands,
       resources: available_resources,
       threshold: bid_below_threshold,
@@ -366,7 +369,7 @@ Trader.prototype = {
 
     // Create structured decision object (rendered on client), used for consolidated decision check
     var structured_decision = {
-      trader: "Combined sell at ("+(combined_deal.would_sell_at || 0).toFixed(2)+")",
+      trader: "("+me.name.split("_")[1]+") sell ("+(combined_deal.would_sell_at || 0).toFixed(2)+")",
       would_sell_price: (combined_deal.would_sell_at < current_sale_price),
       cool: potential_better_than_heat,
       managed: (combined_deal.amount <= wallet.current.btc_balance)
@@ -701,7 +704,7 @@ function checkMarket(done) {
       q.drain = function() {
         //console.log("Current env:", process.env);
         var cool_up = INITIAL_GREED,
-            next_check = (config.simulation ? 2 : ( 
+            next_check = (config.simulation ? 0 : ( 
                 (process.env.NODE_ENV || "development") === "development" ? 10000 : 4000) +
                 (Math.random()*3000)
             );
