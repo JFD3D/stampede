@@ -11,6 +11,7 @@ function Market() {
   this.current = {};
   this.momentum_array = [];
   this.momentum_indicator = 0;
+  this.timer = null;
   this.check_frequency = 4000 + (Math.random()*5000);
 }
 

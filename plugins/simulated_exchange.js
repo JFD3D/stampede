@@ -1,8 +1,8 @@
 // This is a redirection to exchange object under Simulator > exchange
 
 var config = require("./config"),
-    simulator = require("./simulator"),
-    xc = config.exchange.currency;
+    xc = config.exchange.currency,
+    controller = require("./../routes/controller");
 
 
 // The exchange instance will create an object that provides ticker data and simulates exchange apis
@@ -18,7 +18,8 @@ function Exchange() {
 
 Exchange.prototype = {
   
-  load: function(market_data, start_amount) {
+  load: function(market_data) {
+    console.log("Loading data.", market_data.length);
     this.ticks = market_data;
     this.ticks_length = market_data.length;
     this.current_tick = 0;
@@ -29,9 +30,8 @@ Exchange.prototype = {
       fee: 0.4,
       btc_available: 0,
       btc_balance: 0,
-      time: start_tick.time
+      time: start_tick.time || 0
     };
-
 
     this.current_balance[xc+"_reserved"] = 0;
     this.current_balance[xc+"_balance"] = this.current_balance[xc+"_available"] = config.trading.maximum_investment;
@@ -42,17 +42,20 @@ Exchange.prototype = {
 
 
   balance: function(callback) {
-    this.current_balance.time = (this.ticks[this.current_tick] || {}).time;
-    callback(null, this.current_balance);
+    var me = this;
+    me.current_balance.time = (me.ticks[me.current_tick] || {}).time;
+    callback(null, me.current_balance);
   },
 
   ticker: function(callback) {
     // Take currently loaded data and move further by a tick
-    var me = this;
-    var market_current = me.ticks[me.current_tick];
-    if (market_current) {
+    
+    var me = this,
+        market_current = me.ticks[me.current_tick];
 
-      process.stdout.write("i:"+me.current_tick+"|\r");
+    me.current_tick++;
+    
+    if (market_current) {
       //["last", "bid", "low", "high", "volume", "ask"]
       market_current.bid = market_current.last;
       market_current.ask = market_current.last;
@@ -62,9 +65,10 @@ Exchange.prototype = {
       callback(null, market_current);
     }
     else {
-      callback((me.current_tick > me.ticks.length - 1) ? {stop: true} : "Unable to retrieve ticker data from Simulated Exchange.", null);
+      callback((me.current_tick > me.ticks.length) ? {stop: true} : "Unable to retrieve ticker data from Simulated Exchange.", null);
+      controller.simulatorFinish(me);
     }
-    me.current_tick++;
+    
   },
   buy: function(amount, price, callback) {
 

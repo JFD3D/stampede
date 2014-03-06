@@ -14,7 +14,7 @@ function generateData() {
         trend: {
           LT: {
             duration: 14*day,
-            impact: 0.03
+            impact: 0.05
           },
           MT: {
             duration: 6*hour,
@@ -43,7 +43,7 @@ function generateData() {
       time_point = start_time + 1,            // Initialize first time_point
       data = [{
         high: 500,
-        last: 460,
+        last: 450,
         low: 400,
         time: start_time
       }],
@@ -117,7 +117,7 @@ function generateData() {
 
 
     // Time and encapsulate extreme calculation (very costly function)
-    var t1 = +(new Date());
+    var t1 = Date.now();
 
     if (
       current_extremes.time_low < (time_point - config.low_high_window) ||
@@ -143,21 +143,15 @@ function generateData() {
     data_point.low = current_extremes.low;
     data_point.high = current_extremes.high;
 
-    var t2 = +(new Date());
+    var t2 = Date.now();
     extremes_calculation += (t2-t1);
   }
-  var end = +(new Date());
+  var end = Date.now();
 
   console.log("generateData (Length:"+data.length+") | took "+((end-now)/1000).toFixed(2)+" seconds (Extremes: "+(extremes_calculation/1000).toFixed(2)+" seconds | "+(extremes_calculation/(end-now)*100).toFixed(2)+"%).");
   return data;
 
-}
-  
-Array.prototype.calculateVector = function(trends) {
-  var vector = 0;
-
-  return vector;
-};
+}  
 
 function findExtremesInRangeByKey(data, range, key) {
 
@@ -226,25 +220,6 @@ function binner(data, span, key) {
   if (debug) console.log("binner | binned_data:", binned_data);
 
   return binned_data;
-}
-
-function generateBinnedData(span) {
-  var t1 = +(new Date());
-  var data = generateData();
-  var t2 = +(new Date());
-
-  console.log("generateBinnedData | generate took "+((t2-t1)/1000).toFixed(2)+" seconds.");
-
-  var t3 = +(new Date());
-  var binned_data = binner(data, span || 1000, "last");
-  var t4 = +(new Date());
-
-  console.log("generateBinnedData | binner took "+((t4-t3)/1000).toFixed(2)+" seconds.");
-
-
-
-  return binned_data;
-  
 }
 
 exports.launch = generateData;

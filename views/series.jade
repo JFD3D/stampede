@@ -1,0 +1,22 @@
+extends layout
+
+- if (simulator_enabled)
+  block head
+    script(type='text/javascript', src='/javascripts/front-simulator.js')
+
+block navigation
+  #live-messages
+    .content
+block content
+  - if (simulator_enabled)
+    .block#simulator-series(style="width: 100%;")
+      h2 Simulation series results
+      .content
+        .spacer
+        p Will be displayed here...
+  .block#live-trading-config(class="#{class_for_status}")
+    h2 Trading configuration
+    include _trading_config
+    h2 Trading strategies
+    include _trading_strategies
+    .content

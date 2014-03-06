@@ -1,0 +1,9 @@
+- if (serie_results && serie_results.length)
+  table
+    tr
+      each item in serie_results[0]
+        th= item.type + " / " + item.field
+    each result in serie_results
+      tr
+        each item in result
+          td= item.value

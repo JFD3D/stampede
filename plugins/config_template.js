@@ -62,6 +62,11 @@ exports.hosts = {
   production: "production_url"
 };
 
+exports.logging = {
+  decisions: false      // Whether to log decisions into common log 
+                        // Recommended to disable when running with simulator
+};
+
 // Email addresses of ppl allowed to access this app (needs to be google authenticable)
 exports.allowed_user_emails = ["email@address.com", "email2@address.com"]; 
 

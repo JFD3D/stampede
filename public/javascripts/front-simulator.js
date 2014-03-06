@@ -1,14 +1,53 @@
+function Simulator() {
+  this.renderData = function(data) {
+    renderGeneratedData(data);
+    $("#simulator-run, #simulator-save-data").show();
+  };
+}
+
+var sim = new Simulator();
+
 $(document).ready(function() {
   $("#generator-launch").click(launchGenerator);
   $("#simulator-run").click(runSimulator);
+  $("#simulator-save-data").click(saveDataSet);
+  $("body").on("click", ".simulator-data-loader", loadSavedData);
+  $("body").on("click", ".simulator-data-remover", removeSavedData);
 });
 
+function loadSavedData(event) {
+  notify("Loading saved set.");
+  actionAsyncLink(event, this, sim.renderData);
+}
+
+function removeSavedData(event) {
+  actionAsyncLink(event, this);
+}
+
+function actionAsyncLink(event, element, callback) {
+  event.preventDefault();    
+  var action = element.href,
+      method = $(element).attr("data-method") || "get";
+  $[method](action, function(response) {
+    if (response) {
+      notify(response.message || "Complete.");
+      if (callback && response.data) callback(response.data);
+    }
+  });
+}
+
+function saveDataSet() {
+  $.post("/simulator/save_data_set", function(response) {
+    if (response) {
+      notify(response.message || "Submitted data set to storage.");
+    }
+  });
+}
 
 function launchGenerator() {
   $.get("/simulator/generate", function(response) {
     if (response.data) {
-      renderGeneratedData(response.data);
-      $("#simulator-run").show();
+      sim.renderData(response.data);
     }
   });
 }

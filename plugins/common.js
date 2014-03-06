@@ -56,7 +56,21 @@ Array.prototype.extremesByKey = function(key) {
   };
 };
 
+// Standard email validation
 exports.validateEmail = function(email) { 
   var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(email);
 };
+
+// for consistent time labeling down to second grain
+exports.timeLabel = function () {
+  var t = new Date(),
+      h = ("0" + t.getHours()).slice(-2),
+      m = ("0" + t.getMinutes()).slice(-2),
+      s = ("0" + t.getSeconds()).slice(-2),
+      y = t.getFullYear(),
+      mn = ("0" + (t.getMonth() + 1)).slice(-2),
+      d = ("0" + t.getDate()).slice(-2),
+      l = y+"-"+mn+"-"+d+"-"+h+":"+m+":"+s;
+  return l;
+}
