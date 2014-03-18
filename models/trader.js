@@ -34,7 +34,7 @@ var config = require("./../plugins/config"),
     sheets = [],                                  // Current USD value history list
     error_email_sent,                             // Indicate if email for certain error has already been sent
     trader_main_list = "stampede_traders",        // Main repository in redis for keeping list of traders
-    stampede_value_sheet = "stampede_usd_value",  // Repository unsorted list for USD value history
+    stampede_value_sheet = "stampede_value",      // Repository unsorted list for USD value history
     cycle_counter = 0,                            // For simulation purposes so that notification is only emitted
     broadcast_time,                               // Will compute leftover on this
     series_simulation = false,                            // Disables broadcast later, (when series of data are simulated)
@@ -68,6 +68,7 @@ var config = require("./../plugins/config"),
     MOMENTUM_ENABLED,       // Whether purchases will be happening on momentum up trend
     TRAILING_STOP_ENABLED,  // Whether sales will happen only after trailing stop is reached
     BELL_BOTTOM_ENABLED,    // Whether purchases will be sized up going down the price per trader
+    COMBINED_SELLING,       // Whether to sell highest and lowest priced BTC combined
 
     /*
      *
@@ -99,6 +100,7 @@ function initializeConfig() {
   MOMENTUM_ENABLED = config.strategy.momentum_trading;
   TRAILING_STOP_ENABLED = config.strategy.trailing_stop;
   BELL_BOTTOM_ENABLED = config.strategy.bell_bottom;
+  COMBINED_SELLING = config.strategy.combined_selling;
 
   // Logging options load
   DECISION_LOGGING = (config.logging || {}).decisions || false;
@@ -258,7 +260,14 @@ Trader.prototype = {
         
         // Available resources, compare investment and current available in wallet
         available_resources = 
-          (wallet.current.investment < MAX_SUM_INVESTMENT) && 
+
+          // Check if I am not running over allowed investment amount
+          (wallet.current.investment < MAX_SUM_INVESTMENT) &&
+
+          // This serves to knock out trading (if I assign less investment than deal)
+          (MAX_SUM_INVESTMENT > currency_buy_amount) &&
+
+          // Check if I have enough fiat to buy
           (wallet.current[config.exchange.currency+"_available"] > currency_buy_amount),
 
         // Calculate trader bid (aligned by bid alignment to make us competitive when bidding)
@@ -354,9 +363,10 @@ Trader.prototype = {
 
     //console.log("sellingCheck | borders:", borders);
     // Calculate weighted price for deals from extremes (lowes and highest)
+    // ONLY if COMBINED SELLING is enabled:
     // We will sell them at once if the weighted average + fees and profit is below market last
 
-    ["min", "max"].forEach(function(extreme) {
+    (COMBINED_SELLING ? ["min", "max"] : ["min"]).forEach(function(extreme) {
       var current = borders[extreme];
       if (
         current && 
@@ -775,55 +785,69 @@ function checkMarket(done) {
   });  
 }
 
-function checkSheets(done) {
-  console.log("* Checking history sheets.");
-  var now = new Date(),
-      timestamp = now.getTime();
-  db.smembers(stampede_value_sheet, function(error, sheet_records) {
-    //console.log("checkSheets | done | error, response:", error, sheet_records);
-    var step = Math.round(sheet_records.length / 100);
-    sheet_records.forEach(function(record, index) {
-      var current = record.split("|");
-      if (
-        step > 0 &&
-        (index % step) === 0 &&
-        current[0] &&
-        parseInt(current[0]) > 10 &&
-        current[1] &&
-        parseFloat(current[1]) > 10
-      ) sheets.push({time: parseInt(current[0]), value: parseFloat(current[1])});
-    });
-    sheets.sort(function(a, b) {return a.time - b.time;});
-    controller.drawSheets(sheets, "full");
-    done(error, sheets);
-  });
-}
-
 function pullValueSheet(callback) {
   callback(sheets);
 }
 
-function logPerformance() {
-  console.log(
-    "--- PERFORMANCE LOGGING ("+cycle_counter+") ---\n",
-    "| Full cycle:", ((perf_timers.cycle || 0) / cycle_counter).toFixed(2), "miliseconds average.",
-    "| Market check:", ((perf_timers.market || 0) / cycle_counter).toFixed(2), "miliseconds per cycle.",
-    "| Wallet check:", ((perf_timers.wallet || 0) / cycle_counter).toFixed(2), "miliseconds per cycle.",
-    "| Decisions check:", ((perf_timers.decisions || 0) / cycle_counter).toFixed(2), "miliseconds per cycle."
-  );
+function checkSheets(done) {
+  console.log("* Checking history sheets.");
+  
+  var timestamp = Date.now();
+
+  db.zrange([stampede_value_sheet, 0, -1, "WITHSCORES"], function(error, sheet_records) {
+    //console.log("checkSheets | done | error, response:", error, sheet_records);
+    var step = Math.round(sheet_records.length / 100);
+    sheet_records.forEach(function(record, index) {
+      var sheets_index = Math.floor(index / 2);
+      if (!sheets[sheets_index]) {
+        // This is a value
+        sheets[sheets_index] = {
+          value: parseFloat(record)
+        };
+      }
+      else {
+        // This is a timestamp
+        sheets[sheets_index].time = parseInt(record);
+      }
+    });
+    //sheets.sort(function(a, b) {return a.time - b.time;});
+    controller.drawSheets(sheets, "full");
+    done(error, sheets);
+    //console.log("SHEETS AFTER sort:", sheets);
+  });
 }
 
 function refreshSheets() {
   //console.log("* Updating history sheets.");
-  var now = new Date(),
-      timestamp = now.getTime(),
+  var time_stamp = Date.now(),
+      sheet_size_limit = 5000,
       current_currency_value = wallet.current.currency_value;
-  if (wallet.current.currency_value > 10 && !config.simulation) {
-    db.sadd(stampede_value_sheet, timestamp+"|"+current_currency_value, function(error, response) {
-      var new_value = {time: timestamp, value: current_currency_value};
-      sheets.shift();
+
+  if (current_currency_value > 10 && !config.simulation) {
+    //console.log("refreshSheets | Recording sheet entry | time_stamp, current_currency_value, !config.simulation:", time_stamp, current_currency_value, !config.simulation);
+    db.zadd(
+      stampede_value_sheet, 
+      time_stamp, 
+      current_currency_value.toString(), function(error, response) {
+      
+      var new_value = {
+        time: time_stamp, 
+        value: current_currency_value
+      };
+
       sheets.push(new_value);
       if (broadcast_time) controller.drawSheets(new_value, "incremental");
+
+      // Now, let's check if we should remove any points
+      db.zcard(stampede_value_sheet, function(error, sheets_size) {
+        if (sheets_size && parseInt(sheets_size) > sheet_size_limit) {
+          var cutoff_size = sheets_size - sheet_size_limit;
+          db.zremrangebyrank(stampede_value_sheet, 0, cutoff_size, function(error, response) {
+            sheets.splice(0, cutoff_size);
+            console.log("Removed ", (cutoff_size), "points from sheets.");
+          });
+        }
+      });
     });
   }
 }
@@ -1008,8 +1032,19 @@ function refreshAll() {
   controller.refreshTraders(live_traders);
   controller.refreshMarket(market.current);
   controller.refreshWallet(wallet.current);
+  controller.refreshShares(wallet.shares);
   console.log("trader | refreshAll | sheets.length :", sheets.length);
   setTimeout(controller.drawSheets(sheets, "full"), 5000);
+}
+
+function logPerformance() {
+  console.log(
+    "--- PERFORMANCE LOGGING ("+cycle_counter+") ---\n",
+    "| Full cycle:", ((perf_timers.cycle || 0) / cycle_counter).toFixed(2), "miliseconds average.",
+    "| Market check:", ((perf_timers.market || 0) / cycle_counter).toFixed(2), "miliseconds per cycle.",
+    "| Wallet check:", ((perf_timers.wallet || 0) / cycle_counter).toFixed(2), "miliseconds per cycle.",
+    "| Decisions check:", ((perf_timers.decisions || 0) / cycle_counter).toFixed(2), "miliseconds per cycle."
+  );
 }
 
 exports.stopAll = stopAll;

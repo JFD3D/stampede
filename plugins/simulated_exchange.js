@@ -61,7 +61,7 @@ Exchange.prototype = {
       market_current.ask = market_current.last;
       market_current.volume = me.volume;
       market_current.simulation_progress = me.current_tick / me.ticks_length;
-
+      //console.log("market_current.time:", market_current.time);
       callback(null, market_current);
     }
     else {

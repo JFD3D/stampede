@@ -26,7 +26,9 @@ var series = {
 
     trailing_stop: [true, false],
 
-    bell_bottom: [true, false]
+    bell_bottom: [true, false],
+
+    combined_selling: [true, false]
 
   }
 

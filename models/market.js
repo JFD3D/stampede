@@ -54,15 +54,11 @@ Market.prototype = {
     me.current.time = data.time || Date.now();
 
     // Initialize Moving Average instance when starting... do not reuse as global variable for simulation
+    // console.log("Ma exists:", (ma ? "yes": "no"));
     if (data.starting_point || !ma) ma = MA(config.trading.momentum_time_span);
 
     ma.push(me.current.time, me.current.last);
     me.current.EMA = ma.movingAverage();
-    // if (isNaN(me.current.EMA) && momentum_errors === 0) {
-
-    //   console.log("EMA calculation problem | me.current.time:", me.current.time, me.current); 
-    //   momentum_errors++;
-    // }
     me.current.moving_variance = ma.variance();
     me.current.timestamp = (data.time) ? new Date(data.time) : new Date(parseInt(data.timestamp)*1000);
     me.current.middle = (me.current.high + me.current.low) / 2;
@@ -81,7 +77,7 @@ Market.prototype = {
 
     // Market momentum updates
     m_array.push({
-      time: (new Date(now)),
+      time: me.current.time,
       market_shift: (me.current.last - me.current.EMA)
     });
 

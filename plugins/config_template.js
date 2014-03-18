@@ -42,7 +42,8 @@ exports.trading = {
 exports.strategy = {
   momentum_trading: true, // Purchases will be happening on momentum up trend
   trailing_stop: true,    // Sales will happen only after trailing stop is reached
-  bell_bottom: true       // Purchases will be sized up going down the price per trader
+  bell_bottom: true,      // Purchases will be sized up going down the price per trader
+  combined_selling: true  // Sell the highest and lowest priced BTC combined
 };
 
 // Google authentication keys
