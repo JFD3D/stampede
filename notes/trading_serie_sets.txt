@@ -1,0 +1,31 @@
+TRADING SERIE SETS
+
+maximum_currency_per_deal
+[5,10,15,20,25,30]
+
+max_number_of_deals_per_trader
+[10,20,30,40]
+
+momentum_time_span
+[.5min, min, 2mins, 5mins, 10mins, 30mins]
+
+greed
+[0.03, 0.04, 0.05, 0.06, 0.07]
+
+altitude_drop
+[0,1,2,3,4]
+
+momentum_trading
+on/off
+
+trailing_stop
+on/off
+
+bell_bottom
+on/off
+
+number of traders
+[1,2,3,4,5]
+
+size:
+6×4×6×5×5×2×2×2×5 = 144000

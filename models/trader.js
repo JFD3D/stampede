@@ -2,8 +2,17 @@ var config = require("./../plugins/config"),
     async = require("async"),
     db = require("redis").createClient(config.redis_port || 6379),
     email = require("./../plugins/email"),
+
+    // All traders will be loaded into this object
     live_traders = {},
+
+    // Trading performance timers initialization for benchmarking
+    perf_timers = {},
+
+    // For communication to client
     controller = require("./../routes/controller"),
+
+    // Load Market and Walled models to initialize instances below
     Market = require("./market"),
     Wallet = require("./wallet"),
 
@@ -21,15 +30,14 @@ var config = require("./../plugins/config"),
 
     // Additional shared variables
 
-    timer,                // Timer for market check
-    trader_count,         // Current trader count
-    sheets = [],          // Current USD value history list
-    error_email_sent,     // Indicate if email for certain error has already been sent
+    trader_count,                                 // Current trader count
+    sheets = [],                                  // Current USD value history list
+    error_email_sent,                             // Indicate if email for certain error has already been sent
     trader_main_list = "stampede_traders",        // Main repository in redis for keeping list of traders
-    stampede_value_sheet = "stampede_usd_value",  // Repository unsorted list for USD value history
-    error_email_sent,
-    cycle_counter = 0,    // For simulation purposes so that notification is only emitted
-    broadcast_time,       // Will compute leftover on this
+    stampede_value_sheet = "stampede_value",      // Repository unsorted list for USD value history
+    cycle_counter = 0,                            // For simulation purposes so that notification is only emitted
+    broadcast_time,                               // Will compute leftover on this
+    series_simulation = false,                            // Disables broadcast later, (when series of data are simulated)
     cycle_sell_decisions = [],
     cycle_buy_decisions = [],
 
@@ -47,7 +55,7 @@ var config = require("./../plugins/config"),
     INITIAL_GREED,          // Greed (.05 means trader looks for 5% upside) XXX: As of now, this is calculated based on current market shift (difference btw low and high)
     BID_ALIGN,              // Align bid before buying to allow competitive price
     IMPATIENCE,             // Where do I buy up from middle
-    ALTITUDE_DROP,          //Defined lower price percentage to buy at
+    ALTITUDE_DROP,          // Defined lower price percentage to buy at
 
     /*
      *
@@ -60,10 +68,21 @@ var config = require("./../plugins/config"),
     MOMENTUM_ENABLED,       // Whether purchases will be happening on momentum up trend
     TRAILING_STOP_ENABLED,  // Whether sales will happen only after trailing stop is reached
     BELL_BOTTOM_ENABLED,    // Whether purchases will be sized up going down the price per trader
+    COMBINED_SELLING,       // Whether to sell highest and lowest priced BTC combined
+
+    /*
+     *
+     * Logging options
+     *
+     *
+     *
+     */    
+    DECISION_LOGGING,
 
 
-// nasty variable declaration end
-    variable_declaration_ender;                     
+
+    // Dirty variable declaration end
+    variable_declaration_ender;
 
 
 function initializeConfig() {
@@ -81,6 +100,10 @@ function initializeConfig() {
   MOMENTUM_ENABLED = config.strategy.momentum_trading;
   TRAILING_STOP_ENABLED = config.strategy.trailing_stop;
   BELL_BOTTOM_ENABLED = config.strategy.bell_bottom;
+  COMBINED_SELLING = config.strategy.combined_selling;
+
+  // Logging options load
+  DECISION_LOGGING = (config.logging || {}).decisions || false;
 
 }
 
@@ -237,7 +260,14 @@ Trader.prototype = {
         
         // Available resources, compare investment and current available in wallet
         available_resources = 
-          (wallet.current.investment < MAX_SUM_INVESTMENT) && 
+
+          // Check if I am not running over allowed investment amount
+          (wallet.current.investment < MAX_SUM_INVESTMENT) &&
+
+          // This serves to knock out trading (if I assign less investment than deal)
+          (MAX_SUM_INVESTMENT > currency_buy_amount) &&
+
+          // Check if I have enough fiat to buy
           (wallet.current[config.exchange.currency+"_available"] > currency_buy_amount),
 
         // Calculate trader bid (aligned by bid alignment to make us competitive when bidding)
@@ -287,7 +317,7 @@ Trader.prototype = {
       potential_better_than_heat
     ) decision = true;
     
-    if (decision) console.log(
+    if (decision && DECISION_LOGGING) console.log(
       "*** Buying deal? ***",
       "\n|- Has hands available (..., me.deals.length):", has_free_hands, me.deals.length,
       "\n|- Available resources (..., wallet.current.investment):", available_resources, wallet.current.investment,
@@ -314,6 +344,7 @@ Trader.prototype = {
       decision: decision
     };
 
+    //console.log("structured_decision:", structured_decision);
     cycle_buy_decisions.push(structured_decision);
 
     return decision;
@@ -332,9 +363,10 @@ Trader.prototype = {
 
     //console.log("sellingCheck | borders:", borders);
     // Calculate weighted price for deals from extremes (lowes and highest)
+    // ONLY if COMBINED SELLING is enabled:
     // We will sell them at once if the weighted average + fees and profit is below market last
 
-    ["min", "max"].forEach(function(extreme) {
+    (COMBINED_SELLING ? ["min", "max"] : ["min"]).forEach(function(extreme) {
       var current = borders[extreme];
       if (
         current && 
@@ -391,7 +423,7 @@ Trader.prototype = {
     cycle_sell_decisions.push(structured_decision);
 
     // Log the success!
-    if (structured_decision.decision) console.log("||| trader | sellingCheck | isSelling? | structured_decision:", structured_decision);
+    if (structured_decision.decision && DECISION_LOGGING) console.log("||| trader | sellingCheck | isSelling? | structured_decision:", structured_decision);
 
     // Check all outstanding factors and make final decision
     var decision = (
@@ -399,7 +431,7 @@ Trader.prototype = {
       combined_deal.names.length > 0
     );
 
-    if (decision) console.log(
+    if (decision && DECISION_LOGGING) console.log(
       "*** Selling deal? ***",
       "\n|- amount is managed (amount):", (combined_deal.amount <= wallet.current.btc_balance), combined_deal.amount,
       "\n|- potential_better_than_heat:", potential_better_than_heat,
@@ -416,6 +448,7 @@ Trader.prototype = {
       market.current &&
       market.current.last > 5
     ) {
+
       var deal = {},
           combined_deal = {};
       if (
@@ -451,13 +484,13 @@ Trader.prototype = {
     deal.heat = INITIAL_GREED;
     wallet.current.cool -= market.current.shift_span;
     //wallet.current.investment += deal.buy_price;
-    controller.notifyClient({
-      message: "Decided to buy "+deal.amount.toFixed(5)+"BTC for "+config.exchange.currency.toUpperCase()+" "+currency_buy_amount.toFixed(2)+" at "+config.exchange.currency.toUpperCase()+" "+deal.buy_price.toFixed(2)+" per BTC.", 
+    if (!series_simulation) controller.notifyClient({
+      message: "Decided to BUY "+deal.amount.toFixed(5)+"BTC for "+config.exchange.currency.toUpperCase()+" "+currency_buy_amount.toFixed(2)+" at "+config.exchange.currency.toUpperCase()+" "+deal.buy_price.toFixed(2)+" per BTC.", 
       permanent: true
     });
     
     controller.buy(deal.amount.toFixed(7), (deal.buy_price).toFixed(2), function(error, order) {
-      console.log("trader | buy | order, error:", order, error);
+      if (DECISION_LOGGING) console.log("trader | buy | order, error:", order, error);
       if (
         order &&
         order.id
@@ -501,13 +534,13 @@ Trader.prototype = {
     // Align current cool to avoid all sell / buy
     wallet.current.cool -= market.current.shift_span;
     
-    controller.notifyClient({
-      message: "Decided to sell "+deal.amount.toFixed(5)+"BTC for "+config.exchange.currency.toUpperCase()+((market.current.last * BID_ALIGN)*deal.amount).toFixed(2)+" at "+config.exchange.currency.toUpperCase()+deal.aligned_sell_price+" per BTC.", 
+    if (!series_simulation) controller.notifyClient({
+      message: "Decided to SELL "+deal.amount.toFixed(5)+"BTC for "+config.exchange.currency.toUpperCase()+" "+((market.current.last * BID_ALIGN)*deal.amount).toFixed(2)+" at "+config.exchange.currency.toUpperCase()+deal.aligned_sell_price+" per BTC.", 
       permanent: true
     });
 
     controller.sell(deal.amount.toFixed(7), deal.aligned_sell_price, function(error, order) {
-      console.log("EXCHANGE: Response after attempt to sell | error, order:", error, order);
+      if (DECISION_LOGGING) console.log("EXCHANGE: Response after attempt to sell | error, order:", error, order);
       if (
         order && 
         order.id
@@ -651,8 +684,9 @@ function stringDeal(deal) {
 }
 
 function cycle(done) {
+  var cycle_start_timer = Date.now();
   cycle_counter++;
-  broadcast_time = (!config.simulation || cycle_counter % 1000 === 0);
+  broadcast_time = (!config.simulation || cycle_counter % 10000 === 0) && !series_simulation;
   if (!config.simulation) console.log("Cycle initiated.");
   cycle_buy_decisions = [];
   cycle_sell_decisions = [];
@@ -663,18 +697,27 @@ function cycle(done) {
 
   // Initialize market and wallet data into global var, exposed on top
   async.series(actions, function(errors, results) {
+
+    // Export current market and wallet data
+    exports.current_market = market.current;
+    exports.current_wallet = wallet.current;
+
     // Final callback returning default market.current
     if (done) done(null, market.current);
-    
+    perf_timers.cycle = (perf_timers.cycle || 0) + (Date.now() - cycle_start_timer);
     // Update client on performed decisions
-    if (broadcast_time) controller.refreshDecisions({
-      buy_decisions: cycle_buy_decisions,
-      sell_decisions: cycle_sell_decisions
-    });
+    if (broadcast_time) {
+      controller.refreshDecisions({
+        buy_decisions: cycle_buy_decisions,
+        sell_decisions: cycle_sell_decisions
+      });
+    }
+    if (cycle_counter % 10000 === 0) logPerformance();
   });
 }
 
 function checkMarket(done) {
+  var market_start_timer = Date.now();
   market.check(function(error, market_current) {
     var stop_simulation = (config.simulation && error && error.stop);
     // Check if traders are initialized
@@ -684,7 +727,11 @@ function checkMarket(done) {
       market.current.threshold = IMPATIENCE * (market.current.high - market.current.middle) + market.current.middle;
       var btc_to_distribute = wallet.current.btc_available - wallet.current.btc_amount_managed;
       wallet.current.currency_value = (wallet.current.btc_balance || 0) * (market.current.last || 0) + (wallet.current[config.exchange.currency+"_balance"] || 0);
-      if (broadcast_time) controller.refreshWallet(wallet.current); 
+      if (broadcast_time) controller.refreshWallet(wallet.current);
+      perf_timers.market = (perf_timers.market || 0) + (Date.now() - market_start_timer);
+
+      var decisions_start_timer = Date.now();
+
       var q = async.queue(function(trader_name, internal_callback) {
         var trader = live_traders[trader_name];
         
@@ -703,6 +750,7 @@ function checkMarket(done) {
 
       q.drain = function() {
         //console.log("Current env:", process.env);
+        perf_timers.decisions = (perf_timers.decisions || 0) + (Date.now() - decisions_start_timer);
         var cool_up = INITIAL_GREED,
             next_check = (config.simulation ? 0 : ( 
                 (process.env.NODE_ENV || "development") === "development" ? 10000 : 4000) +
@@ -718,11 +766,16 @@ function checkMarket(done) {
           console.log("... Cycle(wallet, market) CHECK again in:", (next_check / 1000).toFixed(2), "seconds. - "+(new Date())+".");
           refreshSheets();
         }
-            
-        if (timer) clearTimeout(timer);
-        timer = setTimeout(cycle, next_check);
 
         if (done) done(null, market.current);
+
+        if (config.simulation) {
+          cycle();
+        }
+        else {
+          if (market.timer) clearTimeout(market.timer);
+          market.timer = setTimeout(cycle, next_check);
+        }
       };
     }
     else {
@@ -732,45 +785,69 @@ function checkMarket(done) {
   });  
 }
 
-function checkSheets(done) {
-  console.log("* Checking history sheets.");
-  var now = new Date(),
-      timestamp = now.getTime();
-  db.smembers(stampede_value_sheet, function(error, sheet_records) {
-    //console.log("checkSheets | done | error, response:", error, sheet_records);
-    var step = Math.round(sheet_records.length / 100);
-    sheet_records.forEach(function(record, index) {
-      var current = record.split("|");
-      if (
-        step > 0 &&
-        (index % step) === 0 &&
-        current[0] &&
-        parseInt(current[0]) > 10 &&
-        current[1] &&
-        parseFloat(current[1]) > 10
-      ) sheets.push({time: parseInt(current[0]), value: parseFloat(current[1])});
-    });
-    sheets.sort(function(a, b) {return a.time - b.time;});
-    controller.drawSheets(sheets, "full");
-    done(error, sheets);
-  });
-}
-
 function pullValueSheet(callback) {
   callback(sheets);
 }
 
+function checkSheets(done) {
+  console.log("* Checking history sheets.");
+  
+  var timestamp = Date.now();
+
+  db.zrange([stampede_value_sheet, 0, -1, "WITHSCORES"], function(error, sheet_records) {
+    //console.log("checkSheets | done | error, response:", error, sheet_records);
+    var step = Math.round(sheet_records.length / 100);
+    sheet_records.forEach(function(record, index) {
+      var sheets_index = Math.floor(index / 2);
+      if (!sheets[sheets_index]) {
+        // This is a value
+        sheets[sheets_index] = {
+          value: parseFloat(record)
+        };
+      }
+      else {
+        // This is a timestamp
+        sheets[sheets_index].time = parseInt(record);
+      }
+    });
+    //sheets.sort(function(a, b) {return a.time - b.time;});
+    controller.drawSheets(sheets, "full");
+    done(error, sheets);
+    //console.log("SHEETS AFTER sort:", sheets);
+  });
+}
+
 function refreshSheets() {
   //console.log("* Updating history sheets.");
-  var now = new Date(),
-      timestamp = now.getTime(),
+  var time_stamp = Date.now(),
+      sheet_size_limit = 5000,
       current_currency_value = wallet.current.currency_value;
-  if (wallet.current.currency_value > 10 && !config.simulation) {
-    db.sadd(stampede_value_sheet, timestamp+"|"+current_currency_value, function(error, response) {
-      var new_value = {time: timestamp, value: current_currency_value};
-      sheets.shift();
+
+  if (current_currency_value > 10 && !config.simulation) {
+    //console.log("refreshSheets | Recording sheet entry | time_stamp, current_currency_value, !config.simulation:", time_stamp, current_currency_value, !config.simulation);
+    db.zadd(
+      stampede_value_sheet, 
+      time_stamp, 
+      current_currency_value.toString(), function(error, response) {
+      
+      var new_value = {
+        time: time_stamp, 
+        value: current_currency_value
+      };
+
       sheets.push(new_value);
       if (broadcast_time) controller.drawSheets(new_value, "incremental");
+
+      // Now, let's check if we should remove any points
+      db.zcard(stampede_value_sheet, function(error, sheets_size) {
+        if (sheets_size && parseInt(sheets_size) > sheet_size_limit) {
+          var cutoff_size = sheets_size - sheet_size_limit;
+          db.zremrangebyrank(stampede_value_sheet, 0, cutoff_size, function(error, response) {
+            sheets.splice(0, cutoff_size);
+            console.log("Removed ", (cutoff_size), "points from sheets.");
+          });
+        }
+      });
     });
   }
 }
@@ -778,10 +855,12 @@ function refreshSheets() {
 
 function checkWallet(done) {
   // Initialize into global var, exposed on top
+  var wallet_start_timer = Date.now();
   if (!config.simulation) console.log("* Checking wallet.");
   wallet.check(live_traders, function() {
     if (broadcast_time) controller.refreshShares(wallet.shares);
     wallet.assignAvailableResources(MAX_SUM_INVESTMENT);
+    perf_timers.wallet = (perf_timers.wallet || 0) + (Date.now() - wallet_start_timer);
     if (done) done(null, wallet.current);
   });
 }
@@ -803,7 +882,7 @@ function updateConfig(new_config) {
     );
   }
   else {
-    controller.notifyClient({message: "Unable to update config, values are invalid."});
+    if (!series_simulation) controller.notifyClient({message: "Unable to update config, values are invalid."});
   }
 }
 
@@ -907,11 +986,12 @@ function viewTraders(done) {
   });
 }
 
-function prepareForSimulation() {
+function prepareForSimulation(series) {
   //initializeConfig();
   stopAll();
   config.simulation = true;
   market.simulation = true;
+  if (series) series_simulation = true; 
   db.del(stampede_value_sheet);
 
 }
@@ -940,7 +1020,7 @@ function addShare(holder, investment) {
 }
 
 function stopAll(done) {
-  clearTimeout(timer);
+  // clearTimeout(timer);
   wallet = new Wallet();
   market = new Market();
   sheets = [];
@@ -952,8 +1032,19 @@ function refreshAll() {
   controller.refreshTraders(live_traders);
   controller.refreshMarket(market.current);
   controller.refreshWallet(wallet.current);
+  controller.refreshShares(wallet.shares);
   console.log("trader | refreshAll | sheets.length :", sheets.length);
   setTimeout(controller.drawSheets(sheets, "full"), 5000);
+}
+
+function logPerformance() {
+  console.log(
+    "--- PERFORMANCE LOGGING ("+cycle_counter+") ---\n",
+    "| Full cycle:", ((perf_timers.cycle || 0) / cycle_counter).toFixed(2), "miliseconds average.",
+    "| Market check:", ((perf_timers.market || 0) / cycle_counter).toFixed(2), "miliseconds per cycle.",
+    "| Wallet check:", ((perf_timers.wallet || 0) / cycle_counter).toFixed(2), "miliseconds per cycle.",
+    "| Decisions check:", ((perf_timers.decisions || 0) / cycle_counter).toFixed(2), "miliseconds per cycle."
+  );
 }
 
 exports.stopAll = stopAll;
@@ -968,8 +1059,6 @@ exports.resetConfig = resetConfig;
 
 // Open variables (simulation required)
 exports.live_traders = live_traders;
-exports.market = market;
-exports.wallet = wallet;
 exports.config = config;
 exports.prepareForSimulation = prepareForSimulation;
 exports.removeAllDeals = removeAllDeals;

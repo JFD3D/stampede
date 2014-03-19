@@ -1,0 +1,10 @@
+table
+  tr
+    th Data set
+    th Removal
+  each data_set in data_sets
+    tr
+      td
+        a.active-link.simulator-data-loader(href="/simulator/load_data_set/#{data_set}")= data_set
+      td
+        a.active-link.simulator-data-remover(href="/simulator/remove_data_set/#{data_set}") Remove

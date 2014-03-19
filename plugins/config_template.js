@@ -42,7 +42,8 @@ exports.trading = {
 exports.strategy = {
   momentum_trading: true, // Purchases will be happening on momentum up trend
   trailing_stop: true,    // Sales will happen only after trailing stop is reached
-  bell_bottom: true       // Purchases will be sized up going down the price per trader
+  bell_bottom: true,      // Purchases will be sized up going down the price per trader
+  combined_selling: true  // Sell the highest and lowest priced BTC combined
 };
 
 // Google authentication keys
@@ -60,6 +61,11 @@ exports.redis_port = 6379;
 exports.hosts = {
   development: "http://localhost", 
   production: "production_url"
+};
+
+exports.logging = {
+  decisions: false      // Whether to log decisions into common log 
+                        // Recommended to disable when running with simulator
 };
 
 // Email addresses of ppl allowed to access this app (needs to be google authenticable)

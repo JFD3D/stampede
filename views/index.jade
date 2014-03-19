@@ -10,9 +10,14 @@ block navigation
 block content
   - var class_for_status = (traders_awake == true ? "active" : "inactive")
   - if (simulator_enabled)
+    .block#simulator-data-sets
+      h2 Simulation data sets
+      .content
+        include _simulator_data_sets
     .block#live-simulation
       .content
         button#generator-launch Generate data
+        button#simulator-save-data(style="display: none;") Save data
         .spacer
         #chart
         .spacer
