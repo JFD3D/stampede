@@ -218,12 +218,10 @@ Simulator.prototype = {
   },
 
   applySerieConfig: function() {
-
     var sim = this,
         serie_config = sim.current.series_config,
         serie_options = sim.current.series_array[sim.current.serie_index],
         s = 0;
-
 
     for (var setting in serie_config.trading) {
       // Read settings from 1, since we are applying in order after data sets
@@ -232,10 +230,14 @@ Simulator.prototype = {
     }
     for (var strategy in serie_config.strategies) {
       s++;
-      config.strategy[strategy] = serie_config.strategies[strategy][serie_options[s]];
+      config.strategy[strategy] = 
+        serie_config.strategies[strategy][serie_options[s]];
     }
 
-    console.log("applySerieConfig | serie_options, config.trading, config.strategy:", serie_options, config.trading, config.strategy);
+    console.log(
+      "applySerieConfig | serie_options, config.trading, config.strategy:", 
+      serie_options, config.trading, config.strategy
+    );
   },
 
   loadSerieSet: function(serie_data_set_name, callback) {
@@ -250,15 +252,6 @@ Simulator.prototype = {
 };
 
 module.exports = Simulator;
-
-// Assigns size calculation to hash, for counting number of keys in a hash
-function lengthOfKeys(obj) {
-  var size = 0, key;
-  for (key in obj) {
-    if (obj.hasOwnProperty(key)) size++;
-  }
-  return size;
-}
 
 
 function cartesian(arg) {

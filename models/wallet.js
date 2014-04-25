@@ -24,11 +24,20 @@ Wallet.prototype = {
         if (me.current.error) delete me.current.error;
       }
       else {
-        console.log("!!!!!!!!!!!!!!!!ERROR Getting WALLET from API !!!!!!!!!!!!!!", error, data);;
+        console.log(
+          "!!!!!!!!!!!!!!!!ERROR Getting WALLET from API !!!!!!!!!!!!!!", 
+          error, data
+        );
         me.current.error = "Unable to load current balance ["+(new Date())+"].";
       }
       
-      me.summarizeShares(callback);
+      // Fasten in case of series simulation, avoid share summarization
+      if (me.series_simulation) {
+        callback();
+      } 
+      else {
+        me.summarizeShares(callback);
+      }
     });
   },
   assign: function(data) {
@@ -56,8 +65,6 @@ Wallet.prototype = {
       (MAX_SUM_INVESTMENT - me.current.investment) < me.current[config.exchange.currency+"_available"] ? 
         MAX_SUM_INVESTMENT - me.current.investment : 
         me.current[config.exchange.currency+"_available"];
-
-    //console.log("assignAvailableResources | me.current.available_to_traders:", me.current.available_to_traders);
   },
 
   summarizeDeals: function() {
@@ -67,7 +74,9 @@ Wallet.prototype = {
     for (var trader_name in live_traders) {
       var current_trader_deals = live_traders[trader_name].deals || [];
       (live_traders[trader_name].record || {}).current_investment = 0;
-      (live_traders[trader_name].record || {}).current_deals = current_trader_deals.length;
+      (live_traders[trader_name].record || {}).current_deals = 
+        current_trader_deals.length;
+
       current_trader_deals.forEach(function(current_trader_deal) {
         var deal_buy_price = current_trader_deal.buy_price,
             deal_amount = current_trader_deal.amount;
@@ -76,9 +85,12 @@ Wallet.prototype = {
           !isNaN(deal_amount * deal_buy_price)
         ) me.current.investment += (deal_amount * deal_buy_price);
         live_traders[trader_name].record.current_investment += 
-          isNaN(deal_amount * deal_buy_price) ? 0 : (deal_amount * deal_buy_price);
+          isNaN(deal_amount * deal_buy_price) ? 
+            0 : (deal_amount * deal_buy_price);
       });
-      me.current.average_buy_price = (me.current.investment) / (me.current.btc_amount_managed);
+
+      me.current.average_buy_price = 
+        me.current.investment / me.current.btc_amount_managed;
     }
     
   },
@@ -107,13 +119,20 @@ Wallet.prototype = {
 
         // Now assign part value
         me.shares.forEach(function(share) {
-          var piece = share.invested_currency_amount / (me.current.initial_investment || 0.01);
-          var current_currency_value = piece * me.current.currency_value;
+          var piece = 
+                share.invested_currency_amount / 
+                (me.current.initial_investment || 0.01),
+              current_currency_value = piece * me.current.currency_value;
+          
           share.current_currency_value = current_currency_value.toFixed(2);
           share.pie_share = (piece*100).toFixed(1)+"%";
-          share.profit_loss = ((current_currency_value - share.invested_currency_amount) / share.invested_currency_amount*100).toFixed(2)+"%";
+          share.profit_loss = (
+            (current_currency_value - share.invested_currency_amount) / 
+            share.invested_currency_amount*100
+          ).toFixed(2)+"%";
+
         });
-        if (callback) callback(errors, me.shares);
+        if (callback) callback();
       } 
       else {
         me.shares = [{
@@ -122,7 +141,7 @@ Wallet.prototype = {
           pie_share: "100%",
           current_currency_value: me.current.currency_value || 0
         }];
-        if (callback) callback(null, me.shares);
+        if (callback) callback();
       }
     });
   },

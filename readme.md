@@ -1,14 +1,10 @@
-#Stampede - A bitcoin bot written in Node
-
-
+#Stampede - Bitcoin trading bot
 
 ##Configuration:
 The app must be configured by making a copy of the /plugins/config_template.js file to /plugins/config.js using your information and api keys.
 
 Peter Berezny - [Github](https://github.com/pejrak)
 Matthew Perkins - [Github](https://github.com/mattarse)
-
-
 
 
 License

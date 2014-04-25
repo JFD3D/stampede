@@ -73,4 +73,13 @@ exports.timeLabel = function () {
       d = ("0" + t.getDate()).slice(-2),
       l = y+"-"+mn+"-"+d+"-"+h+":"+m+":"+s;
   return l;
-}
+};
+
+exports.reassignProperties = function(source_hash, target_hash) {
+  for (var property in source_hash) {
+    if (source_hash.hasOwnProperty(property)) {
+      target_hash[property] = 
+        source_hash[property];
+    }
+  }
+};

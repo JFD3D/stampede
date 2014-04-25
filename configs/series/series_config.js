@@ -1,9 +1,9 @@
 var series = {
   
   data_sets: [
-    "stampede_data_set_2014-02-18-14:50:03",
-    "stampede_data_set_2014-02-18-14:51:50",
-    "stampede_data_set_2014-02-18-15:36:43"
+    "stampede_data_set_2014-03-27-16:06:43",
+    "stampede_data_set_2014-03-27-16:06:50",
+    "stampede_data_set_2014-03-27-16:06:33"
   ],
 
   trading: {
@@ -16,7 +16,7 @@ var series = {
 
     greed: [0.03, 0.05, 0.07],
 
-    altitude_drop: [0,1,2]
+    altitude_drop: [2, 1, 0]
 
   },
 
