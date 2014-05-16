@@ -32,7 +32,7 @@ Wallet.prototype = {
       }
       
       // Fasten in case of series simulation, avoid share summarization
-      if (me.series_simulation) {
+      if (me.simulation) {
         callback();
       } 
       else {
@@ -62,7 +62,9 @@ Wallet.prototype = {
   assignAvailableResources: function(MAX_SUM_INVESTMENT) {
     var me = this;
     me.current.available_to_traders = 
-      (MAX_SUM_INVESTMENT - me.current.investment) < me.current[config.exchange.currency+"_available"] ? 
+      (
+        MAX_SUM_INVESTMENT - me.current.investment
+      ) < me.current[config.exchange.currency+"_available"] ? 
         MAX_SUM_INVESTMENT - me.current.investment : 
         me.current[config.exchange.currency+"_available"];
   },
@@ -99,7 +101,6 @@ Wallet.prototype = {
     var me = this;
     me.shares = [];
     me.current.initial_investment = 0;
-    //console.log("wallet | summarizeShares | currency_value:", me.current.currency_value);
     db.smembers("stampede_shares", function(errors, share_list) {
       if (
         share_list && 
@@ -151,7 +152,9 @@ Wallet.prototype = {
       holder: holder,
       invested_currency_amount: amount_invested
     };
-    db.sadd("stampede_shares", share.holder+"|"+share.invested_currency_amount, callback);
+    db.sadd(
+      "stampede_shares", 
+      share.holder+"|"+share.invested_currency_amount, callback);
   }
 
 };
