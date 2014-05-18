@@ -7,7 +7,7 @@ var series = {
 
   trading: {
 
-    maximum_currency_per_deal: [5, 7, 10],
+    maximum_currency_per_deal: [2, 5, 7],
 
     max_number_of_deals_per_trader: [100],
 

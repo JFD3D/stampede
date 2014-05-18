@@ -83,3 +83,11 @@ exports.reassignProperties = function(source_hash, target_hash) {
     }
   }
 };
+
+exports.cumulate = function(base, length) {
+  var result = base;
+  for (var multiplier = 0; multiplier < (length - 1); multiplier++) {
+    result *= 2;
+  }
+  return result;
+}

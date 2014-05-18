@@ -253,7 +253,7 @@ Trader.prototype = {
         lowest_buy_price = borders.min.buy_price || 0,
         currency_buy_amount = 
           BELL_BOTTOM_ENABLED ? (
-            ((deals.length / MAX_DEALS_HELD) + 1) * MAX_PER_DEAL
+            common.cumulate(MAX_PER_DEAL, me.deals.length + 1)
           ) : MAX_PER_DEAL,
 
         // Check if trader has available spot for another deal
@@ -402,6 +402,7 @@ Trader.prototype = {
 
 
     combined_deal.currency_amount = 0;
+    combined_deal.max_currency_amount = 0;
     combined_deal.amount = 0;
     combined_deal.names = [];
 
@@ -419,7 +420,9 @@ Trader.prototype = {
         combined_deal.currency_amount += (current.buy_price * current.amount);
         combined_deal.max_currency_amount += 
           (
-            current.max_price ? current.max_price : current.buy_price
+            (
+              current.max_price > current.buy_price
+            ) ? current.max_price : current.buy_price
           ) * current.amount;
         combined_deal.amount += current.amount;
         combined_deal.names.push(current.name);
@@ -448,7 +451,7 @@ Trader.prototype = {
 
     */
 
-    // Stop price is the buy price reduced by half of greed
+    // Stop price is the max price reduced by half of greed
     combined_deal.stop_price = 
       (combined_deal.max_price) * (1 - (trader_greed / 2));
 
@@ -468,25 +471,24 @@ Trader.prototype = {
     if (TRAILING_STOP_ENABLED) {
       structured_decision.trailing_stop = (
         combined_deal.stop_price >= current_sale_price &&
-        (2 * MAX_PER_DEAL) > wallet.current[currency_key] &&
+        //(2 * MAX_PER_DEAL) > wallet.current[currency_key] &&
         combined_deal.names.length > 1
       );
-
       combined_deal.trailing_stop = structured_decision.trailing_stop;
     }
 
     structured_decision.managed = (
       combined_deal.amount <= wallet.current.btc_balance
     );
-
     // Check trailing stop, if enabled affect decision
     structured_decision.decision = (
-      (
-        (!TRAILING_STOP_ENABLED && structured_decision.would_sell_price) ||
-        structured_decision.trailing_stop
-      ) &&
+      structured_decision.would_sell_price &&
       structured_decision.managed &&
-      structured_decision.cool
+      structured_decision.cool &&
+      (
+        !TRAILING_STOP_ENABLED || 
+        structured_decision.trailing_stop
+      )
     );
 
     // Add the decision to array which will be rendered on client
@@ -531,7 +533,7 @@ Trader.prototype = {
           sale_deal = {};
 
       if (
-        me.isBuying()
+        me.isBuying(purchase_deal)
       ) {
         me.buy(purchase_deal, done);
       }
@@ -552,8 +554,8 @@ Trader.prototype = {
     var me = this,
         currency_buy_amount = 
           BELL_BOTTOM_ENABLED ? (
-            ((me.deals.length / MAX_DEALS_HELD) + 1
-          ) * MAX_PER_DEAL) : MAX_PER_DEAL;
+            common.cumulate(MAX_PER_DEAL, (me.deals.length + 1))
+          ) : MAX_PER_DEAL;
 
     deal.buy_price = (market.current.last / BID_ALIGN);
 
@@ -807,7 +809,7 @@ function cycle(done) {
   cycle_counter++;
   broadcast_time = (
     !config.simulation || 
-    cycle_counter % 10000 === 0
+    cycle_counter % 1000 === 0
   ) && !series_simulation;
   if (!config.simulation) console.log("Cycle initiated.");
   cycle_buy_decisions = [];
