@@ -15,16 +15,15 @@ _.mixin({
 });  
 
 var Bitstamp = function(key, secret, client_id) {
-  this.client_id = client_id;
   this.key = key;
   this.secret = secret;
-  var self = this
-  _.each(_.functions(self), function(f) {
-    self[f] = _.bind(self[f], self);
-  });
+  this.client_id = client_id;
+
+  _.bindAll(this);
 }
 
 Bitstamp.prototype._request = function(method, path, data, callback, args) {
+  
   var options = {
     host: 'www.bitstamp.net',
     path: path,
@@ -54,10 +53,23 @@ Bitstamp.prototype._request = function(method, path, data, callback, args) {
       callback(null, json);
     });
   });
+
   req.on('error', function(err) {
     callback(err);
   });
+
+  req.on('socket', function (socket) {
+    socket.setTimeout(5000);
+    socket.on('timeout', function() {
+      req.abort();
+    });
+    socket.on('error', function(err) {
+      callback(err);
+    });
+  });
+  
   req.end(data);
+
 }
 
 Bitstamp.prototype._get = function(action, callback, args) {
@@ -72,7 +84,7 @@ Bitstamp.prototype._post = function(action, callback, args) {
 
   var path = '/api/' + action + '/';
 
-  var nonce = +new Date() + '';
+  var nonce = new Date().getTime() + '' + new Date().getMilliseconds();
   var message = nonce + this.client_id + this.key;
   var signer = crypto.createHmac('sha256', new Buffer(this.secret, 'utf8'));
   var signature = signer.update(message).digest('hex').toUpperCase();

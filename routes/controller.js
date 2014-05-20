@@ -59,8 +59,13 @@ exports.addShare = function(req, res) {
 
 exports.refreshShares = function(shares) {
 
-  jade.renderFile(__dirname + "/../views/_shares_table.jade", {shares: shares, helpers: helpers}, function(error, html) {
-    if (error) console.log("rendering updateShares | error, html:", error, html);
+  jade.renderFile(__dirname + "/../views/_shares_table.jade", {
+    shares: shares, 
+    helpers: helpers
+  }, function(error, html) {
+    if (error) console.log(
+      "rendering updateShares | error, html:", error, html
+    );
     if (html) live.sendToAll("stampede_updates", {
       container: "live-shares",
       html: html
@@ -132,14 +137,19 @@ exports.getValueSheet = function(req, res) {
 
 exports.refreshMarket = function(market_data) {
   //console.log("Updating market with data.", data);
-  jade.renderFile(__dirname + "/../views/_market.jade", {current_market: market_data, helpers: helpers}, function(error, html) {
+  jade.renderFile(__dirname + "/../views/_market.jade", {
+    current_market: market_data, 
+    helpers: helpers
+  }, function(error, html) {
     //console.log("rendering updateMarket | error:", error);
     if (html) live.sendToAll("stampede_updates", {
       container: "live-ticker",
       html: html
     });
   });
-  if (market_data.last) live.sendToAll("stampede_updates", {current_last_price: "$"+market_data.last.toFixed(2)});
+  if (market_data.last) live.sendToAll(
+    "stampede_updates", {current_last_price: "$"+market_data.last.toFixed(2)}
+  );
 };
 
 exports.drawSheets = function(data, update_type) {
@@ -154,7 +164,10 @@ exports.drawSheets = function(data, update_type) {
 
 exports.refreshWallet = function(wallet_data, done) {
   //console.log("^^^^^ Updating wallet with data.", data);
-  jade.renderFile(__dirname + "/../views/_wallet.jade", {current_wallet: wallet_data, helpers: helpers}, function(error, html) {
+  jade.renderFile(__dirname + "/../views/_wallet.jade", {
+    current_wallet: wallet_data, 
+    helpers: helpers
+  }, function(error, html) {
     if (error) console.log("!!!! refreshWallet error:", error);
     if (html) live.sendToAll("stampede_updates", {
       container: "live-balance",
@@ -165,7 +178,10 @@ exports.refreshWallet = function(wallet_data, done) {
 };
 
 exports.refreshTraders = function(traders, done) {
-  jade.renderFile(__dirname + "/../views/_traders.jade", {traders: traders, helpers: helpers}, function(error, html) {
+  jade.renderFile(__dirname + "/../views/_traders.jade", {
+    traders: traders, 
+    helpers: helpers
+  }, function(error, html) {
     if (error) console.log("refreshTraders | renderFile | error:", error);
     if (html) live.sendToAll("stampede_updates", {
       container: "live-traders",
@@ -187,7 +203,10 @@ exports.refreshTradingConfig = function(trading_config, done) {
 
 
 exports.refreshDecisions = function(data) {
-  jade.renderFile(__dirname + "/../views/_decision_indicators.jade", {decisions: data, helpers: helpers}, function(error, html) {
+  jade.renderFile(__dirname + "/../views/_decision_indicators.jade", {
+    decisions: data, 
+  helpers: helpers
+}, function(error, html) {
     if (error) console.log("refreshDecisions | renderFile | error:", error);
     if (html) live.sendToAll("stampede_updates", {
       container: "decision-indicators",
@@ -197,7 +216,10 @@ exports.refreshDecisions = function(data) {
 };
 
 exports.refreshSimulationSets = function(data_sets, done) {
-  jade.renderFile(__dirname + "/../views/_simulator_data_sets.jade", {data_sets: data_sets, helpers: helpers}, function(error, html) {
+  jade.renderFile(__dirname + "/../views/_simulator_data_sets.jade", {
+    data_sets: data_sets, 
+  helpers: helpers
+}, function(error, html) {
     if (error) console.log("refreshSimulationDataSets | renderFile | error:", error);
     if (html) live.sendToAll("stampede_updates", {
       container: "simulator-data-sets",
@@ -208,7 +230,10 @@ exports.refreshSimulationSets = function(data_sets, done) {
 };
 
 exports.refreshSimulationResults = function(results, done) {
-  jade.renderFile(__dirname + "/../views/_simulator_serie_results.jade", {serie_results: results, helpers: helpers}, function(error, html) {
+  jade.renderFile(__dirname + "/../views/_simulator_serie_results.jade", {
+    serie_results: results, 
+  helpers: helpers
+}, function(error, html) {
     if (error) console.log("refreshSimulationResults | renderFile | error:", error);
     if (html) live.sendToAll("stampede_updates", {
       container: "simulator-series",
@@ -233,7 +258,9 @@ exports.updateTradingConfig = function(req, res) {
   var update_body = req.body,
       new_config = {};
   for (var attribute in config.trading) {
-    new_config[attribute] = (parseFloat(update_body[attribute]) || config.trading[attribute]);
+    new_config[attribute] = (
+      parseFloat(update_body[attribute]) || config.trading[attribute]
+    );
   }
   Trader.updateConfig(new_config);
   res.send({message: "Trading configuration update submitted."});
@@ -327,7 +354,9 @@ exports.simulatorRemoveDeals = function(req, res) {
 };
 
 exports.simulatorRun = function(req, res) {
-  console.log("Simulator warming up (data length - "+generated_data.length+").");
+  console.log(
+    "Simulator warming up (data length - "+generated_data.length+")."
+  );
   
   simulatorWarmUp(generated_data);
   // MAKE SURE we run simulation on virtual exchange !!!
@@ -345,8 +374,6 @@ exports.simulatorRun = function(req, res) {
 
 
 exports.simulatorRunSeries = function(req, res) {
-  //console.log("Simulator warming up (data length - "+generated_data.length+").");
-  
   // MAKE SURE we run simulation on virtual exchange !!!
   if (config.exchange.selected === "simulated_exchange") {
     simulator.startSeries();

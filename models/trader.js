@@ -578,7 +578,7 @@ Trader.prototype = {
     
     controller.buy(
       deal.amount.toFixed(7), 
-      deal.buy_price.toFixed(2), 
+      deal.buy_price.toFixed(2),
     function(error, order) {
       if (DECISION_LOGGING) console.log(
         "trader | buy | order, error:", order, error
@@ -608,7 +608,7 @@ Trader.prototype = {
           to: config.owner.email,
           subject: "Stampede: Error BUYING deal through bitstamp API",
           template: "error.jade",
-          data: {error:error}
+          data: {error: error}
         }, function(success) {
           console.log("ERROR Email sending success?:", success);
           error_email_sent = true;
