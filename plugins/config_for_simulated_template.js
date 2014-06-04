@@ -21,7 +21,7 @@ exports.email = {
 };
 
 exports.trading = {
-  maximum_currency_per_deal: 2,        // Maximum allowed $ per deal / trade / hand
+  base_currency_per_deal: 2,            // Maximum allowed $ per deal / trade / hand
   maximum_investment: 1000,             // Maximum total $ allowed to invest in BTC
   bid_alignment: 0.998,                 // Bid align for competitive edge when placing bids 
                                         // EXAMPLE: BTC price is $600, to buy, we would place order at: 600 / 0.999 = 600.6
@@ -38,7 +38,8 @@ exports.strategy = {
   momentum_trading: true,
   trailing_stop: true,
   bell_bottom: true,
-  combined_selling: true
+  combined_selling: true,
+  dynamic_multiplier: true
 };
 
 exports.auth = {

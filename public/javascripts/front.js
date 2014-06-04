@@ -7,18 +7,15 @@ function Stampede() {
   
   var _me = this;
 
-  _me.cache = {
-    value_sheet: []
-  };
+  _me.value_sheet = [];
 
   this.updateValueSheet = function(incoming) {
-    _me.value_sheet = _me.cache.value_sheet;
     if (
       incoming.update_type &&
       incoming.update_type === "full" &&
       incoming.data
     ) {
-      _me.cache.value_sheet = incoming.data;
+      _me.value_sheet = incoming.data;
       renderValueSheet(_me.value_sheet);
     }
     else if (
@@ -28,12 +25,14 @@ function Stampede() {
     ) {
       if (_me.value_sheet.length > 0) {
         _me.value_sheet.push(incoming.data);
-        renderValueSheet(_me.cache.value_sheet);
+        if (_me.value_sheet.length > incoming.limit) {
+          _me.value_sheet.shift();
+        }
+        renderValueSheet(_me.value_sheet);
       } else {
-        //console.log("Waiting for full cache update to value_sheet");
         $.get("/value_sheet", function(incoming) {
           if (incoming.value_sheet) {
-            _me.cache.value_sheet = incoming.value_sheet;
+            _me.value_sheet = incoming.value_sheet;
             renderValueSheet(_me.value_sheet);
           }
         });
@@ -97,14 +96,19 @@ $(document).ready(function() {
     var action = $(this).attr("data-action") || "/stop",
         button = this;
     
-    $(button).text((action === "/stop") ? "Stopping trade..." : "Starting trade...");
+    $(button)
+      .text((action === "/stop") ? "Stopping trade..." : "Starting trade...");
     $(button).disabled = true;
     $.get(action, function(response) {
       notify(response.message || "Attempted to "+action+".", 60000);
       if (response.success) {
-        $(".block")[(action === "/stop" ? "addClass" : "removeClass")]("inactive");
+        $(".block")[(
+          action === "/stop" ? "addClass" : "removeClass"
+        )]("inactive");
         $(button).text((action === "/stop") ? "START" : "STOP");
-        $(button).attr("data-action", (action === "/stop") ? "/start" : "/stop");
+        $(button).attr("data-action", (
+          action === "/stop") ? "/start" : "/stop"
+        );
       }
       else {
         $(button).text((action === "/stop") ? "STOP" : "START");
@@ -118,9 +122,15 @@ $(document).ready(function() {
         deal_name = $(this).attr("data-deal");
         
     if (trader_name) {
-      var confirmation = confirm("Sure to remove "+(trader_name && deal_name ? "deal: "+deal_name : "trader: "+trader_name)+"?");
+      var confirmation = confirm(
+        "Sure to remove " + (
+          trader_name && deal_name ? "deal: "+deal_name : "trader: "+trader_name
+        ) + "?"
+      );
       if (deal_name && confirmation) {
-        $.get("/trader/"+trader_name+"/deal/"+deal_name+"/remove", function(response) {
+        $.get(
+          "/trader/"+trader_name+"/deal/"+deal_name+"/remove", 
+        function(response) {
           notify(response.message || "Removed deal.", 10000);
         });
       }
@@ -138,7 +148,10 @@ function notify(message, decay) {
   var date = new Date(),
       message_id = "notification_"+parseInt(+date);
 
-  $(".content", "#live-messages").prepend("<p class='notification' id='"+message_id+"''><i>"+message+"</i><span style='color:grey'></span></p>");
+  $(".content", "#live-messages").prepend(
+    "<p class='notification' id='" + message_id + "''><i>" + message + 
+    "</i><span style='color:grey'></span></p>"
+  );
   if (decay) {
     $("#"+message_id).fadeOut(decay, function() {
       $(this).remove();
@@ -166,9 +179,18 @@ function render(data, level) {
   var inner_html= "";
   for (var key in data) {
     if (key === "last") document.title = "$"+data[key];
-    inner_html += (typeof(data[key]) === "object" && data[key] !== null) ?
-      "<div class='level_"+level+" sub-block "+key+"' data-key='"+key+"'>"+render(data[key], level)+"</div>" :
-      ("<p class='"+key+"' data-key='"+key+"'><b>"+capitaliseFirstLetter(key.replace(/_/g, " "))+": </b><span class='value'>"+(data[key] || "None")+"</span></p>");
+    inner_html += (
+      typeof(data[key]) === "object" && data[key] !== null
+    ) ?
+      (
+        "<div class='level_" + level + " sub-block " + key + 
+        "' data-key='" + key + "'>" + render(data[key], level) + "</div>"
+      ) :
+      (
+        "<p class='" + key + "' data-key='" + key + 
+        "'><b>" + capitaliseFirstLetter(key.replace(/_/g, " ")) + 
+        ": </b><span class='value'>" + (data[key] || "None")+"</span></p>"
+      );
   }
   return inner_html;
 }
@@ -187,6 +209,7 @@ function capitaliseFirstLetter(string) {
 
 function renderValueSheet(data, container) {
   container = container || "#live-sheets";
+  console.log("renderValueSheet | data.length:", data.length);
   // d3.select("svg").remove();
   $(container).empty();
   var min_value = d3.min(data.map(function(d) { return d.value; }));
@@ -247,9 +270,13 @@ function renderValueSheet(data, container) {
       .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
 
   x.domain(d3.extent(data.map(function(d) { return d.time; })));
-  y.domain([0, d3.max(data.map(function(d) { return d.value; })) - d3.min(data.map(function(d) { return d.value; }))]);
+  y.domain([0, d3.max(data.map(rValue)) - d3.min(data.map(rValue))]);
   x2.domain(x.domain());
   y2.domain(y.domain());
+
+  function rValue(d) {
+    return d.value;
+  }
 
   focus.append("path")
       .datum(data)

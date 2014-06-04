@@ -26,7 +26,7 @@ exports.email = {
 };
 
 exports.trading = {
-  maximum_currency_per_deal: 20,        // Maximum allowed $ per deal / trade / hand
+  base_currency_per_deal: 20,           // Maximum allowed $ per deal / trade / hand
   maximum_investment: 0,                // Maximum total $ allowed to invest in BTC
   bid_alignment: 0.999,                 // Bid align for competitive edge when placing bids 
                                         // EXAMPLE: BTC price is $600, to buy, we would place order at: 600 / 0.999 = 600.6
@@ -40,10 +40,11 @@ exports.trading = {
 };
 
 exports.strategy = {
-  momentum_trading: true, // Purchases will be happening on momentum up trend
-  trailing_stop: true,    // Sales will happen only after trailing stop is reached
-  bell_bottom: true,      // Purchases will be sized up going down the price per trader
-  combined_selling: true  // Sell the highest and lowest priced BTC combined
+  momentum_trading: true,   // Purchases will be happening on momentum up trend
+  trailing_stop: true,      // Sales will happen only after trailing stop is reached
+  bell_bottom: true,        // Purchases will be sized up going down the price per trader
+  combined_selling: true,   // Sell the highest and lowest priced BTC combined
+  dynamic_multiplier: true  // Calculate deal multiplication per altitude drop and current high
 };
 
 // Google authentication keys
