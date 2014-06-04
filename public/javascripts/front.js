@@ -10,8 +10,8 @@ function Stampede() {
   _me.value_sheet = [];
 
   this.updateValueSheet = function(incoming) {
+    console.log("updateValueSheet | incoming:", incoming);
     if (
-      incoming.update_type &&
       incoming.update_type === "full" &&
       incoming.data
     ) {
@@ -19,7 +19,6 @@ function Stampede() {
       renderValueSheet(_me.value_sheet);
     }
     else if (
-      incoming.update_type &&
       incoming.update_type === "incremental" &&
       incoming.data
     ) {
@@ -37,7 +36,6 @@ function Stampede() {
           }
         });
       }
-      
     }
     else {
       console.log("Cache problem.");
