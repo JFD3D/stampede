@@ -26,7 +26,7 @@ exports.email = {
 };
 
 exports.trading = {
-  base_currency_per_deal: 20,           // Maximum allowed $ per deal / trade / hand
+  base_currency_per_deal: 20,           // Base $ per starting deal / trade / hand
   maximum_investment: 0,                // Maximum total $ allowed to invest in BTC
   bid_alignment: 0.999,                 // Bid align for competitive edge when placing bids 
                                         // EXAMPLE: BTC price is $600, to buy, we would place order at: 600 / 0.999 = 600.6
@@ -57,6 +57,9 @@ exports.auth = {
 exports.port = 3111;
 // Port for redis store
 exports.redis_port = 6379;
+
+// Size limit to displayed usd values graph
+exports.sheet_size_limit = 300;
 
 // Hosts, also used for authentication realm
 exports.hosts = {
