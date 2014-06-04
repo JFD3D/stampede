@@ -1272,4 +1272,3 @@ exports.config = config;
 exports.prepareForSimulation = prepareForSimulation;
 exports.removeAllDeals = removeAllDeals;
 exports.viewTraders = viewTraders;
-exports.sheet_size_limit = SHEET_SIZE_LIMIT;
