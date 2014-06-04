@@ -156,7 +156,7 @@ exports.drawSheets = function(data, update_type) {
   //console.log("Drawing sheets ("+(data.length || "incremental")+").");
   var outgoing = {
     data: data,
-    limit: Trader.sheet_size_limit,
+    display_limit: Trader.sheet_size_limit || 450,
     update_type: update_type,
     container: "live-sheets"
   };

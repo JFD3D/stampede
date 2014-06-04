@@ -24,7 +24,7 @@ function Stampede() {
     ) {
       if (_me.value_sheet.length > 0) {
         _me.value_sheet.push(incoming.data);
-        if (_me.value_sheet.length > incoming.limit) {
+        if (_me.value_sheet.length > incoming.display_limit) {
           _me.value_sheet.shift();
         }
         renderValueSheet(_me.value_sheet);
