@@ -10,7 +10,7 @@ function Stampede() {
   _me.value_sheet = [];
 
   this.updateValueSheet = function(incoming) {
-    console.log("updateValueSheet | incoming:", incoming);
+    // console.log("updateValueSheet | incoming:", incoming);
     if (
       incoming.update_type === "full" &&
       incoming.data
@@ -207,7 +207,7 @@ function capitaliseFirstLetter(string) {
 
 function renderValueSheet(data, container) {
   container = container || "#live-sheets";
-  console.log("renderValueSheet | data.length:", data.length);
+  // console.log("renderValueSheet | data.length:", data.length);
   // d3.select("svg").remove();
   $(container).empty();
   var min_value = d3.min(data.map(function(d) { return d.value; }));
