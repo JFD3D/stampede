@@ -302,6 +302,9 @@ Trader.prototype = {
         lowest_currency_amount * deal_ratio
       ) : BASE_PER_DEAL;
 
+    // Assign calculated values to trader so that we can display them
+    me.next_deal_ratio = deal_ratio;
+    me.next_deal_amount = purchase.currency_amount;
     
 
         // Available resources, compare investment 
@@ -783,7 +786,18 @@ Trader.prototype = {
         ) ? deal.max_price : current_market.last;
       });
     }
-  } 
+  },
+
+  sortDealsByPrice: function() {
+    var me = this,
+        deals = me.deals || [];
+
+    if (deals.length) {
+      deals.sort(function(a, b) {
+        return a.buy_price - b.buy_price;
+      });
+    }
+  }
 };
 
 // Create a hash by deal name to lookup deals and their traders
@@ -915,6 +929,8 @@ function checkMarket(done) {
         trader.highlightExtremeDeals();
         // Add highest deal price for each deal
         trader.addCurrentMaximumPrice();
+        // Sort
+        trader.sortDealsByPrice();
         // Decide if buying or selling
         trader.decide(internal_callback);
       }, 1);

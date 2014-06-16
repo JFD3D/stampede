@@ -9,8 +9,8 @@ function generateData() {
       config = {
         time_back: (60*day),
         low_high_window: 24*hour,
-        min: process.env.MIN || 10,
-        max: process.env.MAX || 2000,
+        min: 10,
+        max: 2000,
         trend: {
           LT: {
             duration: 14*day,
@@ -18,7 +18,7 @@ function generateData() {
           },
           MT: {
             duration: 6*hour,
-            impact: 0.04
+            impact: 0.02
           },
           ST: {
             duration: 1*minute,
@@ -74,7 +74,7 @@ function generateData() {
     i++;
 
     // Calculate time shift somewhere btw 5 - 7 seconds
-    var time_shift = parseInt((5 + (2 * Math.random())) * 10000),
+    var time_shift = parseInt((5 + (2 * Math.random())) * 1000),
         // Initialize new data point
         data_point = {},
         previous_data_point = data[data.length-1],

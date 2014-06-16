@@ -108,7 +108,7 @@ module.exports = (function() {
   function getCurrentRatio(max_sum, altitude_levels, max_ratio, base) {
     var cur_ratio = max_ratio,
         sum = 0,
-        step = 0.01,
+        step = 0.05,
         result = {
           // Assign default(max) ratio in case no result fits
           ratio: max_ratio,
