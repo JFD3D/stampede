@@ -287,7 +287,7 @@ Trader.prototype = {
           price_levels.length &&
           DYNAMIC_MULTIPLIER
         ) ? common.getCurrentRatio(
-          available_currency_amount, price_levels, 3, lowest_currency_amount
+          available_currency_amount, price_levels, 2, lowest_currency_amount
         ) : 2,
 
         // Check if trader has available spot for another deal
