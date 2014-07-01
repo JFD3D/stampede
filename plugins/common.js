@@ -106,22 +106,23 @@ module.exports = (function() {
   }
 
   function getCurrentRatio(max_sum, altitude_levels, max_ratio, base) {
-    var cur_ratio = max_ratio,
+    var min_ratio = 1.1,
+        cur_ratio = min_ratio,
         sum = 0,
-        step = 0.05,
+        step = 0.1,
         result = {
           // Assign default(max) ratio in case no result fits
-          ratio: max_ratio,
+          ratio: min_ratio,
           // Assign default sum for projection in case I do not have any result
-          projected_sum: (max_sum / 2)
+          projected_sum: getSeriesTotal(min_ratio)
         };
-    while (cur_ratio > 1) {
+    while (max_ratio > cur_ratio) {
       var cur_sum = getSeriesTotal(cur_ratio);
       if (cur_sum < max_sum && cur_sum > result.projected_sum) {
         result.ratio = cur_ratio;
         result.projected_sum = cur_sum;
       }
-      cur_ratio -= step;
+      cur_ratio += step;
     }
 
     return result.ratio;

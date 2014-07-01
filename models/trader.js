@@ -287,7 +287,7 @@ Trader.prototype = {
           price_levels.length &&
           DYNAMIC_MULTIPLIER
         ) ? common.getCurrentRatio(
-          available_currency_amount, price_levels, 2, lowest_currency_amount
+          available_currency_amount, price_levels, 1.99, lowest_currency_amount
         ) : 2,
 
         // Check if trader has available spot for another deal
@@ -307,8 +307,8 @@ Trader.prototype = {
     me.next_deal_amount = purchase.currency_amount;
     
 
-        // Available resources, compare investment 
-        // and current available in wallet
+    // Available resources, compare investment 
+    // and current available in wallet
     var available_resources = 
 
           // Check if I am not running over allowed investment amount
@@ -1045,7 +1045,7 @@ function refreshSheets() {
             console.log(
               "(Former size: " + sheets_size + " / Limit: " + SHEET_SIZE_LIMIT + 
               ") Removed", (cutoff_size), "points from sheets", 
-              "(Response: " + response + ")."
+              "(Response: " + response + "). Current length:" + sheets.length
             );
           });
         }

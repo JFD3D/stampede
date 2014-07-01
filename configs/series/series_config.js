@@ -1,8 +1,8 @@
 var series = {
   
   data_sets: [
-    "stampede_data_set_2014-06-01-19:52:56",
-    "stampede_data_set_2014-06-01-19:53:32"
+    "stampede_data_set_2014-07-01-18:12:36",
+    "stampede_data_set_2014-07-01-18:12:41"
   ],
 
   trading: {
@@ -17,7 +17,7 @@ var series = {
 
     altitude_drop: [2, 1, 0],
 
-    impatience: [0.9, 0.5]
+    impatience: [0.9]
 
   },
 

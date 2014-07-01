@@ -74,7 +74,7 @@ function generateData() {
     i++;
 
     // Calculate time shift somewhere btw 5 - 7 seconds
-    var time_shift = parseInt((5 + (2 * Math.random())) * 1000),
+    var time_shift = parseInt((5 + (2 * Math.random())) * 10000), // <<<<< THIS is FORCED DATA THINNING!!! BAD
         // Initialize new data point
         data_point = {},
         previous_data_point = data[data.length-1],
