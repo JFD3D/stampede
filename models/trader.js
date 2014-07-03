@@ -1035,7 +1035,7 @@ function refreshSheets() {
       };
 
       sheets.push(new_value);
-      
+      if (broadcast_time) controller.drawSheets(new_value, "incremental");
 
       // Now, let's check if we should remove any points
       db.zcard(stampede_value_sheet, function(error, sheets_size) {
@@ -1054,7 +1054,7 @@ function refreshSheets() {
         }
       });
     });
-    if (broadcast_time) controller.drawSheets(new_value, "incremental");
+    
   }
 }
 
