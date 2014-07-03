@@ -1019,7 +1019,11 @@ function checkSheets(done) {
 
 function refreshSheets() {
   var time_stamp = Date.now(),
-      current_currency_value = wallet.current.currency_value;
+      current_currency_value = wallet.current.currency_value,
+      cur_sheets_len = sheets.length;
+
+  if (cur_sheets_len > SHEET_SIZE_LIMIT)
+    sheets = sheets.splice((cur_sheets_len - SHEET_SIZE_LIMIT), cur_sheets_len);
 
   if (current_currency_value > 10 && !config.simulation) {
     db.zadd(
@@ -1031,17 +1035,16 @@ function refreshSheets() {
       };
 
       sheets.push(new_value);
-      if (broadcast_time) controller.drawSheets(new_value, "incremental");
+      
 
       // Now, let's check if we should remove any points
       db.zcard(stampede_value_sheet, function(error, sheets_size) {
-
         if (parseInt(sheets_size) > SHEET_SIZE_LIMIT) {
           var cutoff_size = parseInt(sheets_size) - SHEET_SIZE_LIMIT;
           db.zremrangebyrank(
             stampede_value_sheet, 0, cutoff_size, 
           function(error, response) {
-            sheets.splice(0, cutoff_size);
+            
             console.log(
               "(Former size: " + sheets_size + " / Limit: " + SHEET_SIZE_LIMIT + 
               ") Removed", (cutoff_size), "points from sheets", 
@@ -1051,6 +1054,7 @@ function refreshSheets() {
         }
       });
     });
+    if (broadcast_time) controller.drawSheets(new_value, "incremental");
   }
 }
 
