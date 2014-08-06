@@ -23,7 +23,7 @@ block content
         .spacer
         button#simulator-run(style="display: none;") Simulate trading
   .block#live-traders(class="#{class_for_status}")
-    h2 &#9801; Traders
+    h2 &#9801; Traders (#{helpers.sanitizeVariableName(config.exchange.selected)})
     .clearer
     - if (simulator_enabled)
       a(href="/remove_all_simulator_deals")

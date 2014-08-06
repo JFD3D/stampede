@@ -1,6 +1,7 @@
 // This is a redirection to exchange object under Simulator > exchange
 
 var config = require("./config"),
+    generator = require("./generator"),
     xc = config.exchange.currency,
     controller = require("./../routes/controller");
 
@@ -19,11 +20,24 @@ function Exchange() {
 Exchange.prototype = {
   
   load: function(market_data) {
-    console.log("Loading data.", market_data.length);
+    console.log(
+      "Loading data.",
+        market_data ? market_data.length : "Starting real time simulation."
+    );
+    var now = Date.now();
+    this.real_time = (!market_data);
+
+    market_data = 
+       market_data || [generator.initializeStartPoint(now)];
+
+    this.current_extremes = 
+      generator.initializeCurrentExtremes(market_data, now);
+
     this.ticks = market_data;
     this.ticks_length = market_data.length;
     this.current_tick = 0;
     var start_tick = this.ticks[this.current_tick];
+    
     start_tick.starting_point = true;
     this.current_balance = {
       btc_reserved: 0,
@@ -53,8 +67,20 @@ Exchange.prototype = {
     var me = this,
         market_current = me.ticks[me.current_tick];
 
-    me.current_tick++;
     
+    if (me.real_time) {
+      var now = Date.now(),
+          market_next = 
+            generator.initializeDataPoint(
+              now, now - market_current.time, market_current
+            );
+      me.ticks.push(market_next);
+      me.ticks_length = me.ticks.length;
+      generator.assignExtremes(me.current_extremes, me.ticks, market_next, now);
+    }
+    
+    me.current_tick++;
+
     if (market_current) {
       //["last", "bid", "low", "high", "volume", "ask"]
       market_current.bid = market_current.last;

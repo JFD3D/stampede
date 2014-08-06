@@ -9,6 +9,7 @@ var config = require("./../plugins/config"),
     simulator = new Simulator(),
     Trader = require("./../models/trader"),
     jade = require("jade"),
+    async = require("async"),
     generated_data = [],
     traders_awake = false;
 
@@ -22,17 +23,39 @@ var config = require("./../plugins/config"),
 
 
 exports.index = function(req, res) {
-  res.render('index', {
-    title: 'Stampede',
-    current_user: req.current_user,
-    traders_awake: traders_awake,
-    simulator_enabled: false,
-    trading_config: config.trading,
-    trading_strategies: config.strategy,
-    helpers: helpers
-  });
-  console.log("Traders are awake:", traders_awake);
-  if (traders_awake) Trader.refreshAll();
+
+  if (config.exchange.selected === "simulated_exchange") {
+    var removeTraderDeals = Trader.removeAllDeals;
+    var wakeTraders = exports.wakeTraders;
+    var cleanSheets = Trader.cleanSheets;
+
+    async.series([
+      simulatorRealtimePrep,
+      cleanSheets,
+      wakeTraders,
+      removeTraderDeals
+    ], respond)
+  }
+  else {
+    respond();
+  }
+
+  function respond() {
+    var response = {
+      title: 'Stampede',
+      current_user: req.current_user,
+      traders_awake: traders_awake,
+      simulator_enabled: false,
+      trading_config: config.trading,
+      config: config,
+      trading_strategies: config.strategy,
+      helpers: helpers
+    };
+    console.log("Traders are awake:", traders_awake);
+    if (traders_awake) Trader.refreshAll();
+    res.render('index', response);
+  }
+
 };
 
 exports.shares = function(req, res) {
@@ -119,6 +142,7 @@ exports.stop = function(req, res) {
 };
 
 exports.start = function(req, res) {
+
   Trader.wakeAll(function() {
     traders_awake = true;
     res.send({message: "Woke all traders.", success: true});
@@ -419,13 +443,10 @@ exports.simulatorLoad = function(req, res) {
   });
 };
 
-
-
 exports.simulatorRemove = function(req, res) {
   var set_name = req.params.data_set;
   simulator.removeSet(set_name);
 };
-
 
 // Called from within simulated exchange once the end of data has been reached
 exports.simulatorFinish = function(exchange_data) {
@@ -435,6 +456,13 @@ exports.simulatorFinish = function(exchange_data) {
 function simulatorWarmUp(data) {
   exports.generated_data = data;
   exchange.load(data);
-};
+}
+
+// This is used to real time simulate data on index
+function simulatorRealtimePrep(done) {
+  // No data is passed into simulated exchange, it will be a real time exchange
+  exchange.load();
+  if (done) return done();
+}
 
 exports.simulatorWarmUp = simulatorWarmUp;

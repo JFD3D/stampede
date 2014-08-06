@@ -383,7 +383,7 @@ Trader.prototype = {
       potential_better_than_heat
     ) decision = true;
     
-    if (decision && DECISION_LOGGING) console.log(
+    if (DECISION_LOGGING) console.log(
       "*** Buying deal? ***",
       "\n|- Has hands available (..., me.deals.length):", 
         has_free_hands, me.deals.length,
@@ -416,11 +416,11 @@ Trader.prototype = {
       free_hands: has_free_hands,
       resources: available_resources,
       threshold: bid_below_threshold,
-      lowest: bid_below_lowest,
-      potential: potential_better_than_heat,
+      lowest_drop: bid_below_lowest,
+      potential: potential_better_than_heat && potential_better_than_fee,
       momentum: (!MOMENTUM_ENABLED || market_momentum_significant),
       cool: potential_better_than_heat,
-      decision: decision
+      buy: decision
     };
 
     //console.log("structured_decision:", structured_decision);
@@ -954,7 +954,7 @@ function checkMarket(done) {
                 (
                   process.env.NODE_ENV || 
                   "development"
-                ) === "development" ? 10000 : 4000) + (Math.random()*3000)
+                ) === "development" ? 3000 : 4000) + (Math.random()*3000)
             );
         wallet.current.cool = (
           wallet.current.cool < 1 && 
@@ -1178,15 +1178,13 @@ function wakeAll(done) {
       ], function(errors, results) {
         if (errors) {
           console.log("Problems loading traders, market or wallet:", errors);
-          done();
+          
         }
-        else {
-          if (done) done();
-        }
+        if (done) done();
       });
     }
     else {
-      if (done) done(live_traders);
+      if (done) done();
     }
   });
 }
@@ -1217,10 +1215,14 @@ function prepareForSimulation(series) {
       wallet.series_simulation =
       true;
   }
-  db.del(stampede_value_sheet);
+  cleanSheets();
 }
 
-function removeAllDeals() {
+function cleanSheets(done) {
+  db.del(stampede_value_sheet, done);
+}
+
+function removeAllDeals(done) {
   for (var name in live_traders) {
     var trader = live_traders[name];
     var trader_deals_copy = trader.deals.slice(0);
@@ -1231,6 +1233,7 @@ function removeAllDeals() {
       });
     });
   }
+  if (done) done();
 }
 
 function addShare(holder, investment) {
@@ -1293,4 +1296,5 @@ exports.live_traders = live_traders;
 exports.config = config;
 exports.prepareForSimulation = prepareForSimulation;
 exports.removeAllDeals = removeAllDeals;
+exports.cleanSheets = cleanSheets;
 exports.viewTraders = viewTraders;
