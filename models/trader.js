@@ -412,7 +412,7 @@ Trader.prototype = {
     var structured_decision = {
       trader: 
         "(" + me.name.split("_")[1] + 
-        ") buy (" + (projected_buy_price / BID_ALIGN).toFixed(2) + ")",
+        ") buy (" + (projected_buy_price * BID_ALIGN).toFixed(2) + ")",
       free_hands: has_free_hands,
       resources: available_resources,
       threshold: bid_below_threshold,
