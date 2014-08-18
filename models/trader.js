@@ -293,6 +293,7 @@ Trader.prototype = {
         // Check if trader has available spot for another deal
         has_free_hands = MAX_DEALS_HELD > me.deals.length;
 
+    // Assign price levels to current object so we can display it
     // Cumulate new deal amount with ratio (statc[2], dynamic)
     purchase.currency_amount =
       (
@@ -533,7 +534,7 @@ Trader.prototype = {
       combined_deal.amount <= wallet.current.btc_balance
     );
     // Check trailing stop, if enabled affect decision
-    structured_decision.decision = (
+    structured_decision.sell = (
       structured_decision.would_sell_price &&
       structured_decision.managed &&
       structured_decision.cool &&
@@ -665,6 +666,17 @@ Trader.prototype = {
     });
   },
 
+  
+
+  // Takes
+  /*
+  deal = {
+    buy_price: Num float,
+    amount: Num float,
+    names: Array strings
+  }
+  */
+
   sell: function(deal, done) {
     var me = this;
     deal.heat = deal.buy_price / MAX_SUM_INVESTMENT;
@@ -756,6 +768,30 @@ Trader.prototype = {
     else {
       console.log(
         "!!! trader | removeDeal | Unable to find deal for removal | deal_name", 
+        deal_name
+      );
+      callback("Problems finding deal.", null);
+    }
+  },
+
+  //sellDeal
+
+  sellDeal: function(deal_name, callback) {
+    var me = this,
+        deal_item = me.deals.lookup("name", deal_name);
+
+    //console.log("removeDeal | me.deals, deal_name:", me.deals, deal_name);
+    if (deal_item && deal_item.amount > 0) {
+      var deal_to_sell = {
+        buy_price: deal_item.buy_price,
+        amount: deal_item.amount,
+        names: [deal_item.name]
+      };
+      me.sell(deal_to_sell, callback)
+    }
+    else {
+      console.log(
+        "!!! trader | sellDeal | Unable to find valid deal for sale | deal_name", 
         deal_name
       );
       callback("Problems finding deal.", null);
@@ -911,16 +947,12 @@ function checkMarket(done) {
             wallet.current.btc_available - wallet.current.btc_amount_managed;
 
       market.current.threshold = 
-        IMPATIENCE * 
-        (
-          market.current.high - market.current.middle
-        ) + 
+        IMPATIENCE * (market.current.high - market.current.middle) + 
         market.current.middle;
       market.current.trader_bid = market.current.last / BID_ALIGN;
       wallet.current.currency_value = 
-        (wallet.current.btc_balance || 0) * 
-        (market.current.last || 0) + 
-        (wallet.current[config.exchange.currency+"_balance"] || 0);
+        (wallet.current.btc_balance || 0) * (market.current.last || 0) + 
+        (wallet.current[config.exchange.currency + "_balance"] || 0);
       perf_timers.market = 
         (perf_timers.market || 0) + (Date.now() - market_start_timer);
       var decisions_start_timer = Date.now();

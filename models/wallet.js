@@ -92,7 +92,7 @@ Wallet.prototype = {
       });
 
       me.current.average_buy_price = 
-        me.current.investment / me.current.btc_amount_managed;
+        (me.current.investment / me.current.btc_amount_managed) || 0;
     }
     
   },
@@ -101,6 +101,7 @@ Wallet.prototype = {
     var me = this;
     me.shares = [];
     me.current.initial_investment = 0;
+
     db.smembers("stampede_shares", function(errors, share_list) {
       if (
         share_list && 
@@ -130,18 +131,27 @@ Wallet.prototype = {
           share.profit_loss = (
             (current_currency_value - share.invested_currency_amount) / 
             share.invested_currency_amount*100
-          ).toFixed(2)+"%";
+          ).toFixed(3)+"%";
 
         });
         if (callback) callback();
       } 
       else {
+        var current_currency_value = me.current.currency_value || 0;
+        // Assign initial investment as maximum (this flies in case of simulator)
+        var current_initial_investment = config.trading.maximum_investment;
+        me.current.initial_investment = current_initial_investment;
+
         me.shares = [{
           holder: "Primary",
-          invested_currency_amount: 0,
+          invested_currency_amount: current_initial_investment,
           pie_share: "100%",
-          current_currency_value: me.current.currency_value || 0
+          current_currency_value: current_currency_value,
+          profit_loss: (
+            (current_currency_value / current_initial_investment - 1) * 100
+          ).toFixed(3) + "%"
         }];
+
         if (callback) callback();
       }
     });

@@ -63,6 +63,7 @@ app.post("/trading_strategy/update", auth.ensure, controller.updateTradingStrate
 app.get("/trading_config/reset", auth.ensure, controller.resetTradingConfig);
 app.get("/trader/:trader_name/remove", auth.ensure, controller.removeTrader);
 app.get("/trader/:trader_name/deal/:deal_name/remove", auth.ensure, controller.removeDeal);
+app.get("/trader/:trader_name/deal/:deal_name/sell", auth.ensure, controller.sellDeal);
 app.get("/stop", auth.ensure, controller.stop);
 app.get("/value_sheet", auth.ensure, controller.getValueSheet);
 app.get("/start", auth.ensure, controller.start);

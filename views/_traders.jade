@@ -14,6 +14,7 @@ each trader, trader_name in traders
         th Buy price
         th Amount
         th
+        th
       each deal in trader.deals
         tr
           td= deal.buy_price.toFixed(2)
@@ -24,3 +25,5 @@ each trader, trader_name in traders
           td= (deal.amount || 0).toFixed(7)+" BTC"
           td
             a.removal(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}") Remove
+          td
+            a.deal-sale(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}", title="Sell at current price") Sell

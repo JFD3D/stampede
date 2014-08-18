@@ -127,6 +127,20 @@ exports.removeDeal = function(req, res) {
   });
 };
 
+
+exports.sellDeal = function(req, res) {
+  var deal_name = req.params.deal_name,
+      deal = {name: deal_name},
+      trader_name = req.params.trader_name,
+      trader = new Trader.instance(trader_name);
+  trader.wake(function(error, record) {
+    trader.sellDeal(deal_name, function() {
+      res.send({message: "Deal sale opened."});
+    });
+  });
+};
+
+
 exports.wakeTraders = function(done) {
   Trader.wakeAll(function() {
     traders_awake = true;
@@ -345,6 +359,7 @@ exports.simulatorHome = function(req, res) {
       data_sets: [],
       simulator_enabled: true,
       trading_config: config.trading,
+      config: config,
       traders_awake: true,
       trading_strategies: config.strategy,
       helpers: helpers

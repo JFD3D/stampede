@@ -139,6 +139,31 @@ $(document).ready(function() {
       }
     }
   });
+
+  $("body").on("click", "#live-traders .deal-sale", function() {
+    var trader_name = $(this).attr("data-trader"),
+        deal_name = $(this).attr("data-deal"),
+        current_last_price = parseFloat($("#current-last-price").text());
+        
+    if (trader_name) {
+      var confirmation = confirm(
+        "Sure to sell " + (
+          trader_name && deal_name ? "deal: "+deal_name : "trader: "+trader_name
+        ) + " at current price ($" + current_last_price + ")?"
+      );
+      if (deal_name && confirmation && current_last_price > 10) {
+        $.get(
+          "/trader/"+trader_name+"/deal/"+deal_name+"/sell", 
+        function(response) {
+          notify(response.message || "Removed deal.", 10000);
+        });
+      }
+      else {
+        notify("Cancelled sale of deal.", 10000)
+      }
+    }
+  });
+
 });
 
 

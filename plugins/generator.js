@@ -1,13 +1,17 @@
-var debug = false;
+
 
 module.exports = (function() {
+  
+  var debug = false;
+
   var generator = this;
+
   var minute = 60*1000,
       hour = 60*minute,
       day = 24*hour,
 
       config = {
-        time_back: (60*day),
+        time_back: (30*day),
         low_high_window: 24*hour,
         min: 10,
         max: 2000,
@@ -22,7 +26,7 @@ module.exports = (function() {
           },
           ST: {
             duration: 1*minute,
-            impact: 0.005
+            impact: 0.05
           }
         }
       },
@@ -50,7 +54,7 @@ module.exports = (function() {
       */
 
     // Initialize array for data and create the first data point
-    var now = +(new Date()),
+    var now = Date.now(),
         start_time = now - config.time_back,    // Initialize start time 60 days back
         time_point = start_time + 1,            // Initialize first time_point
         data = [initializeStartPoint(start_time)],
@@ -65,21 +69,30 @@ module.exports = (function() {
       // We have our first data point already, so iterate right away
       i++;
 
+      if (i % 10000 === 0) {
+        console.log(
+          "Generating " + i + 
+          ". data point datetime: " + new Date(time_point) + "."
+        );
+      }
       // Calculate time shift somewhere btw 5 - 7 seconds
-      var time_shift = parseInt((5 + (2 * Math.random())) * 1000), // <<<<< if (10000), THIS is FORCED DATA THINNING!!! BAD
+      var time_shift = parseInt(
+            (5 + (2 * Math.random())) * 10000
+          ), // <<<<< if (10000), THIS is FORCED DATA THINNING!!! BAD
+
           // Initialize new data point
-          
           previous_data_point = data[data.length-1],
           data_point = initializeDataPoint(time_point, time_shift, previous_data_point);
 
       data.push(data_point);
 
-
       // Time and encapsulate extreme calculation (very costly function)
       var t1 = Date.now();
       assignExtremes(current_extremes, data, data_point, time_point);
       var t2 = Date.now();
-      extremes_calculation += (t2-t1);
+      extremes_calculation += (t2 - t1);
+      // Add time shift to current time_point
+      time_point += time_shift;             
     }
     var end = Date.now();
 
@@ -90,9 +103,9 @@ module.exports = (function() {
 
   function initializeStartPoint(start_time) {
     return {
-      high: 585,
-      last: 577,
-      low: 576,
+      high: 490,
+      last: 460,
+      low: 455,
       time: start_time || Date.now()
     };    
   }
@@ -162,7 +175,6 @@ module.exports = (function() {
 
     });
 
-    time_point += time_shift;             // Add time shift to current time_point
     data_point.time = time_point;         // Add current time to the data point
 
     if (debug) console.log("generateData | trends, vector:", trends, vector);
