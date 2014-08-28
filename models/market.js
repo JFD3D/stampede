@@ -1,5 +1,5 @@
 var async = require("async"),
-    config = require("./../plugins/config"),
+    config = require("./../configs/config"),
     common = require("./../plugins/common"),
     email = require("./../plugins/email"),
     controller = require("./../routes/controller"),

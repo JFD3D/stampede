@@ -5,7 +5,7 @@
 var GoogleStrategy = require("passport-google-oauth").OAuth2Strategy,
     
     // Load config file to 
-    config = require("./config"),
+    config = require("./../configs/config"),
 
     // Use redis to find share holders able to login
     db = require("redis").createClient(6379),

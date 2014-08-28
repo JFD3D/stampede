@@ -1,5 +1,5 @@
 var moment = require("moment"),
-	config = require("./config");
+	config = require("./../configs/config");
 
 exports.moment = moment;
 exports.current_currency = config.exchange.currency;

@@ -1,6 +1,6 @@
 // This is a redirection to exchange object under Simulator > exchange
 
-var config = require("./config"),
+var config = require("./../configs/config"),
     generator = require("./generator"),
     xc = config.exchange.currency,
     controller = require("./../routes/controller");

@@ -1,6 +1,6 @@
 var BTCChina = require('btcchina'),
     btcchina,
-    config = require("./config"),
+    config = require("./../configs/config"),
     https = require('https');
 
 function Exchange(key, secret) {

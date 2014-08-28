@@ -1,2 +1,4 @@
 node_modules/
-plugins/config.js
+configs/config.js
+configs/nginx/
+

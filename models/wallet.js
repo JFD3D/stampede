@@ -1,5 +1,5 @@
 var async = require("async"),
-    config = require("./../plugins/config"),
+    config = require("./../configs/config"),
     db = require("redis").createClient(config.redis_port || 6379),
     email = require("./../plugins/email"),
     controller = require("./../routes/controller"),

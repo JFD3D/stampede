@@ -1,4 +1,4 @@
-var config = require("./../plugins/config"),
+var config = require("./../configs/config"),
     common = require("./../plugins/common"),
     helpers = require("./../plugins/helpers"),
     Simulator = require("./../plugins/simulator"),

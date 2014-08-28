@@ -1,7 +1,7 @@
 var mailer = require("nodemailer"),
     jade = require("jade"),
     path = require('path'),
-    config = require("./config");
+    config = require("./../configs/config");
 
 /*
  *

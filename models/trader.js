@@ -1,4 +1,4 @@
-var config = require("./../plugins/config"),
+var config = require("./../configs/config"),
     common = require("./../plugins/common"),
     async = require("async"),
     db = require("redis").createClient(config.redis_port || 6379),
