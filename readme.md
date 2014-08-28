@@ -1,13 +1,20 @@
 #Stampede - Bitcoin trading bot
+Node.js bitcoin trading bot experiment. Runnable from any low -> high spec machine or instance. Best put behind nginx or other http proxy for front end.
 
-##Configuration:
+##Supported
+Bitstamp and Btcchina exchanges are supported.
+
+##Configuration
 The app must be configured by making a copy of the /plugins/config_template.js file to /plugins/config.js using your information and api keys.
 
+##Maintainers
 Peter Berezny - [Github](https://github.com/pejrak)
 Matthew Perkins - [Github](https://github.com/mattarse)
 
+You are welcome to fork and use the repository. This started as a fun project by non expert developers, we welcome suggestions for improvement and pull requests. Actually, we welcome any attention to be honest.
 
-License
+
+##License
 ===
 Copyright (C) 2014 Peter Berezny
 
