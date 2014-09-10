@@ -895,13 +895,15 @@ function stringDeal(deal) {
 }
 
 function cycle(done) {
+  if (!config.simulation) console.log("Cycle initiated.");
+
   var cycle_start_timer = Date.now();
   cycle_counter++;
   broadcast_time = (
     !config.simulation || 
     cycle_counter % 1000 === 0
   ) && !series_simulation;
-  if (!config.simulation) console.log("Cycle initiated.");
+  
   cycle_buy_decisions = [];
   cycle_sell_decisions = [];
   var actions = [
@@ -981,7 +983,7 @@ function checkMarket(done) {
         perf_timers.decisions = 
           (perf_timers.decisions || 0) + (Date.now() - decisions_start_timer);
         var cool_up = INITIAL_GREED,
-            next_check = (
+            next_check = parseInt(
               config.simulation ? 0 : ( 
                 (
                   process.env.NODE_ENV || 
@@ -1004,6 +1006,7 @@ function checkMarket(done) {
           );
           refreshSheets();
           if (market.timer) clearTimeout(market.timer);
+          console.log("market.timer, next_check:", next_check);
           market.timer = setTimeout(cycle, next_check);
         }
         if (done) done(null, market.current);
@@ -1052,29 +1055,37 @@ function checkSheets(done) {
 }
 
 function refreshSheets() {
+  console.log("refreshSheets | inititated.");
   var time_stamp = Date.now(),
       current_currency_value = wallet.current.currency_value,
       cur_sheets_len = sheets.length;
 
-  if (cur_sheets_len > SHEET_SIZE_LIMIT)
+  if (cur_sheets_len > SHEET_SIZE_LIMIT) {
     sheets = sheets.splice((cur_sheets_len - SHEET_SIZE_LIMIT), cur_sheets_len);
+  }
 
   if (current_currency_value > 10 && !config.simulation) {
+    console.log("refreshSheets | before zadd")
     db.zadd(
       stampede_value_sheet, time_stamp, current_currency_value, 
     function(error, response) {
+
       var new_value = {
         time: time_stamp, 
         value: current_currency_value
       };
+      
+      console.log("refreshSheets | after zadd, new_value", new_value)
 
       sheets.push(new_value);
       if (broadcast_time) controller.drawSheets(new_value, "incremental");
 
       // Now, let's check if we should remove any points
       db.zcard(stampede_value_sheet, function(error, sheets_size) {
+        console.log("refreshSheets | before zcard, sheets_size:", sheets_size);
         if (parseInt(sheets_size) > SHEET_SIZE_LIMIT) {
           var cutoff_size = parseInt(sheets_size) - SHEET_SIZE_LIMIT;
+          // console.log("refreshSheets | after zcard, cutoff_size:", cutoff_size);
           db.zremrangebyrank(
             stampede_value_sheet, 0, cutoff_size, 
           function(error, response) {
