@@ -94,14 +94,22 @@ Simulator.prototype = {
   // If we have worked with a stored data set
   finish: function(current_market, current_wallet) {
     var sim = this;
-    console.log("Ended simulation | current_market, current_wallet:", current_market, current_wallet, config);
+    console.log(
+      "Ended simulation | current_market, current_wallet:", 
+      current_market, current_wallet
+    );
 
-    var final_ratio = parseInt((current_wallet.currency_value / config.trading.maximum_investment) * 100);
+    var final_ratio = parseInt(
+      (current_wallet.currency_value / config.trading.maximum_investment) * 100
+    );
     controller.notifyClient({
       message: "Serie ("+
         ( 
           sim.current.series_array ? 
-          (sim.current.series_array[sim.current.serie_index] + " / " + sim.current.series_array.length) : 
+          (
+            sim.current.series_array[sim.current.serie_index] + " / " + 
+            sim.current.series_array.length
+          ) : 
           "Interactive"
         ) + ") | Ratio: " + final_ratio + ".", 
       permanent: true
@@ -109,12 +117,18 @@ Simulator.prototype = {
 
     if (sim.series_simulation) {
       // Now record results of simulation (start value, options, end value);
-      var result = [{value: sim.current.data_set_name, field: "data_set", type: "data_sets"}];
+      var result = [{
+        value: sim.current.data_set_name, 
+        field: "data_set", 
+        type: "data_sets"
+      }];
+
       sim.current.series_attributes.forEach(function(serie_attribute) {
         var serie_attribute_arrayed = serie_attribute.split(":");
         if (serie_attribute_arrayed[0] !== "data_sets") {
           var item = {};
-          item.value = config[serie_attribute_arrayed[0]][serie_attribute_arrayed[1]];
+          item.value = 
+            config[serie_attribute_arrayed[0]][serie_attribute_arrayed[1]];
           item.type = [serie_attribute_arrayed[0]];
           item.field = [serie_attribute_arrayed[1]]
           result.push(item);
@@ -129,7 +143,10 @@ Simulator.prototype = {
 
 
       sim.current.series_results.push(result);
-      controller.refreshSimulationResults(sim.current.series_results.sort(function(a, b) { return b[b.length-1].value - a[a.length-1].value}));
+      controller.refreshSimulationResults(
+        sim.current.series_results.sort(function(a, b) { 
+          return b[b.length-1].value - a[a.length-1].value;
+        }));
       sim.current.serie_index++;
       if (sim.current.series_array.length > sim.current.serie_index) {
         // Continue with next simulation
@@ -184,15 +201,16 @@ Simulator.prototype = {
       series_options.push(setting_array);
     }
 
-    console.log("series_options, series_attributes:", series_options, series_attributes);
+    console.log(
+      "series_options, series_attributes:", 
+      series_options, series_attributes
+    );
 
     // Now combine options
 
     var series_array = cartesian(series_options);
 
-    //console.log("series_array, series_array.length:", series_array, series_array.length);
     console.log("series_array.length:", series_array.length);
-
     sim.current.serie_index = 0;
     sim.current.series_array = series_array;
     sim.current.series_attributes = series_attributes;
@@ -208,7 +226,8 @@ Simulator.prototype = {
   processSerie: function() {
     var sim = this,
         serie_options = sim.current.series_array[sim.current.serie_index],
-        serie_data_set_name = sim.current.series_config.data_sets[serie_options[0]];
+        serie_data_set_name = 
+          sim.current.series_config.data_sets[serie_options[0]];
 
     sim.applySerieConfig();
     sim.loadSerieSet(serie_data_set_name, function(error, set) {

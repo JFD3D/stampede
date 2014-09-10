@@ -126,7 +126,7 @@ Wallet.prototype = {
                 (me.current.initial_investment || 0.01),
               current_currency_value = piece * me.current.currency_value;
           
-          share.current_currency_value = current_currency_value.toFixed(2);
+          share.current_currency_value = current_currency_value;
           share.pie_share = (piece*100).toFixed(1)+"%";
           share.profit_loss = (
             (current_currency_value - share.invested_currency_amount) / 
