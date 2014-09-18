@@ -515,6 +515,7 @@ Trader.prototype = {
         "("+me.name.split("_")[1] + 
         ") sell (" + (combined_deal.would_sell_at || 0).toFixed(2) + ")",
       would_sell_price: (combined_deal.would_sell_at < current_sale_price),
+      has_deals: (combined_deal.names.length > 1),
       cool: potential_better_than_heat
     };
 
@@ -534,7 +535,7 @@ Trader.prototype = {
       combined_deal.amount <= wallet.current.btc_balance
     );
     // Check trailing stop, if enabled affect decision
-    structured_decision.sell = (
+    structured_decision.decision = (
       structured_decision.would_sell_price &&
       structured_decision.managed &&
       structured_decision.cool &&
@@ -678,6 +679,7 @@ Trader.prototype = {
   */
 
   sell: function(deal, done) {
+
     var me = this;
     deal.heat = deal.buy_price / MAX_SUM_INVESTMENT;
     deal.aligned_sell_price = (market.current.last * BID_ALIGN).toFixed(2);
@@ -900,10 +902,18 @@ function cycle(done) {
   var cycle_start_timer = Date.now();
   cycle_counter++;
   broadcast_time = (
-    !config.simulation || 
-    cycle_counter % 1000 === 0
+    !config.simulation || cycle_counter % 1000 === 0
   ) && !series_simulation;
-  
+
+  // Update client on performed decisions
+  if (broadcast_time) {
+    console.log("decision lengths:", cycle_buy_decisions.length, cycle_sell_decisions.length)
+    controller.refreshDecisions({
+      buy_decisions: cycle_buy_decisions,
+      sell_decisions: cycle_sell_decisions
+    });
+  }  
+
   cycle_buy_decisions = [];
   cycle_sell_decisions = [];
   var actions = [
@@ -922,13 +932,7 @@ function cycle(done) {
     if (done) done(null, market.current);
     perf_timers.cycle = 
       (perf_timers.cycle || 0) + (Date.now() - cycle_start_timer);
-    // Update client on performed decisions
-    if (broadcast_time) {
-      controller.refreshDecisions({
-        buy_decisions: cycle_buy_decisions,
-        sell_decisions: cycle_sell_decisions
-      });
-    }
+
     if (cycle_counter % 10000 === 0) logPerformance();
   });
 }

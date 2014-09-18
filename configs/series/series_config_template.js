@@ -1,9 +1,4 @@
 var series = {
-  
-  data_sets: [
-    "stampede_data_set_2014-06-01-19:52:56",
-    "stampede_data_set_2014-06-01-19:53:32"
-  ],
 
   trading: {
 

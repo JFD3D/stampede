@@ -178,47 +178,52 @@ Simulator.prototype = {
 
     console.log("entering startSeries.");
 
+    db.smembers(data_sets_repo, function(errors, data_sets) {
+      
+      series_config.data_sets = data_sets || [];
 
-    series_config.data_sets.forEach(function(data_set_name, set_index) { 
-      series_options[0].push(set_index);
+      series_config.data_sets.forEach(function(data_set_name, set_index) { 
+        series_options[0].push(set_index);
+      });
+
+      for (var setting in series_config.trading) {
+        series_attributes.push("trading:"+setting);
+        var setting_array = [];
+        series_config.trading[setting].forEach(function(option, option_index) {
+          setting_array.push(option_index);
+        });
+        series_options.push(setting_array);
+      }
+
+      for (var strategy in series_config.strategies) {
+        series_attributes.push("strategy:"+strategy);
+        var setting_array = [];
+        series_config.strategies[strategy].forEach(function(option, option_index) {
+          setting_array.push(option_index);
+        });
+        series_options.push(setting_array);
+      }
+
+      console.log(
+        "series_options, series_attributes:", 
+        series_options, series_attributes
+      );
+
+      // Now combine options
+
+      var series_array = cartesian(series_options);
+
+      console.log("series_array.length:", series_array.length);
+      sim.current.serie_index = 0;
+      sim.current.series_array = series_array;
+      sim.current.series_attributes = series_attributes;
+      sim.current.series_config = series_config;
+      sim.current.series_results = [];
+      sim.series_simulation = true;
+      
+      sim.processSerie();
     });
 
-    for (var setting in series_config.trading) {
-      series_attributes.push("trading:"+setting);
-      var setting_array = [];
-      series_config.trading[setting].forEach(function(option, option_index) {
-        setting_array.push(option_index);
-      });
-      series_options.push(setting_array);
-    }
-
-    for (var strategy in series_config.strategies) {
-      series_attributes.push("strategy:"+strategy);
-      var setting_array = [];
-      series_config.strategies[strategy].forEach(function(option, option_index) {
-        setting_array.push(option_index);
-      });
-      series_options.push(setting_array);
-    }
-
-    console.log(
-      "series_options, series_attributes:", 
-      series_options, series_attributes
-    );
-
-    // Now combine options
-
-    var series_array = cartesian(series_options);
-
-    console.log("series_array.length:", series_array.length);
-    sim.current.serie_index = 0;
-    sim.current.series_array = series_array;
-    sim.current.series_attributes = series_attributes;
-    sim.current.series_config = series_config;
-    sim.current.series_results = [];
-    sim.series_simulation = true;
-    
-    sim.processSerie();
 
   },
 
@@ -265,6 +270,7 @@ Simulator.prototype = {
       callback(null, controller.generated_data);
     }
     else {
+      console.log("Loading series set:", serie_data_set_name);
       sim.loadSet(serie_data_set_name, callback);
     }
   }

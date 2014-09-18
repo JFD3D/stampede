@@ -26,7 +26,7 @@ module.exports = (function() {
           },
           ST: {
             duration: 1*minute,
-            impact: 0.05
+            impact: 0.005
           }
         }
       },
