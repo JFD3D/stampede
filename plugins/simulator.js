@@ -151,6 +151,9 @@ Simulator.prototype = {
       if (sim.current.series_array.length > sim.current.serie_index) {
         // Continue with next simulation
         console.log("Continuing with next serie ("+sim.current.serie_index+").");
+        if (sim.current.serie_index % 10 === 0) {
+          sim.analyseResults();
+        }
         sim.processSerie();
       }
       else {
@@ -162,6 +165,24 @@ Simulator.prototype = {
     else {
       console.log("Finishing interactive simulation, refreshing all.");
       Trader.refreshAll();
+    }
+  },
+
+  analyseResults: function() {
+    
+    var results = sim.current.series_results;
+    var analysis = [];
+    // Analyse per dataset
+    var results_count = results.length;
+    var top_ratio_result = results[0];
+    var lowest_ratio_result = results[results.length - 1];
+    var top_ratio = top_ratio_result[top_ratio_result.length -1].value;
+    var lowest_ratio = lowest_ratio_result[lowest_ratio_result.length -1].value;
+
+
+
+    function getResultValues(result, field) {
+
     }
   },
 

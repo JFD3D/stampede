@@ -19,6 +19,18 @@ module.exports = (function() {
     return result;
   };
 
+  // Extract values of keys in array of hashes
+  function extract(arr, key) {
+    var res = [];
+    arr.forEach(function(member) {
+      var value = member[key];
+      if (value) {
+        res.push(value);
+      }
+    });
+    return res;
+  }
+
   String.prototype.upperCaseFirst = function() {
     var string = this;
     return string.charAt(0).toUpperCase() + string.slice(1);
