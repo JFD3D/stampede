@@ -8,14 +8,14 @@ table
     th Threshold
     th Middle
     th Low
-    th Span
+    th Spread
   tr
     td#current-last-price= current_market.last.toFixed(2)
     td= current_market.high.toFixed(2)
     td= current_market.threshold.toFixed(2)
     td= current_market.middle.toFixed(2)
     td= current_market.low.toFixed(2)
-    td= (current_market.shift_span*100).toFixed(2)+"%"
+    td= (current_market.spread*100).toFixed(2)+"%"
 h3 Calculations
 table
   tr

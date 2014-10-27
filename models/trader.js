@@ -348,13 +348,13 @@ Trader.prototype = {
         // Check if current market span (high - low / last) is favorable 
         // and wider than fee
         potential_better_than_fee = (
-            market.current.shift_span / 2
+            market.current.spread / 2
           ) > (
             2 * (wallet.current.fee / 100)
           ),
 
         // What is the current market acceleration
-        current_market_greed = (market.current.shift_span / 2),
+        current_market_greed = (market.current.spread / 2),
 
         // What potential is the trader looking at
         trader_greed = INITIAL_GREED + ((wallet.current.fee || 0.5) / (2*100)),
@@ -395,8 +395,8 @@ Trader.prototype = {
         market.current.middle.toFixed(2),
       "\n|- Bid is lowest among deals (..., lowest_buy_price):", 
         bid_below_lowest, lowest_buy_price.toFixed(2),
-      "\n|- Projected profit is better than fee (..., market.current.shift_span):", 
-        potential_better_than_fee, market.current.shift_span.toFixed(2),
+      "\n|- Projected profit is better than fee (..., market.current.spread):", 
+        potential_better_than_fee, market.current.spread.toFixed(2),
       "\n|- Projected profit better than heat (..., wallet.current.cool, weighted_heat):", 
         potential_better_than_heat, wallet.current.cool.toFixed(2), 
         weighted_heat,
@@ -438,7 +438,7 @@ Trader.prototype = {
         // Initialize resulting decision
         decision = false,
         // Deal independent calculations
-        current_market_greed = (market.current.shift_span / 2),
+        current_market_greed = (market.current.spread / 2),
         // Calculate for comparison on deal
         current_sale_price = (market.current.last * BID_ALIGN),
         // Calculate trader greed
@@ -525,7 +525,6 @@ Trader.prototype = {
     if (TRAILING_STOP_ENABLED) {
       structured_decision.trailing_stop = (
         combined_deal.stop_price >= current_sale_price &&
-        //(2 * BASE_PER_DEAL) > wallet.current[currency_key] &&
         combined_deal.names.length > 1
       );
       combined_deal.trailing_stop = structured_decision.trailing_stop;
@@ -613,7 +612,7 @@ Trader.prototype = {
       deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100))
     );
     deal.heat = INITIAL_GREED;
-    wallet.current.cool -= market.current.shift_span;
+    wallet.current.cool -= market.current.spread;
     //wallet.current.investment += deal.buy_price;
     if (!series_simulation) controller.notifyClient({
       message: 
@@ -685,7 +684,7 @@ Trader.prototype = {
     deal.aligned_sell_price = (market.current.last * BID_ALIGN).toFixed(2);
     
     // Align current cool to avoid all sell / buy
-    wallet.current.cool -= market.current.shift_span;
+    wallet.current.cool -= market.current.spread;
     
     if (!series_simulation) controller.notifyClient({
       message: 

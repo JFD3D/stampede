@@ -62,7 +62,7 @@ Market.prototype = {
     me.current.timestamp = (data.time) ? new Date(data.time) : new Date(parseInt(data.timestamp)*1000);
     me.current.middle = (me.current.high + me.current.low) / 2;
     me.current.top = me.top = (me.top && me.top > me.current.high) ? me.top : me.current.high;
-    me.current.shift_span = (me.current.high - me.current.low) / (me.current.high || 0 + 0.00001);
+    me.current.spread = (me.current.high - me.current.low) / (me.current.high || 0 + 0.00001);
   },
 
   tick: function() {
@@ -98,6 +98,5 @@ Market.prototype = {
     //console.log("MOMENTUM tick | me.momentum_array.length, start_time, end_time, m_to_start:", me.momentum_array.length, start_time, end_time, m_to_start);
   }
 };
-
 
 module.exports = Market;
