@@ -1,9 +1,17 @@
-var moment = require("moment"),
-	config = require("./../configs/config");
+module.exports = function(STAMPEDE) {
 
-exports.moment = moment;
-exports.current_currency = config.exchange.currency;
+  var moment = require("moment")
+  var config = STAMPEDE.config
+  var helpers = {}
 
-exports.sanitizeVariableName = function(string) {
-  return (string.charAt(0).toUpperCase() + string.slice(1)).replace(/_/g, " ");
-};
+  helpers.moment = moment;
+  helpers.current_currency = config.exchange.currency;
+
+  helpers.sanitizeVariableName = function(string) {
+    var sanitized = 
+      (string.charAt(0).toUpperCase() + string.slice(1)).replace(/_/g, " ")
+    return sanitized
+  }
+
+  return helpers
+}
