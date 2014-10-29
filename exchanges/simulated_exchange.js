@@ -1,28 +1,38 @@
 
 
 // This is a redirection to exchange object under Simulator > exchange
-module.exports = function(STAMPEDE) {
-
-  var LOG = STAMPEDE.LOG("sim_x")
-  var config = STAMPEDE.config
-  var generator = STAMPEDE.generator
-  var xc = config.exchange.currency
-  var controller = STAMPEDE.controller
+module.exports = Exchange
 
 
-  // The exchange instance will create an object that provides ticker data and simulates exchange apis
-  function Exchange() {
-    /*  Serves to simulate exchange adapter
-     *  Initialize object for trading simulation
-     *
-     *
-     */
-    console.log("Initializing Simulated Exchange wrapper...")
-  }
+
+// The exchange instance will create an object that provides ticker data and simulates exchange apis
+function Exchange() {
+  /*  Serves to simulate exchange adapter
+   *  Initialize object for trading simulation
+   *
+   *
+   */
+  console.log("Initializing Simulated Exchange wrapper...")
+}
+
+var initialization = (function() {
+
+  var LOG
+  var config
+  var generator
+  var xc
+  var controller
 
   Exchange.prototype = {
     
-    load: function(market_data) {
+    load: function(STAMPEDE, market_data) {
+
+      LOG = STAMPEDE.LOG("sim_x")
+      config = STAMPEDE.config
+      generator = STAMPEDE.generator
+      xc = config.exchange.currency
+      controller = STAMPEDE.controller
+
       console.log(
         "Loading data.",
           market_data ? market_data.length : "Starting real time simulation."
@@ -151,6 +161,6 @@ module.exports = function(STAMPEDE) {
     }
   }
 
-  return Exchange
-}
+
+} ())
 

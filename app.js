@@ -128,7 +128,7 @@ var START = (function() {
   function initializeExchange() {
     var config = STAMPEDE.config
     var Exchange = 
-        require("./exchanges/" + config.exchange.selected + ".js")(STAMPEDE)
+        require("./exchanges/" + config.exchange.selected)
     var credentials = config.credentials[config.exchange.selected]
 
     this.exchange = new Exchange(

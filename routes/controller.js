@@ -465,13 +465,13 @@ module.exports = function(STAMPEDE) {
 
   function simulatorWarmUp(data) {
     controller.generated_data = data
-    exchange.load(data)
+    exchange.load(STAMPEDE, data)
   }
 
   // This is used to real time simulate data on index
   function simulatorRealtimePrep(done) {
     // No data is passed into simulated exchange, it will be a real time exchange
-    exchange.load()
+    exchange.load(STAMPEDE)
     if (done) return done()
   }
 
