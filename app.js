@@ -1,20 +1,22 @@
+
+
+
 var START = (function() {
 
-  function Stampede() {
-    var STAMPEDE = {}
-    STAMPEDE.name = "stampede"
-    STAMPEDE.environment = (process.env.NODE_ENV || 'development')
-    STAMPEDE.config = require("./configs/config")
+  var STAMPEDE = {
+    name: "stampede",
+    environment: (process.env.NODE_ENV || 'development'),
+    config: require("./configs/config"),
 
     // Load shareable dependencies
-    STAMPEDE.MA = require("moving-average")
-    STAMPEDE.async = require("async")
-    STAMPEDE.jade = require("jade")
-    STAMPEDE._ = require("underscore")
+    MA: require("moving-average"),
+    async: require("async"),
+    jade: require("jade"),
+    _: require("underscore"),
 
     // Array of plugins that will be loaded
     // ORDER is important
-    STAMPEDE.plugins = [
+    plugins: [
       "common",
       "auth",
       "email",
@@ -22,26 +24,26 @@ var START = (function() {
       "helpers",
       "live",
       "simulator"
-    ]
+    ],
 
     // Array of routers
-    STAMPEDE.models = [
+    models: [
       "market",
       "wallet",
       "trader",
       "cycle"
-    ]
+    ],
 
-    STAMPEDE.LOG = function(module_name) {
+    LOG: function(module_name) {
       // Assign default logging function to each module and plugin     
       return (function() {
         var args = Array.prototype.slice.call(arguments)
         args.unshift(module_name.toUpperCase() + "(" + process.pid + "):")
         console.log.apply(null, args)
       })
-    }
+    },
 
-    STAMPEDE.initialize = function() {
+    initialize: function() {
       // Trigger to cycle through modules and initialize
       connectDatabase()
       setupApplication()
@@ -51,10 +53,7 @@ var START = (function() {
       assignRoutes()
       initiateLiveCommunication()
     }
-
-    return STAMPEDE
   }
-
 
 
   function loadDependencies() {
@@ -183,7 +182,6 @@ var START = (function() {
     app.get("/remove_all_simulator_deals", auth.ensure, controller.simulatorRemoveDeals)      
   }
 
-  var STAMPEDE = Stampede()
   var LOG = STAMPEDE.LOG("app")
 
   STAMPEDE.initialize()

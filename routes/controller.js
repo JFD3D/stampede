@@ -326,12 +326,10 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.ticker = function(callback) {
-    //console.log("Getting ticker for user.")
     exchange.ticker(callback)
   }
 
   controller.buy = function(amount, price, callback) {
-    //console.log("Buying bitcoins | amount, price:", amount, price)
     exchange.buy(amount, price, callback)
   }
 

@@ -3,6 +3,7 @@
 // This is a redirection to exchange object under Simulator > exchange
 module.exports = function(STAMPEDE) {
 
+  var LOG = STAMPEDE.LOG("sim_x")
   var config = STAMPEDE.config
   var generator = STAMPEDE.generator
   var xc = config.exchange.currency
@@ -46,7 +47,7 @@ module.exports = function(STAMPEDE) {
         fee: 0.4,
         btc_available: 0.001,
         btc_balance: 0.001,
-        time: start_tick.time || 0
+        time: (start_tick.time || 0)
       }
 
       this.current_balance[xc+"_reserved"] = 0
@@ -103,27 +104,33 @@ module.exports = function(STAMPEDE) {
       amount = parseFloat(amount)
       price = parseFloat(price)
       
-      var me = this,
-          adjusted_amount_price = (amount*price)*(1+(me.current_balance.fee/100))
+      var me = this
+      var adjusted_amount_price = (amount*price)*(1+(me.current_balance.fee/100))
 
       if (me.current_balance[xc+"_available"] >= adjusted_amount_price) {
+
         me.current_balance.btc_available += amount
         me.current_balance.btc_balance = me.current_balance.btc_available
         me.current_balance[xc+"_available"] -= adjusted_amount_price
         me.current_balance[xc+"_balance"] = me.current_balance[xc+"_available"]
         me.volume += amount
-        callback(null, {id: parseInt(Math.random()*10000)})
+        
+        //LOG("buy | amount, btc_balance:", amount, me.current_balance.btc_balance)
+
+        callback(null, {
+          id: parseInt(Math.random()*10000)
+        })
       }
       else {
-        callback("There were not enough resources in balance.", null)  
+        callback("Not enough " + xc + "resources in balance.", null)
       }
     },
     sell: function(amount, price, callback) {
       amount = parseFloat(amount)
       price = parseFloat(price)
 
-      var me = this,
-          adjusted_amount_price = (amount*price)*(1-(me.current_balance.fee/100))
+      var me = this
+      var adjusted_amount_price = (amount*price)*(1-(me.current_balance.fee/100))
 
       if (me.current_balance.btc_available >= amount) {
         me.current_balance.btc_available -= amount
@@ -131,10 +138,15 @@ module.exports = function(STAMPEDE) {
         me.current_balance[xc+"_available"] += adjusted_amount_price
         me.current_balance[xc+"_balance"] = me.current_balance[xc+"_available"]
         me.volume += amount
-        callback(null, {id: parseInt(Math.random()*10000)})
+
+        //LOG("sell | amount, btc_balance:", amount, me.current_balance.btc_balance)
+
+        callback(null, {
+          id: parseInt(Math.random()*10000)
+        })
       }
       else {
-        callback("There were not enough resources in balance.", null)  
+        callback("Not enough BTC resources in balance.", null)  
       }
     }
   }

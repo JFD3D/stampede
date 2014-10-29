@@ -132,6 +132,8 @@ module.exports = function(STAMPEDE) {
      *
      */
 
+    this.purchases = 0
+    this.sales = 0
     this.id_counter = "stampede_trader_number"
     this.trader_prefix = "trader_"
     this.book_prefix = "book_for_"
@@ -315,7 +317,7 @@ module.exports = function(STAMPEDE) {
             (MAX_SUM_INVESTMENT > purchase.currency_amount) &&
 
             // Check if I have enough fiat to buy
-            (wallet.current[currency_key] > purchase.currency_amount),
+            (wallet.current.available_to_traders > purchase.currency_amount),
 
           // Calculate trader bid 
           // (aligned by bid alignment to make us competitive when bidding)
@@ -452,6 +454,7 @@ module.exports = function(STAMPEDE) {
       combined_deal.currency_amount = 0
       combined_deal.max_currency_amount = 0
       combined_deal.amount = 0
+      combined_deal.amounts = []
       combined_deal.names = []
 
       // Calculate weighted price for deals from extremes (lowes and highest)
@@ -474,6 +477,7 @@ module.exports = function(STAMPEDE) {
               ) ? current.max_price : current.buy_price
             ) * current.amount
           combined_deal.amount += current.amount
+          combined_deal.amounts.push(current.amount)
           combined_deal.names.push(current.name)
         }
         else if (!config.simulation) {
@@ -529,6 +533,24 @@ module.exports = function(STAMPEDE) {
       structured_decision.managed = (
         combined_deal.amount <= wallet.current.btc_balance
       )
+
+      if (
+        !structured_decision.managed && structured_decision.has_deals && 
+        structured_decision.would_sell_price
+      ) {
+        LOG(
+          "unmanaged |", 
+          "amount:", 
+          combined_deal.amount, 
+          "btc_balance:", wallet.current.btc_balance, 
+          "amounts:", combined_deal.amounts,
+          "bal/am", 
+          (wallet.current.btc_balance / combined_deal.amount).toFixed(3), "%",
+          "bal-am",
+          (wallet.current.btc_balance - combined_deal.amount).toFixed(6), "BTC"
+        )
+      }
+
       // Check trailing stop, if enabled affect decision
       structured_decision.decision = (
         structured_decision.would_sell_price &&
@@ -624,6 +646,7 @@ module.exports = function(STAMPEDE) {
         deal.amount.toFixed(7), 
         deal.buy_price.toFixed(2),
       function(error, order) {
+        //LOG("buy | deal.amount, wallet.current.btc_balance, deals:", deal.amount, wallet.current.btc_balance, STAMPEDE._.pluck(me.deals, "amount"))
         if (DECISION_LOGGING) console.log(
           "trader | buy | order, error:", order, error
         )
@@ -632,6 +655,7 @@ module.exports = function(STAMPEDE) {
           order.id
         ) {
           deal.order_id = order.id
+          me.purchases++
           me.recordDeal(deal, done)
           if (!config.simulation) email.send({
             to: config.owner.email,
@@ -705,6 +729,7 @@ module.exports = function(STAMPEDE) {
           order && 
           order.id
         ) {
+          me.sales++
           // Create asynchronous queue that will 
           // purge sold deals from redis and live traders
           async.each(deal.names, function(deal_name, internal_callback) {
@@ -744,6 +769,7 @@ module.exports = function(STAMPEDE) {
       var me = this
       me.deals.push(deal)
       var deal_string = stringDeal(deal)
+
       if (!config.simulation) {
         db.sadd(me.record.book, deal.name, callback)
       }

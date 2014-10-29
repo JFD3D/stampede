@@ -93,7 +93,7 @@ module.exports = function(STAMPEDE) {
           if (
             !isNaN(deal_amount * deal_buy_price)
           ) me.current.investment += (deal_amount * deal_buy_price)
-          live_traders[trader_name].record.current_investment += 
+          trader_record.current_investment += 
             isNaN(deal_amount * deal_buy_price) ? 
               0 : (deal_amount * deal_buy_price)
         })

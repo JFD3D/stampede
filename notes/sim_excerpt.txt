@@ -1,0 +1,44 @@
+* Checking history sheets.
+
+
+SIM_X(23104): buy | amount, btc_balance: 0.0132902 0.0132902
+TRADER(23104): buy | deal.amount, wallet.current.btc_balance, deals: 0.013290201012666349 0 [ 0.01084775587677048 ]
+
+SIM_X(23104): buy | amount, btc_balance: 0.0163081 0.0295983
+TRADER(23104): buy | deal.amount, wallet.current.btc_balance, deals: 0.01630809924360017 0.0132902 [ 0.013290201012666349, 0.01084775587677048 ]
+
+SIM_X(23104): buy | amount, btc_balance: 0.0199825 0.0495808
+TRADER(23104): buy | deal.amount, wallet.current.btc_balance, deals: 0.01998250928522721 0.0295983 
+
+[ 
+  0.01630809924360017,
+  0.013290201012666349,
+  0.01084775587677048 ]
+
+SIM_X(23104): buy | amount, btc_balance: 0.0244764 0.0740572
+TRADER(23104): buy | deal.amount, wallet.current.btc_balance, deals: 0.024476444013514384 0.0495808 [ 0.01998250928522721,
+  0.01630809924360017,
+  0.013290201012666349,
+  0.01084775587677048 ]
+
+SIM_X(23104): buy | amount, btc_balance: 0.0300562 0.10411340000000001
+
+TRADER(23104): buy | deal.amount, wallet.current.btc_balance, deals:  0.0740572 
+  [ 
+  //0.03005620323870533,//
+    0.024476444013514384,
+    0.01998250928522721,
+    0.01630809924360017,
+    0.013290201012666349,
+    0.01084775587677048 
+  ] = 0.114961213
+
+
+
+
+SELLING !!!!!!!!!!!!!!!!!!
+
+SIM_X(23104): sell | amount, btc_balance: 0.040904 0.0632094
+SIM_X(23104): sell | amount, btc_balance: 0.0377666 0.0254428
+TRADER(23104): unmanaged | amount: 0.03629060852882738 btc_balance: 0.0254428 amounts: [ 0.01998250928522721, 0.01630809924360017 ] bal/am 0.701 % bal-am -0.010848 BTC
+TRADER(23104): unmanaged | amount: 0.03629060852882738 btc_balance: 0.0254428 amounts: [ 0.01998250928522721, 0.01630809924360017 ] bal/am 0.701 % bal-am -0.010848 BTC
