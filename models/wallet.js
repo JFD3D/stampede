@@ -8,6 +8,7 @@ module.exports = function(STAMPEDE) {
   var email = STAMPEDE.email
   var live_traders
   var error_email_sent
+  var LOG = STAMPEDE.LOG("wallet")
 
   function Wallet() {
     this.current = {}
@@ -145,8 +146,10 @@ module.exports = function(STAMPEDE) {
         } 
         else {
           var current_currency_value = me.current.currency_value || 0
-          // Assign initial investment as maximum (this flies in case of simulator)
+          // Assign initial investment as maximum 
+          // (this flies in case of simulator)
           var current_initial_investment = config.trading.maximum_investment
+          LOG("config.trading.maximum_investment:", config.trading.maximum_investment)
           me.current.initial_investment = current_initial_investment
 
           me.shares = [{

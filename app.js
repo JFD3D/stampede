@@ -1,6 +1,3 @@
-
-
-
 var START = (function() {
 
   var STAMPEDE = {
@@ -169,8 +166,6 @@ var START = (function() {
     app.get("/start", auth.ensure, controller.start)
     app.get("/shares", auth.ensure, controller.shares)
     app.post("/shares/add", auth.ensure, controller.addShare)
-
-
     app.get("/simulator", auth.ensure, controller.simulatorHome)
     app.post("/simulator/save_data_set", auth.ensure, controller.simulatorSave)
     app.get("/simulator/generate", auth.ensure, controller.simulatorGenerate)
@@ -178,12 +173,10 @@ var START = (function() {
     app.get("/simulator/run_series", auth.ensure, controller.simulatorRunSeries)
     app.get("/simulator/load_data_set/:data_set", auth.ensure, controller.simulatorLoad)
     app.get("/simulator/remove_data_set/:data_set", auth.ensure, controller.simulatorRemove)
-
     app.get("/remove_all_simulator_deals", auth.ensure, controller.simulatorRemoveDeals)      
   }
 
   var LOG = STAMPEDE.LOG("app")
-
   STAMPEDE.initialize()
 
 } ())

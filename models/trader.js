@@ -381,7 +381,7 @@ module.exports = function(STAMPEDE) {
         potential_better_than_heat
       ) decision = true
       
-      if (DECISION_LOGGING) console.log(
+      if (DECISION_LOGGING) LOG(
         "*** Buying deal? ***",
         "\n|- Has hands available (..., me.deals.length):", 
           has_free_hands, me.deals.length,
@@ -405,8 +405,6 @@ module.exports = function(STAMPEDE) {
         "\n******"
       )
       
-      //console.log("Market from isBuying:", market.current)
-
       var structured_decision = {
         trader: 
           "(" + me.name.split("_")[1] + 
@@ -421,36 +419,35 @@ module.exports = function(STAMPEDE) {
         buy: decision
       }
 
-      //console.log("structured_decision:", structured_decision)
       cycle_buy_decisions.push(structured_decision)
 
       return decision
     },
 
     isSelling: function(combined_deal) {
-      var me = this,
-          deals = me.deals,
+      var me = this
+      var deals = me.deals
           // Get min and max deal from all, initialize a combined deal for further calc
-          borders = deals.extremesByKey("buy_price"),
+      var borders = deals.extremesByKey("buy_price")
           // Initialize resulting decision
-          decision = false,
+      var decision = false
           // Deal independent calculations
-          current_market_greed = (market.current.spread / 2),
+      var current_market_greed = (market.current.spread / 2)
           // Calculate for comparison on deal
-          current_sale_price = (market.current.last * BID_ALIGN),
+      var current_sale_price = (market.current.last * BID_ALIGN)
           // Calculate trader greed
-          trader_greed = INITIAL_GREED + ((wallet.current.fee || 0.5) / (2*100)),
+      var trader_greed = INITIAL_GREED + ((wallet.current.fee || 0.5) / (2*100))
           // If wallet is ready
-          weighted_heat = wallet.current.cool + trader_greed,
+      var weighted_heat = wallet.current.cool + trader_greed
           // Check if wallet is ready
-          potential_better_than_heat = (weighted_heat > 1),
+      var potential_better_than_heat = (weighted_heat > 1)
           // Check if market has negative momentum
-          market_momentum_low = (
+      var market_momentum_low = (
             market.current.momentum_record_healthy &&
             market.current.momentum_average <= 0
           )
 
-
+      // Build combined deal attributes
       combined_deal.currency_amount = 0
       combined_deal.max_currency_amount = 0
       combined_deal.amount = 0
@@ -510,12 +507,16 @@ module.exports = function(STAMPEDE) {
 
       // Create structured decision object (rendered on client), 
       // used for consolidated decision check
+      var selected_deal_count = combined_deal.names.length
+
       var structured_decision = {
         trader: 
           "("+me.name.split("_")[1] + 
           ") sell (" + (combined_deal.would_sell_at || 0).toFixed(2) + ")",
         would_sell_price: (combined_deal.would_sell_at < current_sale_price),
-        has_deals: (combined_deal.names.length > 1),
+        has_deals: (
+          selected_deal_count && (!COMBINED_SELLING || selected_deal_count > 1)
+        ),
         cool: potential_better_than_heat
       }
 
@@ -1092,7 +1093,6 @@ module.exports = function(STAMPEDE) {
     }
 
     if (current_currency_value > 10 && !config.simulation) {
-      console.log("refreshSheets | before zadd")
       db.zadd(
         stampede_value_sheet, time_stamp, current_currency_value, 
       function(error, response) {
@@ -1102,21 +1102,18 @@ module.exports = function(STAMPEDE) {
           value: current_currency_value
         }
         
-        console.log("refreshSheets | after zadd, new_value", new_value)
-
         sheets.push(new_value)
-        if (broadcast_time) STAMPEDE.controller.drawSheets(new_value, "incremental")
+        if (broadcast_time) {
+          STAMPEDE.controller.drawSheets(new_value, "incremental")
+        }
 
         // Now, let's check if we should remove any points
         db.zcard(stampede_value_sheet, function(error, sheets_size) {
-          console.log("refreshSheets | before zcard, sheets_size:", sheets_size)
           if (parseInt(sheets_size) > SHEET_SIZE_LIMIT) {
             var cutoff_size = parseInt(sheets_size) - SHEET_SIZE_LIMIT
-            // console.log("refreshSheets | after zcard, cutoff_size:", cutoff_size)
             db.zremrangebyrank(
               stampede_value_sheet, 0, cutoff_size, 
             function(error, response) {
-              
               console.log(
                 "(Former size: " + sheets_size + " / Limit: " + SHEET_SIZE_LIMIT + 
                 ") Removed", (cutoff_size), "points from sheets", 
@@ -1134,7 +1131,7 @@ module.exports = function(STAMPEDE) {
   function checkWallet(done) {
     // Initialize into global var, exposed on top
     var wallet_start_timer = Date.now()
-    if (!config.simulation) console.log("* Checking wallet.")
+    if (!config.simulation && DECISION_LOGGING) console.log("* Checking wallet.")
     wallet.check(live_traders, function() {
       if (
         !series_simulation && 

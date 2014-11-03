@@ -1,6 +1,6 @@
 each trader, trader_name in traders
   .trader(id="#{trader_name}")
-    h4 Deals (#{trader_name}) (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase()+" "+((trader.record || {}).current_investment || 0).toFixed(2)})
+    p Deals (#{trader_name}) (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase()+" "+((trader.record || {}).current_investment || 0).toFixed(2)})
       span  | 
       - if (trader.next_deal_amount)
         span= ("Next: " + trader.next_deal_amount.toFixed(2)+" USD")

@@ -1,11 +1,6 @@
-body {
-  padding: 100px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
-}
-
-a {
+/*a {
   color: #00B7FF;
-}
+}*/
 
 #navigation, #live-simulation-progress {
   padding: 1em;
@@ -19,12 +14,6 @@ a {
 
 #live-simulation-progress {
   right: 1em;
-}
-
-
-
-#navigation button {
-  margin: 1em 1em 1em 1em;
 }
 
 #live-messages {
@@ -53,6 +42,10 @@ a {
   overflow: auto;
 }
 
+.block.wide {
+  width: 1200px;
+}
+
 .block.inactive {
   color: #ccc;
   background-color: #eee;
@@ -60,14 +53,6 @@ a {
 
 .error {
   color: red;
-}
-
-button {
-  padding: 1em;
-}
-
-input {
-  padding: .5em;
 }
 
 .lefter {
@@ -96,6 +81,11 @@ table td {
 table td, table th {
   padding: .25em;
 }
+
+table th {
+  border-bottom: 1px solid #ccc;
+}
+
 a.removal {
   font-weight: normal;
 }

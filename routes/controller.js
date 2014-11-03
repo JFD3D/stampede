@@ -11,11 +11,10 @@ module.exports = function(STAMPEDE) {
 
   var config = STAMPEDE.config
   var common = STAMPEDE.common
-  var Simulator = STAMPEDE.simulator
   var Exchange = STAMPEDE.exchange
   var Trader = STAMPEDE.trader
   var live = STAMPEDE.live
-  var simulator = new Simulator()
+  var simulator = new STAMPEDE.simulator()
   var jade = STAMPEDE.jade
   var async = STAMPEDE.async
   var generated_data = []
@@ -226,12 +225,13 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  controller.refreshTradingConfig = function(trading_config, done) {
+  controller.refreshTradingConfig = function(done) {
     var outgoing = {
-      data: trading_config,
+      data: STAMPEDE.config,
       container: "live-trading-config"
     }
-    //console.log("^^^^^ Updating wallet with data.", data)
+
+    console.log("^^^^^ Updating wallet with data.", outgoing)
     live.sendToAll("stampede_updates", outgoing)
     if (done) done()
   }
@@ -279,8 +279,8 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.updateTradingStrategy = function(req, res) {
-    var update_body = req.body,
-        new_config = {}
+    var update_body = req.body
+    var new_config = {}
     for (var attribute in config.strategy) {
       new_config[attribute] = (update_body[attribute] === "on" ? true : false)
     }
@@ -290,8 +290,8 @@ module.exports = function(STAMPEDE) {
 
 
   controller.updateTradingConfig = function(req, res) {
-    var update_body = req.body,
-        new_config = {}
+    var update_body = req.body
+    var new_config = {}
     for (var attribute in config.trading) {
       new_config[attribute] = (
         parseFloat(update_body[attribute]) || config.trading[attribute]
@@ -308,8 +308,7 @@ module.exports = function(STAMPEDE) {
 
   controller.notifyClient = function(data, done) {
     var outgoing = data
-    
-    //console.log("^^^^^ Updating wallet with data.", data)
+
     live.sendToAll("stampede_updates", outgoing)
     if (done) done()
   }
@@ -478,6 +477,3 @@ module.exports = function(STAMPEDE) {
   return (controller)
 
 }
-
-
-  

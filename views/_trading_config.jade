@@ -1,14 +1,16 @@
 form#trading-config-form.async-form(action="/trading_config/update", method="post")
-  mixin config_form_inputs(trading_config)
+  table
+    mixin config_form_input(trading_config)
   .spacer
-  button Submit changes
-  a(href="/trading_config/reset")
-    button(type="button") Reset config
+  button.btn.btn-default Submit changes
 
-
-mixin config_form_inputs(config_set)
-  each config, attribute in trading_config
-    label(for="#{attribute}-input") #{helpers.sanitizeVariableName(attribute)}
-      br
-      input(type="text", name="#{attribute}", value="#{config}")
-      br
+mixin config_form_input(config_set)
+    
+    each config, attribute in trading_config
+      tr
+        td 
+          label(for="#{attribute}-input") 
+            b #{helpers.sanitizeVariableName(attribute)}
+        td
+          input.form-control(type="text", name="#{attribute}", value="#{config}", id="{attribute}-input")
+        
