@@ -13,7 +13,7 @@ module.exports = function(STAMPEDE) {
   function Wallet() {
     this.current = {}
     this.shares = []
-    this.cool = 1
+    this.cool = 0.5
   }
 
   Wallet.prototype = {

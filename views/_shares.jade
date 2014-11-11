@@ -1,16 +1,15 @@
-.block#live-shares
-  h2 Live shares
-  - if (current_user.owner)
-    form.block-form(action="shares/add", method="post")
-      label(for="holder_name_input") Shareholder email
+.row.block#live-shares(style="display: none;")
+  .col-md-2
+    h2 Live shares
+    - if (current_user.owner)
+      form.block-form(action="shares/add", method="post")
+        label(for="holder_name_input") Shareholder email
+          br
+          input.form-control#holder_name_input(type="text", name="holder", placeholder="@")
         br
-        input#holder_name_input(type="text", name="holder", placeholder="@")
-      br
-      label(for="investment_input") Amount
+        label(for="investment_input") Amount
+          br
+          input.form-control#investment_input(type="text", name="investment", placeholder="00.00")
         br
-        input#investment_input(type="text", name="investment", placeholder="00.00")
-      br
-      button(type="Submit") Add
-      .spacer
+        button.btn.btn-default(type="Submit") Add
   .content
-    p Loading shares information...

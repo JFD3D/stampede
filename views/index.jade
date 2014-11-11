@@ -5,70 +5,74 @@ extends layout
     script(type='text/javascript', src='/internal/front-simulator.js')
 
 block navigation
-  #live-messages
+  .col-md-4#live-messages
     .content
 block content
+
   - var class_for_status = (traders_awake == true ? "active" : "inactive")
-  - if (simulator_enabled)
-    .block#simulator-data-sets
-      h2 Simulation data sets
+  .spacer(style="height: 100px")
+
+  .row
+    .col-md-5.block#live-balance(class="#{class_for_status}", style="display: none;")
+      h2 &#2947; Wallet
       .content
-        include _simulator_data_sets
-    .block#live-simulation
+    .col-md-5.block#live-ticker(class="#{class_for_status}", style="display: none;")
+      h2 &cap; Market
       .content
-        button.btn.btn-default#generator-launch Generate data
-        button.btn.btn-info#simulator-save-data(style="display: none;") Save data
-        .spacer
-        #chart
-        .spacer
-        button.btn.btn-success#simulator-run(style="display: none;") Simulate trading
-  .block#live-traders(class="#{class_for_status}")
-    h2 &#9801; Traders (#{helpers.sanitizeVariableName(config.exchange.selected)})
-    .clearer
-    - if (simulator_enabled)
-      form.async-form(action="/remove_all_simulator_deals", method="get")
-        button.btn.btn-warning Remove all deals  
-    - else
-      button.btn.btn-default.trader-switch(data-action=(traders_awake == true ? "/stop" : "/start"))= (traders_awake == true ? "STOP" : "START")
+
+  .row.block#decision-indicators(class="#{class_for_status}", style="display: none;")
+    .col-md-4
+      h2 &plusmn; Decision indicators
+    .content
+
+  .block.row#live-traders(class="#{class_for_status}", style="display: none;")
+    .col-md-4
+      h2 &#9801; Traders (#{helpers.sanitizeVariableName(config.exchange.selected)})
+      .clearer
+      - if (simulator_enabled)
+        form.async-form(action="/remove_all_simulator_deals", data-method="get")
+          button.btn.btn-warning Remove all deals
+      - else
+        button.btn.btn-default.trader-switch(data-action=(traders_awake == true ? "/stop" : "/start"))= (traders_awake == true ? "STOP" : "START")
     .spacer
     .content
     .spacer
     form.async-form(action="trader/create", method="post", style="margin-bottom: 10px;")
       button.btn.btn-default Add trader
-  .block#live-balance(class="#{class_for_status}")
-    h2 &#2947; Wallet
-    .content
-  .block#live-ticker(class="#{class_for_status}")
-    h2 &cap; Market
-    .content
-  .block#decision-indicators(class="#{class_for_status}")
-    h2 Trading indicators
-    .content
-  .block#live-sheets(class="#{class_for_status}")
+  
+  // Simulator stuff
+  - if (simulator_enabled)
+    .row
+      .block.col-md-4#simulator-data-sets
+        h2 Simulation data sets
+        .content
+          include _simulator_data_sets
+        .clearer
+        button.btn.btn-default#generator-launch Generate data
+      .block.col-md-6#live-simulation
+        .content
+          button.btn.btn-success#simulator-run(style="display: none;") Simulate trading
+          button.btn.btn-info#simulator-save-data(style="display: none;") Save data
+          .spacer
+          #chart
+       
+  .block#live-sheets(class="#{class_for_status}", style="display: none;")
     h2 Current value change
     .content
-  .block#live-shares
-    h2 Live shares
-    - if (current_user && current_user.owner)
-      form.block-form(action="shares/add", method="post")
-        label(for="holder_name_input") Shareholder email
-          br
-          input.form-control#holder_name_input(type="text", name="holder", placeholder="@")
-        br
-        label(for="investment_input") Amount
-          br
-          input.form-control#investment_input(type="text", name="investment", placeholder="00.00")
-        br
-        button.btn.btn-default(type="Submit") Add
-        .spacer
-    .content
-      p Loading shares information...
-  .block#live-trading-config(class="#{class_for_status}")
-    h2 Trading configuration
-    include _trading_config
-    h2 Trading strategies
-    include _trading_strategies
+  include _shares
+  .row.block#live-trading-config(class="#{class_for_status}")
+    .col-md-4
+      h2 Configuration
+      a(href="/trading_config/reset")
+        button.btn.btn-warning(type="button") Reset config
     .spacer
-    a(href="/trading_config/reset")
-      button.btn.btn-warning(type="button") Reset config
+    .col-md-5
+      h3 Trading 
+      include _trading_config
+    .col-md-5
+      h2 Trading strategies
+      include _trading_strategies
     .content
+
+block footer
+  

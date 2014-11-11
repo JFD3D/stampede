@@ -1,7 +1,7 @@
 form#trading-config-form.async-form(action="/trading_config/update", method="post")
-  table
+  table.table.table-striped
     mixin config_form_input(trading_config)
-  .spacer
+  .clearer
   button.btn.btn-default Submit changes
 
 mixin config_form_input(config_set)

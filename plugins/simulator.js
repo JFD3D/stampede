@@ -171,7 +171,7 @@ module.exports = function(STAMPEDE) {
     },
 
     analyseResults: function() {
-      
+      var sim = this
       var results = sim.current.series_results
       var analysis = []
       // Analyse per dataset
@@ -180,8 +180,6 @@ module.exports = function(STAMPEDE) {
       var lowest_ratio_result = results[results.length - 1]
       var top_ratio = top_ratio_result[top_ratio_result.length -1].value
       var lowest_ratio = lowest_ratio_result[lowest_ratio_result.length -1].value
-
-
 
       function getResultValues(result, field) {
 

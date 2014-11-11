@@ -10,6 +10,11 @@
   background-color: #eee;
   border-radius: .5em;
   box-shadow: 0em .25em .5em 0em rgba(0, 0, 0, 0.1);
+  z-index: 200;
+}
+
+#content {
+  z-index: 100;
 }
 
 #live-simulation-progress {
@@ -17,6 +22,7 @@
 }
 
 #live-messages {
+  padding-top: 1em;
   max-height: 70px;
   min-width: 600px;
   line-height: 60%;
@@ -32,7 +38,7 @@
   font: 80%;
 }
 
-.block {
+/*.block {
   float: left;
   width: 600px;
   margin: 1em;
@@ -44,13 +50,13 @@
 
 .block.wide {
   width: 1200px;
-}
+}*/
 
-.block.inactive {
+/*.block.inactive {
   color: #ccc;
   background-color: #eee;
 }
-
+*/
 .error {
   color: red;
 }
@@ -73,28 +79,9 @@ p b {
   color: #444;
 }
 
-table td {
-  border: 1px solid #ccc;
-  background-color: #fff;
-}
-
-table td, table th {
-  padding: .25em;
-}
-
-table th {
-  border-bottom: 1px solid #ccc;
-}
 
 a.removal {
   font-weight: normal;
-}
-
-table {
-  border-collapse: collapse;
-  width: 100%;
-  border: 1px solid #ccc;
-  background-color: #eee;
 }
 
 .decision-table {
@@ -163,4 +150,12 @@ path {
   fill: #73BAFF;
   fill-opacity: .125;
   shape-rendering: crispEdges;
+}
+
+
+
+/* FOR BOOTSTRAP */ 
+
+.btn {
+  margin: 5px;
 }

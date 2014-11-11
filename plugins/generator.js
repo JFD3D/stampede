@@ -21,7 +21,7 @@ module.exports = function(STAMPEDE) {
           },
           ST: {
             duration: 1*minute,
-            impact: 0.005
+            impact: 0.01 // 0.005 regular
           }
         }
       }

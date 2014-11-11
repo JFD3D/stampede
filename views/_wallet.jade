@@ -2,7 +2,7 @@ h3 Money
 - if (current_wallet.error)
   p(class="error")= current_wallet.error
 
-table
+table.table.table-striped
   tr
     th Currency
     th Balance
@@ -22,7 +22,7 @@ table
     td= (current_wallet.btc_reserved || 0).toFixed(2)
     td= (current_wallet.btc_amount_managed || 0).toFixed(4)
 h3 Calculations
-table
+table.table.table-striped
   tr
     th Cool
     th Av. buy price
@@ -35,7 +35,7 @@ table
     td= (current_wallet.currency_value || 0).toFixed(2)
 
 h3 Information
-table
+table.table.table-striped
   tr
     th Initial investment
     th Fee
@@ -43,4 +43,4 @@ table
   tr
     td= (current_wallet.initial_investment || 0).toFixed(2)
     td= parseFloat(current_wallet.fee)+"%"
-    td= new Date(current_wallet.time)
+    td= formatter.tFormat(current_wallet.time)

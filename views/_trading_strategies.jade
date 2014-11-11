@@ -1,10 +1,10 @@
 form#trading-strategy-form.async-form(action="/trading_strategy/update", method="post")
   mixin strategy_form_inputs(trading_strategies)
-  .spacer
+  .clearer
   button.btn.btn-default Submit changes
 
 mixin strategy_form_inputs(strategy_set)
-  table
+  table.table.table-striped
     each enabled, strategy in strategy_set
       tr
         td 

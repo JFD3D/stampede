@@ -18,9 +18,9 @@ var series = {
 
   strategies: {
 
-    momentum_trading: [false],
+    momentum_trading: [true, false],
 
-    trailing_stop: [false],
+    trailing_stop: [true, false],
 
     bell_bottom: [true],
 

@@ -54,11 +54,12 @@ socket.on("stampede_updates", function(incoming) {
   }
   else if (incoming.target && incoming.html) {
     var target_container = $(incoming.target);
-    target_container.html(incoming.html);
+    target_container.html(incoming.html).show();
   }
   else if (incoming.container && incoming.html) {
-
-    $(".content","#"+incoming.container).html(incoming.html);
+    var container = ("#" + incoming.container)
+    $(".content", container).html(incoming.html).show();
+    $(container).show();
   }
   else if (incoming.message) {
     notify(incoming.message, (incoming.permanent ? null : 30000));
@@ -82,9 +83,10 @@ $(document).ready(function() {
     var form = $(this),
         parent_sub_block = $(this).parents(".sub-block"),
         data = form.serialize(),
+        method = (this.method || "post"),
         path = this.action;
     event.preventDefault();
-    $.post(path, data, function(response) {
+    $[method](path, data, function(response) {
       notify(response.message || "No response.");
       $(".submittal-operators", parent_sub_block).hide();
     });
@@ -185,6 +187,7 @@ function notify(message, decay) {
 
 function update(container, data, rendering) {
   var html = "";
+  container = ("#" + container);
   if (data.length) { 
     data.forEach(function(data_point) {
       html += render(data_point);
@@ -193,7 +196,8 @@ function update(container, data, rendering) {
   else {
     html += render(data);
   }
-  $(".content", "#"+container)[rendering](html);
+  $(".content", container)[rendering](html);
+  $(container).show();
 }
 
 function render(data, level) {
@@ -222,7 +226,7 @@ function request(action) {
   socket.emit("request", {
     action: action
   }, function(response) {
-    update("live-"+action, response);
+    update("live-" + action, response);
   });
 }
 

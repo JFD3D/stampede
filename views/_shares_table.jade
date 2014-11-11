@@ -1,14 +1,15 @@
-table
-  tr
-    th Shareholder
-    th Share
-    th Initial investment
-    th Current value
-    th Profit / Loss
-  each share in shares
+.col-md-7
+  table.table.table-striped
     tr
-      td= share.holder
-      td= share.pie_share
-      td= helpers.current_currency.toUpperCase()+" "+share.invested_currency_amount.toFixed(2)
-      td= helpers.current_currency.toUpperCase()+" "+share.current_currency_value.toFixed(2)
-      td= share.profit_loss
+      th Shareholder
+      th Share
+      th Initial investment
+      th Current value
+      th Profit / Loss
+    each share in shares
+      tr
+        td= share.holder
+        td= share.pie_share
+        td= helpers.current_currency.toUpperCase()+" "+share.invested_currency_amount.toFixed(2)
+        td= helpers.current_currency.toUpperCase()+" "+share.current_currency_value.toFixed(2)
+        td= share.profit_loss

@@ -1,3 +1,5 @@
+"use strict"
+
 module.exports = function(STAMPEDE) {
 
   var config = STAMPEDE.config
@@ -121,8 +123,22 @@ module.exports = function(STAMPEDE) {
    */
 
   function Trader(name) {
+
+    /*
+     *
+     *
+     *  Trader basics
+     *
+     *
+     *
+     */
+
     
     this.name = name
+    this.purchases = 0
+    this.sales = 0
+    this.deals = []
+
     /*
      *
      *
@@ -132,14 +148,10 @@ module.exports = function(STAMPEDE) {
      *
      */
 
-    this.purchases = 0
-    this.sales = 0
     this.id_counter = "stampede_trader_number"
     this.trader_prefix = "trader_"
     this.book_prefix = "book_for_"
     this.main_list = trader_main_list
-    this.deals = []
-
   }
 
 
@@ -162,7 +174,7 @@ module.exports = function(STAMPEDE) {
       var me = this
       db.incr(me.id_counter, function(error, number) {
         me.name = me.trader_prefix + number
-        db.sadd(me.main_list, me.name, function(error, response) {
+        db.sadd(trader_main_list, me.name, function(error, response) {
           me.record = {
             book: me.book_prefix + me.name,
             deals: MAX_DEALS_HELD
@@ -182,7 +194,7 @@ module.exports = function(STAMPEDE) {
       var me = live_traders[this.name],
           my_book = me.record.book
       me.checkRecord(function() {
-        db.srem(me.main_list, me.name, function(error, response) {
+        db.srem(trader_main_list, me.name, function(error, response) {
           db.del(my_book)
           db.del(me.name, function() {
             delete live_traders[me.name]
@@ -249,46 +261,48 @@ module.exports = function(STAMPEDE) {
 
     isBuying: function(purchase) {
 
-      var me = this,
-          decision = false,
+      var me = this
+      var decision = false
 
           // Get the lowest price of deal bought
-          deals = me.deals,
-          borders = deals.extremesByKey("buy_price"),
+      var deals = me.deals
+      var borders = deals.extremesByKey("buy_price")
 
-          lowest_buy_price = borders.min.buy_price || 0,
+      var lowest_buy_price = borders.min.buy_price || 0
 
-          lowest_buy_amount = borders.min.amount || 0,
+      var lowest_buy_amount = borders.min.amount || 0
 
-          lowest_currency_amount = 
-            (lowest_buy_price * lowest_buy_amount) || BASE_PER_DEAL,
+      var lowest_currency_amount = (
+            (lowest_buy_price * lowest_buy_amount) || BASE_PER_DEAL
+          )
 
 
           // Current allowed investment (on top of existing)
-          current_allowed_investment = 
-            MAX_SUM_INVESTMENT - wallet.current.investment,
+      var current_allowed_investment = (
+            MAX_SUM_INVESTMENT - wallet.current.investment
+          )
 
           // Amount I can invest according to available and allowed
-          available_currency_amount = (
+      var available_currency_amount = (
             current_allowed_investment > wallet.current[currency_key]
-          ) ? wallet.current[currency_key] : current_allowed_investment,
+          ) ? wallet.current[currency_key] : current_allowed_investment
 
           // Get array of price levels which the trader will traverse 
           // until hitting bottom of lowest price / through altitude drop
-          price_levels = common.getAltitudeLevels(
+      var price_levels = common.getAltitudeLevels(
             (market.current.high / 2), market.current.high, ALTITUDE_DROP
-          ),
+          )
 
           // Dynamic deal ratio if it is enabled (if not, default to 2)
-          deal_ratio = (
+      var deal_ratio = (
             price_levels.length &&
             DYNAMIC_MULTIPLIER
           ) ? common.getCurrentRatio(
             available_currency_amount, price_levels, 1.99, lowest_currency_amount
-          ) : 2,
+          ) : 2
 
           // Check if trader has available spot for another deal
-          has_free_hands = MAX_DEALS_HELD > me.deals.length
+      var has_free_hands = MAX_DEALS_HELD > me.deals.length
 
       // Assign price levels to current object so we can display it
       // Cumulate new deal amount with ratio (statc[2], dynamic)
@@ -367,8 +381,8 @@ module.exports = function(STAMPEDE) {
           )
       
       purchase.buy_price = trader_bid
-
-
+      me.solvent = (available_resources)
+      me.inspired = (potential_better_than_heat && potential_better_than_fee)
 
       // Decision process takes place on whether to buy
       if (
@@ -406,17 +420,16 @@ module.exports = function(STAMPEDE) {
       )
       
       var structured_decision = {
+        buying: decision,
         trader: 
-          "(" + me.name.split("_")[1] + 
-          ") buy (" + (projected_buy_price * BID_ALIGN).toFixed(2) + ")",
-        free_hands: has_free_hands,
+          "T" + me.name.split("_")[1] + 
+          ": " + (projected_buy_price * BID_ALIGN).toFixed(2) + "",
+        hands: has_free_hands,
         resources: available_resources,
         threshold: bid_below_threshold,
-        lowest_drop: bid_below_lowest,
+        lowest: bid_below_lowest,
         potential: potential_better_than_heat && potential_better_than_fee,
-        momentum: (!MOMENTUM_ENABLED || market_momentum_significant),
-        cool: potential_better_than_heat,
-        buy: decision
+        momentum: (!MOMENTUM_ENABLED || market_momentum_significant)
       }
 
       cycle_buy_decisions.push(structured_decision)
@@ -510,12 +523,13 @@ module.exports = function(STAMPEDE) {
       var selected_deal_count = combined_deal.names.length
 
       var structured_decision = {
+        selling: false,
         trader: 
-          "("+me.name.split("_")[1] + 
-          ") sell (" + (combined_deal.would_sell_at || 0).toFixed(2) + ")",
+          "T"+me.name.split("_")[1] + 
+          ": " + (combined_deal.would_sell_at || 0).toFixed(2) + "",
         would_sell_price: (combined_deal.would_sell_at < current_sale_price),
         has_deals: (
-          selected_deal_count && (!COMBINED_SELLING || selected_deal_count > 1)
+          selected_deal_count > 0// || (!COMBINED_SELLING && selected_deal_count)
         ),
         cool: potential_better_than_heat
       }
@@ -525,8 +539,8 @@ module.exports = function(STAMPEDE) {
       // And if trailing stop was hit
       if (TRAILING_STOP_ENABLED) {
         structured_decision.trailing_stop = (
-          combined_deal.stop_price >= current_sale_price &&
-          combined_deal.names.length > 1
+          combined_deal.stop_price >= current_sale_price && 
+          selected_deal_count > 0
         )
         combined_deal.trailing_stop = structured_decision.trailing_stop
       }
@@ -536,7 +550,8 @@ module.exports = function(STAMPEDE) {
       )
 
       if (
-        !structured_decision.managed && structured_decision.has_deals && 
+        !structured_decision.managed && 
+        structured_decision.has_deals && 
         structured_decision.would_sell_price
       ) {
         LOG(
@@ -553,13 +568,13 @@ module.exports = function(STAMPEDE) {
       }
 
       // Check trailing stop, if enabled affect decision
-      structured_decision.decision = (
-        structured_decision.would_sell_price &&
+      structured_decision.selling = (
         structured_decision.managed &&
+        structured_decision.has_deals &&
         structured_decision.cool &&
         (
-          !TRAILING_STOP_ENABLED || 
-          structured_decision.trailing_stop
+          structured_decision.would_sell_price &&
+          (!TRAILING_STOP_ENABLED || structured_decision.trailing_stop)
         )
       )
 
@@ -568,7 +583,7 @@ module.exports = function(STAMPEDE) {
 
       // Log the success!
       if (
-        structured_decision.decision && 
+        structured_decision.selling && 
         DECISION_LOGGING
       ) console.log(
         "||| trader | sellingCheck | " + 
@@ -577,10 +592,7 @@ module.exports = function(STAMPEDE) {
       )
 
       // Check all outstanding factors and make final decision
-      var decision = (
-        structured_decision.decision &&
-        combined_deal.names.length > 0
-      )
+      var decision = structured_decision.selling
 
       if (decision && DECISION_LOGGING) console.log(
         "*** Selling deal? ***",
@@ -623,15 +635,15 @@ module.exports = function(STAMPEDE) {
     },
     
     buy: function(deal, done) {
-      var me = this,
-          currency_buy_amount = deal.currency_amount
+      var me = this
+      var currency_buy_amount = deal.currency_amount
 
       deal.amount = (currency_buy_amount / deal.buy_price)
       deal.sell_price = (
         deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100))
       )
       deal.heat = INITIAL_GREED
-      wallet.current.cool -= market.current.spread
+      wallet.current.cool -= (market.current.spread * 10)
       //wallet.current.investment += deal.buy_price
       if (!series_simulation) STAMPEDE.controller.notifyClient({
         message: 
@@ -701,11 +713,13 @@ module.exports = function(STAMPEDE) {
     sell: function(deal, done) {
 
       var me = this
+      var sell_price = (market.current.last * BID_ALIGN)
+      var buy_price = deal.buy_price
       deal.heat = deal.buy_price / MAX_SUM_INVESTMENT
-      deal.aligned_sell_price = (market.current.last * BID_ALIGN).toFixed(2)
+      deal.aligned_sell_price = sell_price.toFixed(2)
       
       // Align current cool to avoid all sell / buy
-      wallet.current.cool -= market.current.spread
+      wallet.current.cool -= (market.current.spread * 10)
       
       if (!series_simulation) STAMPEDE.controller.notifyClient({
         message: 
@@ -713,7 +727,7 @@ module.exports = function(STAMPEDE) {
           "Decided to SELL " + deal.amount.toFixed(5) + 
           "BTC for "+config.exchange.currency.toUpperCase() + 
           " "+((market.current.last * BID_ALIGN)*deal.amount).toFixed(2) + 
-          " at "+config.exchange.currency.toUpperCase()+deal.aligned_sell_price + 
+          " at "+config.exchange.currency.toUpperCase() + deal.aligned_sell_price + 
           " per BTC.", 
         permanent: true
       })
@@ -730,7 +744,16 @@ module.exports = function(STAMPEDE) {
           order && 
           order.id
         ) {
+          var sell_currency_amount = sell_price * deal.amount
+          var buy_currency_amount = buy_price * deal.amount
+          var buy_fee = buy_currency_amount * (wallet.current.fee / 100)
+          var sell_fee = sell_currency_amount * (wallet.current.fee / 100)
+
           me.sales++
+          me.profit = (me.profit || 0) + (
+            sell_currency_amount - buy_currency_amount - buy_fee - sell_fee
+          )
+
           // Create asynchronous queue that will 
           // purge sold deals from redis and live traders
           async.each(deal.names, function(deal_name, internal_callback) {
@@ -778,8 +801,8 @@ module.exports = function(STAMPEDE) {
     },
     
     removeDeal: function(deal_name, callback) {
-      var me = this,
-          deal_position = me.deals.lookupIndex("name", deal_name)
+      var me = this
+      var deal_position = me.deals.lookupIndex("name", deal_name)
 
       //console.log("removeDeal | me.deals, deal_name:", me.deals, deal_name)
       if (deal_position > -1) {
@@ -801,8 +824,8 @@ module.exports = function(STAMPEDE) {
     //sellDeal
 
     sellDeal: function(deal_name, callback) {
-      var me = this,
-          deal_item = me.deals.lookup("name", deal_name)
+      var me = this
+      var deal_item = me.deals.lookup("name", deal_name)
 
       //console.log("removeDeal | me.deals, deal_name:", me.deals, deal_name)
       if (deal_item && deal_item.amount > 0) {
@@ -823,9 +846,10 @@ module.exports = function(STAMPEDE) {
     },
 
     highlightExtremeDeals: function() {
-      var me = this,
-          all_deals = me.deals,
-          borders = all_deals.extremesByKey("buy_price")
+      var me = this
+      var all_deals = me.deals
+      var borders = all_deals.extremesByKey("buy_price")
+
       if (
         borders.min && 
         borders.max &&
@@ -837,8 +861,8 @@ module.exports = function(STAMPEDE) {
     },
 
     addCurrentMaximumPrice: function() {
-      var me = this,
-          current_market = market.current
+      var me = this
+      var current_market = market.current
 
       if (current_market && me.deals.length) {
         me.deals.forEach(function(deal) {
@@ -850,8 +874,8 @@ module.exports = function(STAMPEDE) {
     },
 
     sortDealsByPrice: function() {
-      var me = this,
-          deals = me.deals || []
+      var me = this
+      var deals = me.deals || []
 
       if (deals.length) {
         deals.sort(function(a, b) {
@@ -899,15 +923,16 @@ module.exports = function(STAMPEDE) {
 
   //"deal|1.1|332|338"
   function parseDeal(deal) {
-    var original = ""+deal,
-        deal_arrayed = deal.split("|"),
-        objectified_deal = {
+    var original = ""+deal
+    var deal_arrayed = deal.split("|")
+    var objectified_deal = {
           name: original,
           amount: parseFloat(deal_arrayed[1]),
           buy_price: parseFloat(deal_arrayed[2]),
           sell_price: parseFloat(deal_arrayed[3]),
           order_id: deal_arrayed[4]
         }
+
     return objectified_deal
   }
 
@@ -971,10 +996,11 @@ module.exports = function(STAMPEDE) {
         !stop_simulation
       ) {
         if (broadcast_time) STAMPEDE.controller.refreshTraders(live_traders)
-        var i = 0, 
-            new_deal_count = 0,
-            btc_to_distribute = 
+        var i = 0
+        var new_deal_count = 0
+        var btc_to_distribute = (
               wallet.current.btc_available - wallet.current.btc_amount_managed
+            )
 
         market.current.threshold = 
           IMPATIENCE * (market.current.high - market.current.middle) + 
@@ -1010,8 +1036,8 @@ module.exports = function(STAMPEDE) {
         trader_queue.drain = function() {
           perf_timers.decisions = 
             (perf_timers.decisions || 0) + (Date.now() - decisions_start_timer)
-          var cool_up = INITIAL_GREED,
-              next_check = parseInt(
+          var cool_up = INITIAL_GREED
+          var next_check = parseInt(
                 config.simulation ? 0 : ( 
                   (
                     process.env.NODE_ENV || 
@@ -1084,9 +1110,9 @@ module.exports = function(STAMPEDE) {
 
   function refreshSheets() {
     console.log("refreshSheets | inititated.")
-    var time_stamp = Date.now(),
-        current_currency_value = wallet.current.currency_value,
-        cur_sheets_len = sheets.length
+    var time_stamp = Date.now()
+    var current_currency_value = wallet.current.currency_value
+    var cur_sheets_len = sheets.length
 
     if (cur_sheets_len > SHEET_SIZE_LIMIT) {
       sheets = sheets.splice((cur_sheets_len - SHEET_SIZE_LIMIT), cur_sheets_len)
@@ -1229,10 +1255,7 @@ module.exports = function(STAMPEDE) {
     db.smembers(trader_main_list, function(error, trader_list) {
       console.log("wakeAll, Waking ("+trader_list.length+") traders...")
       trader_count = trader_list.length
-      if (
-        trader_list &&
-        trader_list.length > 0
-      ) {
+      if (trader_list && trader_list.length) {
         async.series([
           function(internal_callback) {
             checkTraders(trader_list, internal_callback)
@@ -1242,7 +1265,6 @@ module.exports = function(STAMPEDE) {
         ], function(errors, results) {
           if (errors) {
             console.log("Problems loading traders, market or wallet:", errors)
-            
           }
           if (done) done()
         })
@@ -1283,21 +1305,37 @@ module.exports = function(STAMPEDE) {
   }
 
   function cleanSheets(done) {
-    db.del(stampede_value_sheet, done)
+    db.del(stampede_value_sheet, function(error, response) {
+      LOG("cleanSheets | error:", error, response)
+      if (done) return done()
+    })
   }
 
   function removeAllDeals(done) {
+
+    var queue = async.queue(function(job, internal_callback) {
+      var trader = job.trader
+      trader.purchases = 0
+      trader.sales = 0
+      var deal_name = job.deal_name
+      trader.removeDeal(deal_name, internal_callback)
+    }, 4)
+
     for (var name in live_traders) {
       var trader = live_traders[name]
       var trader_deals_copy = trader.deals.slice(0)
       trader_deals_copy.forEach(function(deal) {
         var deal_name = deal.name
-        trader.removeDeal(deal_name, function() {
-          console.log("removeAllDeals | deal:", deal_name)
-        })
+        queue.push({deal_name: deal_name, trader: trader})
       })
     }
-    if (done) done()
+
+    LOG("removeAllDeals | queue.length:", queue.length())
+
+    if (queue.length()) {
+      queue.drain = done  
+    }
+    else if (done) return done()
   }
 
   function addShare(holder, investment) {

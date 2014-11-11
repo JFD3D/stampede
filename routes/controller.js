@@ -8,7 +8,7 @@
 */
 
 module.exports = function(STAMPEDE) {
-
+  var LOG = STAMPEDE.LOG("controller")
   var config = STAMPEDE.config
   var common = STAMPEDE.common
   var Exchange = STAMPEDE.exchange
@@ -23,6 +23,7 @@ module.exports = function(STAMPEDE) {
 
   controller.index = function(req, res) {
     if (config.exchange.selected === "simulated_exchange") {
+
       var removeTraderDeals = Trader.removeAllDeals
       var wakeTraders = controller.wakeTraders
       var cleanSheets = Trader.cleanSheets
@@ -39,6 +40,7 @@ module.exports = function(STAMPEDE) {
     }
 
     function respond() {
+
       var response = {
         title: 'Stampede',
         current_user: req.current_user,
@@ -49,6 +51,8 @@ module.exports = function(STAMPEDE) {
         trading_strategies: config.strategy,
         helpers: STAMPEDE.helpers
       }
+
+
       console.log("Traders are awake:", traders_awake)
       if (traders_awake) Trader.refreshAll()
       res.render('index', response)
@@ -82,7 +86,8 @@ module.exports = function(STAMPEDE) {
 
     jade.renderFile(__dirname + "/../views/_shares_table.jade", {
       shares: shares, 
-      helpers: STAMPEDE.helpers
+      helpers: STAMPEDE.helpers,
+      formatter: common.formatter
     }, function(error, html) {
       if (error) console.log(
         "rendering updateShares | error, html:", error, html
@@ -151,7 +156,6 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.start = function(req, res) {
-
     Trader.wakeAll(function() {
       traders_awake = true
       res.send({message: "Woke all traders.", success: true})
@@ -172,7 +176,8 @@ module.exports = function(STAMPEDE) {
     //console.log("Updating market with data.", data)
     jade.renderFile(__dirname + "/../views/_market.jade", {
       current_market: market_data, 
-      helpers: STAMPEDE.helpers
+      helpers: STAMPEDE.helpers,
+      formatter: common.formatter
     }, function(error, html) {
       //console.log("rendering updateMarket | error:", error)
       if (html) live.sendToAll("stampede_updates", {
@@ -200,7 +205,8 @@ module.exports = function(STAMPEDE) {
     //console.log("^^^^^ Updating wallet with data.", data)
     jade.renderFile(__dirname + "/../views/_wallet.jade", {
       current_wallet: wallet_data, 
-      helpers: STAMPEDE.helpers
+      helpers: STAMPEDE.helpers,
+      formatter: common.formatter
     }, function(error, html) {
       if (error) console.log("!!!! refreshWallet error:", error)
       if (html) live.sendToAll("stampede_updates", {
@@ -214,7 +220,8 @@ module.exports = function(STAMPEDE) {
   controller.refreshTraders = function(traders, done) {
     jade.renderFile(__dirname + "/../views/_traders.jade", {
       traders: traders, 
-      helpers: STAMPEDE.helpers
+      helpers: STAMPEDE.helpers,
+      formatter: common.formatter
     }, function(error, html) {
       if (error) console.log("refreshTraders | renderFile | error:", error)
       if (html) live.sendToAll("stampede_updates", {
@@ -383,7 +390,7 @@ module.exports = function(STAMPEDE) {
 
   controller.simulatorRemoveDeals = function(req, res) {
     Trader.removeAllDeals()
-    res.redirect("/simulator")
+    res.send({message: "All deals removed."})
   }
 
   controller.simulatorRun = function(req, res) {

@@ -1,6 +1,8 @@
 each trader, trader_name in traders
-  .trader(id="#{trader_name}")
-    p Deals (#{trader_name}) (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase()+" "+((trader.record || {}).current_investment || 0).toFixed(2)})
+  .trader.col-md-5(id="#{formatter.standardize(trader_name)}")
+    .spacer
+    p
+      b #{'T' + trader_name.split('_')[1] || ''}: (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase()+" "+((trader.record || {}).current_investment || 0).toFixed(2)})
       span  | 
       - if (trader.next_deal_amount)
         span= ("Next: " + trader.next_deal_amount.toFixed(2)+" USD")
@@ -9,10 +11,10 @@ each trader, trader_name in traders
         span= ("Multi: " + trader.next_deal_ratio.toFixed(2)+"x")
         span  | 
       a.removal(href="#", data-trader="#{trader_name}") Remove
-    - if (trader.purchases || trader.sales)
-      span #{trader.purchases} purchases | #{trader.sales} sales
+    - if (trader.purchases || trader.sales || trader.profit)
+      span #{trader.purchases} purchases | #{trader.sales} sales | #{helpers.current_currency.toUpperCase() + " " + (trader.profit || 0).toFixed(2)} profit
     span 
-    table.deals
+    table.table.table-striped.deals
       tr
         th Buy price
         th Amount

@@ -150,11 +150,55 @@ module.exports = function(STAMPEDE) {
     }
   }
 
+  function capitalizeFirst(str) {
+    return str.upperCaseFirst()
+  }
 
+  function standardizeString(str) {
+    var input_valid_string = (str && typeof(str) === "string")
+    return (
+      capitalizeFirst((input_valid_string ? str : "").replace(/_/gi, " "))
+    )
+  }
+
+  function shortenIfLong(str, limit) {
+    return (str.length > limit ? (str.substr(0, limit) + "..." ) : str)
+  }
+
+  var time = {}
+  time.second = 1000
+  time.minute = time.second * 60
+  time.hour = time.minute * 60
+  time.day = time.hour * 24
+  time.week = time.day * 7
+  time.format = 'MMMM Do YYYY, HH:mm:ss'
+  time.days = [
+    { name: "Monday" },
+    { name: "Tuesday" },
+    { name: "Wednesday" },
+    { name: "Thursday" },
+    { name: "Friday" },
+    { name: "Saturday" },
+    { name: "Sunday" }
+  ]
+
+  // Quick custom time formatter with moment module
+  function timeFormat(time_incoming) {
+    return STAMPEDE.moment(time_incoming).format(time.format)
+  }
+
+
+  var formatter = {
+        capitalizeFirst: capitalizeFirst,
+        standardize: standardizeString,
+        shortenIfLong: shortenIfLong,
+        tFormat: timeFormat
+      }
 
   return {
     validateEmail: validateEmail,
     timeLabel: timeLabel,
+    formatter: formatter,
     reassignProperties: reassignProperties,
     cumulate: cumulate,
     getAltitudeLevels: getAltitudeLevels,

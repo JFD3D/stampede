@@ -1,15 +1,17 @@
 mixin decision_row(decision, decision_type)
   tr
     each value, aspect in decision
-      td(data-aspect-value="#{value}", class="decision_#{aspect === 'trader' ? 'trader' : value}")= helpers.sanitizeVariableName((aspect==="trader")?value:aspect)
+      td(style="border-right: 1px solid #eee; color: #000;", data-aspect-value="#{value}", class="decision_#{aspect === 'trader' ? 'trader' : value}")= helpers.sanitizeVariableName((aspect==="trader")?value:aspect)
 
-- if (decisions.buy_decisions && decisions.buy_decisions.length)
-  h3 Current buy decisions
-  table#buy-decision-indicators.decision-table
-    each decision in decisions.buy_decisions
-      mixin decision_row(decision, "sell")  
-- if (decisions.sell_decisions && decisions.sell_decisions.length)
-  h3 Current sell decisions
-  table#sell-decision-indicators.decision-table
-    each decision in decisions.sell_decisions
-      mixin decision_row(decision, "buy")
+.col-md-10
+  table.table.table-striped#buy-decision-indicators.decision-table
+    - if (decisions.buy_decisions && decisions.buy_decisions.length)
+      each decision in decisions.buy_decisions
+        mixin decision_row(decision, "sell")  
+    //- Divider
+    tr
+      td(colspan="8")
+
+    - if (decisions.sell_decisions && decisions.sell_decisions.length)
+      each decision in decisions.sell_decisions
+        mixin decision_row(decision, "buy")

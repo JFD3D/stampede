@@ -7,6 +7,7 @@ var START = (function() {
 
     // Load shareable dependencies
     MA: require("moving-average"),
+    moment: require("moment"),
     async: require("async"),
     jade: require("jade"),
     _: require("underscore"),
@@ -40,8 +41,8 @@ var START = (function() {
       })
     },
 
+    // Initialize the application components, order 
     initialize: function() {
-      // Trigger to cycle through modules and initialize
       connectDatabase()
       setupApplication()
       loadDependencies()
@@ -52,6 +53,7 @@ var START = (function() {
     }
   }
 
+  var LOG = STAMPEDE.LOG("app")
 
   function loadDependencies() {
     var module_types = ["plugins", "models"]
@@ -99,6 +101,7 @@ var START = (function() {
     app.use(morgan("dev", {
       skip: function (req, res) { return res.statusCode === 304 }
     }))
+
     // all environments
     app.use(express.static(path.join(__dirname, 'public')))
     app.use(methodOverride())
@@ -150,33 +153,41 @@ var START = (function() {
 
   function assignRoutes() {
     var app = STAMPEDE.app
-    var controller = STAMPEDE.controller
+    var Con = STAMPEDE.controller
     var auth = STAMPEDE.auth
+    var enAuth = auth.ensure
 
-    app.get("/", auth.ensure, controller.index)
-    app.post("/trader/create", auth.ensure, controller.addTrader)
-    app.post("/trading_config/update", auth.ensure, controller.updateTradingConfig)
-    app.post("/trading_strategy/update", auth.ensure, controller.updateTradingStrategy)
-    app.get("/trading_config/reset", auth.ensure, controller.resetTradingConfig)
-    app.get("/trader/:trader_name/remove", auth.ensure, controller.removeTrader)
-    app.get("/trader/:trader_name/deal/:deal_name/remove", auth.ensure, controller.removeDeal)
-    app.get("/trader/:trader_name/deal/:deal_name/sell", auth.ensure, controller.sellDeal)
-    app.get("/stop", auth.ensure, controller.stop)
-    app.get("/value_sheet", auth.ensure, controller.getValueSheet)
-    app.get("/start", auth.ensure, controller.start)
-    app.get("/shares", auth.ensure, controller.shares)
-    app.post("/shares/add", auth.ensure, controller.addShare)
-    app.get("/simulator", auth.ensure, controller.simulatorHome)
-    app.post("/simulator/save_data_set", auth.ensure, controller.simulatorSave)
-    app.get("/simulator/generate", auth.ensure, controller.simulatorGenerate)
-    app.get("/simulator/run", auth.ensure, controller.simulatorRun)
-    app.get("/simulator/run_series", auth.ensure, controller.simulatorRunSeries)
-    app.get("/simulator/load_data_set/:data_set", auth.ensure, controller.simulatorLoad)
-    app.get("/simulator/remove_data_set/:data_set", auth.ensure, controller.simulatorRemove)
-    app.get("/remove_all_simulator_deals", auth.ensure, controller.simulatorRemoveDeals)      
+
+    // Assign common formatting functions
+    app.use(function(req, res, next) {
+      res.locals.formatter = STAMPEDE.common.formatter
+      next()
+    })
+
+    app.get("/", enAuth, Con.index)
+    app.post("/trader/create", enAuth, Con.addTrader)
+    app.post("/trading_config/update", enAuth, Con.updateTradingConfig)
+    app.post("/trading_strategy/update", enAuth, Con.updateTradingStrategy)
+    app.get("/trading_config/reset", enAuth, Con.resetTradingConfig)
+    app.get("/trader/:trader_name/remove", enAuth, Con.removeTrader)
+    app.get("/trader/:trader_name/deal/:deal_name/remove", enAuth, Con.removeDeal)
+    app.get("/trader/:trader_name/deal/:deal_name/sell", enAuth, Con.sellDeal)
+    app.get("/stop", enAuth, Con.stop)
+    app.get("/value_sheet", enAuth, Con.getValueSheet)
+    app.get("/start", enAuth, Con.start)
+    app.get("/shares", enAuth, Con.shares)
+    app.post("/shares/add", enAuth, Con.addShare)
+    app.get("/simulator", enAuth, Con.simulatorHome)
+    app.post("/simulator/save_data_set", enAuth, Con.simulatorSave)
+    app.get("/simulator/generate", enAuth, Con.simulatorGenerate)
+    app.get("/simulator/run", enAuth, Con.simulatorRun)
+    app.get("/simulator/run_series", enAuth, Con.simulatorRunSeries)
+    app.get("/simulator/load_data_set/:data_set", enAuth, Con.simulatorLoad)
+    app.get("/simulator/remove_data_set/:data_set", enAuth, Con.simulatorRemove)
+    app.get("/remove_all_simulator_deals", enAuth, Con.simulatorRemoveDeals)      
   }
 
-  var LOG = STAMPEDE.LOG("app")
+  
   STAMPEDE.initialize()
 
 } ())
