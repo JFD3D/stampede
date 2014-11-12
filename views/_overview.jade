@@ -1,0 +1,15 @@
+table.table.table-striped
+  - var wallet_currency = current_wallet.currency.toUpperCase()
+  tr
+    th Last price #{wallet_currency}
+    th Spread today
+    th Profit / Loss % (USD)
+    th Avail. #{wallet_currency} (Managed)
+    th Avail. BTC (Managed)
+
+  tr
+    td= (current_market.last || 0).toFixed(2)
+    td= ((current_market.spread || 0)*100).toFixed(2)+"%"
+    td= ((current_wallet.profit_loss || 0)*100).toFixed(3)+"% ("+ (current_wallet.profit_loss_currency || 0).toFixed(2) + ")"
+    td= (current_wallet.available_currency || 0).toFixed(2) + " (" + (current_wallet.available_to_traders || 0).toFixed(2) + ")"
+    td= (current_wallet.btc_available || 0).toFixed(4) + " (" + (current_wallet.btc_amount_managed || 0).toFixed(4) + ")"

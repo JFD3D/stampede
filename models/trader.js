@@ -428,8 +428,11 @@ module.exports = function(STAMPEDE) {
         resources: available_resources,
         threshold: bid_below_threshold,
         lowest: bid_below_lowest,
-        potential: potential_better_than_heat && potential_better_than_fee,
-        momentum: (!MOMENTUM_ENABLED || market_momentum_significant)
+        potential: (potential_better_than_heat && potential_better_than_fee)
+      }
+
+      if (MOMENTUM_ENABLED) {
+        structured_decision.momentum = market_momentum_significant
       }
 
       cycle_buy_decisions.push(structured_decision)
@@ -543,6 +546,11 @@ module.exports = function(STAMPEDE) {
           selected_deal_count > 0
         )
         combined_deal.trailing_stop = structured_decision.trailing_stop
+        if (combined_deal.currency_amount) {
+          structured_decision.trader += (
+            " (STOP:" + combined_deal.stop_price.toFixed(2) + ")"
+          )
+        }
       }
 
       structured_decision.managed = (
@@ -976,7 +984,10 @@ module.exports = function(STAMPEDE) {
       // Export current market and wallet data
       STAMPEDE.current_market = market.current
       STAMPEDE.current_wallet = wallet.current
-
+      
+      if (broadcast_time) {
+        STAMPEDE.controller.refreshOverview()
+      }
       // Final callback returning default market.current
       if (done) done(null, market.current)
       perf_timers.cycle = 

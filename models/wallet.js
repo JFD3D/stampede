@@ -9,10 +9,14 @@ module.exports = function(STAMPEDE) {
   var live_traders
   var error_email_sent
   var LOG = STAMPEDE.LOG("wallet")
+  var currency = (config.exchange.currency || "usd")
 
   function Wallet() {
-    this.current = {}
+    this.current = {
+      currency: currency
+    }
     this.shares = []
+    // Assign lower cool, in order not to start trading right away
     this.cool = 0.5
   }
 
@@ -68,12 +72,14 @@ module.exports = function(STAMPEDE) {
 
     assignAvailableResources: function(MAX_SUM_INVESTMENT) {
       var me = this
+      var available_currency = me.current[config.exchange.currency+"_available"]
+      me.current.available_currency = available_currency
       me.current.available_to_traders = 
         (
           MAX_SUM_INVESTMENT - me.current.investment
-        ) < me.current[config.exchange.currency+"_available"] ? 
+        ) < available_currency ? 
           MAX_SUM_INVESTMENT - me.current.investment : 
-          me.current[config.exchange.currency+"_available"]
+          available_currency
     },
 
     summarizeDeals: function() {
@@ -140,9 +146,7 @@ module.exports = function(STAMPEDE) {
               (current_currency_value - share.invested_currency_amount) / 
               share.invested_currency_amount*100
             ).toFixed(3)+"%"
-
           })
-          if (callback) callback()
         } 
         else {
           var current_currency_value = me.current.currency_value || 0
@@ -161,9 +165,14 @@ module.exports = function(STAMPEDE) {
               (current_currency_value / current_initial_investment - 1) * 100
             ).toFixed(3) + "%"
           }]
-
-          if (callback) callback()
         }
+        me.current.profit_loss = (
+          1 - (me.current.initial_investment / me.current.currency_value)
+        )
+        me.current.profit_loss_currency = (
+          me.current.currency_value - me.current.initial_investment
+        )
+        if (callback) callback()
       })
     },
 

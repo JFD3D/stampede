@@ -190,6 +190,22 @@ module.exports = function(STAMPEDE) {
     )
   }
 
+  controller.refreshOverview = function(market_data) {
+    //console.log("Updating market with data.", data)
+    jade.renderFile(__dirname + "/../views/_overview.jade", {
+      current_market: STAMPEDE.current_market,
+      current_wallet: STAMPEDE.current_wallet,
+      helpers: STAMPEDE.helpers,
+      formatter: common.formatter
+    }, function(error, html) {
+      //console.log("rendering updateMarket | error:", error)
+      if (html) live.sendToAll("stampede_updates", {
+        container: "live-overview",
+        html: html
+      })
+    })
+  }
+
   controller.drawSheets = function(data, update_type) {
     //console.log("Drawing sheets ("+(data.length || "incremental")+").")
     var outgoing = {

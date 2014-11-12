@@ -13,6 +13,17 @@ block content
   .spacer(style="height: 100px")
 
   .row
+    .col-md-10#live-overview(class="#{class_for_status}", style="display: none;")
+      h2 &sum; Overview
+      .content
+
+  .row.block#decision-indicators(class="#{class_for_status}", style="display: none;")
+    .col-md-4
+      h2 &plusmn; Decision indicators
+    .content
+
+
+  .row
     .col-md-5.block#live-balance(class="#{class_for_status}", style="display: none;")
       h2 &#2947; Wallet
       .content
@@ -20,10 +31,7 @@ block content
       h2 &cap; Market
       .content
 
-  .row.block#decision-indicators(class="#{class_for_status}", style="display: none;")
-    .col-md-4
-      h2 &plusmn; Decision indicators
-    .content
+
 
   .block.row#live-traders(class="#{class_for_status}", style="display: none;")
     .col-md-4

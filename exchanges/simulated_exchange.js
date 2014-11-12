@@ -55,8 +55,8 @@ var initialization = (function() {
       this.current_balance = {
         btc_reserved: 0,
         fee: 0.4,
-        btc_available: 0.001,
-        btc_balance: 0.001,
+        btc_available: 0,
+        btc_balance: 0,
         time: (start_tick.time || 0)
       }
 
