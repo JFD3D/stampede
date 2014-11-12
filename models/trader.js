@@ -1053,7 +1053,7 @@ module.exports = function(STAMPEDE) {
                   (
                     process.env.NODE_ENV || 
                     "development"
-                  ) === "development" ? 3000 : 4000) + (Math.random()*3000)
+                  ) === "development" ? 1000 : 2000) + (Math.random()*2000)
               )
           wallet.current.cool = (
             wallet.current.cool < 1 && 

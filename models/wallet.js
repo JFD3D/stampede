@@ -166,11 +166,11 @@ module.exports = function(STAMPEDE) {
             ).toFixed(3) + "%"
           }]
         }
-        me.current.profit_loss = (
-          1 - (me.current.initial_investment / me.current.currency_value)
-        )
         me.current.profit_loss_currency = (
           me.current.currency_value - me.current.initial_investment
+        )
+        me.current.profit_loss = (
+          (me.current.profit_loss_currency / me.current.initial_investment)
         )
         if (callback) callback()
       })
