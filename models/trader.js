@@ -667,7 +667,6 @@ module.exports = function(STAMPEDE) {
         deal.amount.toFixed(7), 
         deal.buy_price.toFixed(2),
       function(error, order) {
-        //LOG("buy | deal.amount, wallet.current.btc_balance, deals:", deal.amount, wallet.current.btc_balance, STAMPEDE._.pluck(me.deals, "amount"))
         if (DECISION_LOGGING) console.log(
           "trader | buy | order, error:", order, error
         )
@@ -677,6 +676,7 @@ module.exports = function(STAMPEDE) {
         ) {
           deal.order_id = order.id
           me.purchases++
+          me.resetCurrentMaximumPrice()
           me.recordDeal(deal, done)
           if (!config.simulation) email.send({
             to: config.owner.email,
@@ -872,11 +872,22 @@ module.exports = function(STAMPEDE) {
       var me = this
       var current_market = market.current
 
-      if (current_market && me.deals.length) {
+      if (current_market.last && me.deals.length) {
         me.deals.forEach(function(deal) {
           deal.max_price = (
             deal.max_price > current_market.last
           ) ? deal.max_price : current_market.last
+        })
+      }
+    },
+
+    resetCurrentMaximumPrice: function() {
+      var me = this
+      var current_market = market.current
+
+      if (current_market.last && me.deals.length) {
+        me.deals.forEach(function(deal) {
+          deal.max_price = current_market.last
         })
       }
     },
