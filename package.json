@@ -22,6 +22,7 @@
     "nodemailer": "0.5.3",
     "passport": "0.1.17",
     "passport-google-oauth": "0.1.5",
+    "pusher-client": "^0.2.2",
     "redis": "*",
     "serve-favicon": "^2.1.6",
     "socket.io": "0.9.16",

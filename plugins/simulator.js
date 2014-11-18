@@ -271,7 +271,8 @@ module.exports = function(STAMPEDE) {
       for (var setting in serie_config.trading) {
         // Read settings from 1, since we are applying in order after data sets
         s++
-        config.trading[setting] = serie_config.trading[setting][serie_options[s]]
+        config.trading[setting] = 
+          serie_config.trading[setting][serie_options[s]]
       }
       for (var strategy in serie_config.strategies) {
         s++

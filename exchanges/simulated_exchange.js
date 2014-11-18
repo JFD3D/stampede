@@ -55,13 +55,14 @@ var initialization = (function() {
       this.current_balance = {
         btc_reserved: 0,
         fee: 0.4,
-        btc_available: 0,
-        btc_balance: 0,
+        btc_available: 0.001,
+        btc_balance: 0.001,
         time: (start_tick.time || 0)
       }
 
-      this.current_balance[xc+"_reserved"] = 0
-      this.current_balance[xc+"_balance"] = this.current_balance[xc+"_available"] = config.trading.maximum_investment
+      this.current_balance[xc + "_reserved"] = 0
+      this.current_balance[xc + "_balance"] = 
+        this.current_balance[xc + "_available"] = config.trading.maximum_investment
 
       // Initialize container for future ticker data, that will be supplied by generator
       this.volume = 10000
@@ -79,7 +80,6 @@ var initialization = (function() {
       
       var me = this,
           market_current = me.ticks[me.current_tick]
-
       
       if (me.real_time) {
         var now = Date.now(),
