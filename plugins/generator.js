@@ -106,12 +106,12 @@ module.exports = function(STAMPEDE) {
   }
 
   function initializeCurrentExtremes(data, start_time) {
-    return {
+    return (data && data.length) ? {
         high: data[0].high,
         low: data[0].low,
         time_low: start_time,
         time_high: start_time
-    }    
+      } : (null)
   }
 
   function assignExtremes(current_extremes, data, data_point, time_point) {

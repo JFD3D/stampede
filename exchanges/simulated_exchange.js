@@ -55,8 +55,8 @@ var initialization = (function() {
       this.current_balance = {
         btc_reserved: 0,
         fee: 0.4,
-        btc_available: 0.001,
-        btc_balance: 0.001,
+        btc_available: 0.0001,
+        btc_balance: 0.0001,
         time: (start_tick.time || 0)
       }
 
@@ -148,9 +148,6 @@ var initialization = (function() {
         me.current_balance[xc+"_available"] += adjusted_amount_price
         me.current_balance[xc+"_balance"] = me.current_balance[xc+"_available"]
         me.volume += amount
-
-        //LOG("sell | amount, btc_balance:", amount, me.current_balance.btc_balance)
-
         callback(null, {
           id: parseInt(Math.random()*10000)
         })

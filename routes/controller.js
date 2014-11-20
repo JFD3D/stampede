@@ -405,8 +405,9 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.simulatorRemoveDeals = function(req, res) {
-    Trader.removeAllDeals()
-    res.send({message: "All deals removed."})
+    Trader.removeAllDeals(function() {
+      res.send({message: "All deals removed."})
+    })
   }
 
   controller.simulatorRun = function(req, res) {
@@ -414,16 +415,21 @@ module.exports = function(STAMPEDE) {
       "Simulator warming up (data length - "+generated_data.length+")."
     )
     
-    simulatorWarmUp(generated_data)
     // MAKE SURE we run simulation on virtual exchange !!!
-    if (config.exchange.selected === "simulated_exchange") {
+    if (
+      generated_data && generated_data.length && 
+      config.exchange.selected === "simulated_exchange"
+    ) {
+      simulatorWarmUp(generated_data)
       // simulator.startSeries()
       simulator.run(function(data) {
         res.send({message: data.message})
       })
     }
     else {
-      res.send({message: "WARNING: Simulated exchange is not selected."})
+      res.send({
+        message: "WARNING: Simulated exchange is not selected or no data."
+      })
     }
   }
 
@@ -487,7 +493,7 @@ module.exports = function(STAMPEDE) {
 
   function simulatorWarmUp(data) {
     controller.generated_data = data
-    exchange.load(STAMPEDE, data)
+    if (data && data.length) exchange.load(STAMPEDE, data)
   }
 
   // This is used to real time simulate data on index

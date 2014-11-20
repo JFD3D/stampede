@@ -103,6 +103,16 @@ module.exports = function(STAMPEDE) {
     return result
   }
 
+  function sum(array) {
+    var result = 0
+    if (array && array.length) {
+      array.forEach(function(member) {
+        result += member
+      })
+    }
+    return result
+  }
+
 
   function getAltitudeLevels(min, max, drop) {
     var levels = [],
@@ -201,6 +211,8 @@ module.exports = function(STAMPEDE) {
     formatter: formatter,
     reassignProperties: reassignProperties,
     cumulate: cumulate,
+    sum: sum,
+    extract: extract,
     getAltitudeLevels: getAltitudeLevels,
     getCurrentRatio: getCurrentRatio
   }

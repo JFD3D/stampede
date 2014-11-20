@@ -13,7 +13,8 @@ module.exports = function(STAMPEDE) {
 
   function Wallet() {
     this.current = {
-      currency: currency
+      currency: currency,
+      initial_investment: config.trading.maximum_investment
     }
     this.shares = []
     // Assign lower cool, in order not to start trading right away
@@ -42,6 +43,7 @@ module.exports = function(STAMPEDE) {
         
         // Fasten in case of series simulation, avoid share summarization
         if (me.simulation) {
+          me.sumInvestmentValue()
           callback()
         } 
         else {
@@ -166,14 +168,19 @@ module.exports = function(STAMPEDE) {
             ).toFixed(3) + "%"
           }]
         }
-        me.current.profit_loss_currency = (
-          me.current.currency_value - me.current.initial_investment
-        )
-        me.current.profit_loss = (
-          (me.current.profit_loss_currency / me.current.initial_investment)
-        )
+        me.sumInvestmentValue()
         if (callback) callback()
       })
+    },
+
+    sumInvestmentValue: function() {
+      var me = this
+      me.current.profit_loss_currency = (
+        me.current.currency_value - me.current.initial_investment
+      )
+      me.current.profit_loss = (
+        (me.current.profit_loss_currency / me.current.initial_investment)
+      )
     },
 
     addShare: function(holder, amount_invested, callback) {

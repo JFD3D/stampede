@@ -287,32 +287,41 @@ module.exports = function(STAMPEDE) {
             current_allowed_investment > wallet.current[currency_key]
           ) ? wallet.current[currency_key] : current_allowed_investment
 
-          // Get array of price levels which the trader will traverse 
-          // until hitting bottom of lowest price / through altitude drop
-      var price_levels = common.getAltitudeLevels(
-            (market.current.high / 2), market.current.high, ALTITUDE_DROP
-          )
 
-          // Dynamic deal ratio if it is enabled (if not, default to 2)
-      var deal_ratio = (
-            price_levels.length &&
-            DYNAMIC_MULTIPLIER
-          ) ? common.getCurrentRatio(
-            available_currency_amount, price_levels, 1.99, lowest_currency_amount
-          ) : 2
 
           // Check if trader has available spot for another deal
-      var has_free_hands = MAX_DEALS_HELD > me.deals.length
+      var has_free_hands = MAX_DEALS_HELD > deals.length
+
+      // Initial bought amount is the min per deal amount and ratio is 1
+      var deal_ratio = 1
 
       // Assign price levels to current object so we can display it
-      // Cumulate new deal amount with ratio (statc[2], dynamic)
-      purchase.currency_amount =
-        (
-          BELL_BOTTOM_ENABLED &&
-          me.deals.length
-        ) ? (
-          lowest_currency_amount * deal_ratio
-        ) : BASE_PER_DEAL
+      // Cumulate new deal amount with ratio (static[fibonacci / 2], dynamic)
+      if (
+        BELL_BOTTOM_ENABLED &&
+        deals.length
+      ) {
+        // Get array of price levels which the trader will traverse 
+        // until hitting bottom of lowest price / through altitude drop
+        var price_levels = common.getAltitudeLevels(
+              (market.current.high / 2), market.current.high, ALTITUDE_DROP
+            )
+
+        // For fibonacci static multiplier, get lowest 2 deals
+        var last_2_deals = deals.slice(0, 2)
+        var last_2_deal_amounts = common.extract(last_2_deals, "amount")
+        var last_2_deals_sum = common.sum(last_2_deal_amounts)
+
+        // Dynamic deal ratio if it is enabled (if not, default to 2)
+        deal_ratio = (
+          price_levels.length &&
+          DYNAMIC_MULTIPLIER
+        ) ? common.getCurrentRatio(
+          available_currency_amount, price_levels, 1.99, lowest_currency_amount
+        ) : (last_2_deals_sum ? (last_2_deals_sum / lowest_buy_amount) : 1)
+      }
+
+      purchase.currency_amount = (lowest_currency_amount * deal_ratio)
 
       // Assign calculated values to trader so that we can display them
       me.next_deal_ratio = deal_ratio
@@ -646,7 +655,8 @@ module.exports = function(STAMPEDE) {
       var me = this
       var currency_buy_amount = deal.currency_amount
 
-      deal.amount = (currency_buy_amount / deal.buy_price)
+      deal.amount = parseFloat(
+        (currency_buy_amount / deal.buy_price).toFixed(7))
       deal.sell_price = (
         deal.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100))
       )
@@ -680,7 +690,7 @@ module.exports = function(STAMPEDE) {
           me.recordDeal(deal, done)
           if (!config.simulation) email.send({
             to: config.owner.email,
-            subject: "Stampede - Buying: "+deal.amount.toFixed(7)+"BTC",
+            subject: "Stampede - Buying: " + deal.amount.toFixed(7) + "BTC",
             template: "purchase.jade",
             data: {
               deal: deal,
@@ -1355,7 +1365,7 @@ module.exports = function(STAMPEDE) {
     LOG("removeAllDeals | queue.length:", queue.length())
 
     if (queue.length()) {
-      queue.drain = done  
+      queue.drain = done 
     }
     else if (done) return done()
   }
@@ -1393,15 +1403,15 @@ module.exports = function(STAMPEDE) {
 
   function logPerformance() {
     console.log(
-      "--- PERFORMANCE LOGGING ("+cycle_counter+") ---\n",
-      "| Full cycle:", 
-        ((perf_timers.cycle || 0) / cycle_counter).toFixed(2), "ms/cycle average",
-      "| Market check:", 
-        ((perf_timers.market || 0) / cycle_counter).toFixed(2), "ms/cycle",
-      "| Wallet check:", 
-        ((perf_timers.wallet || 0) / cycle_counter).toFixed(2), "ms/cycle",
-      "| Decisions check:", 
-        ((perf_timers.decisions || 0) / cycle_counter).toFixed(2), "ms/cycle"
+      "--- PERF LOG ("+cycle_counter+". cycle) ---\n",
+      "| Full:", 
+        ((perf_timers.cycle || 0) / cycle_counter).toFixed(3), "ms/c",
+      "| Market:", 
+        ((perf_timers.market || 0) / cycle_counter).toFixed(3), "ms/c",
+      "| Wallet:", 
+        ((perf_timers.wallet || 0) / cycle_counter).toFixed(3), "ms/c",
+      "| Decisions:", 
+        ((perf_timers.decisions || 0) / cycle_counter).toFixed(3), "ms/c"
     )
   }
 

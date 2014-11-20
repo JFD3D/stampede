@@ -22,7 +22,7 @@ exports.email = {
 
 exports.trading = {
   base_currency_per_deal: 2,            // Maximum allowed $ per deal / trade / hand
-  maximum_investment: 1000,             // Maximum total $ allowed to invest in BTC
+  maximum_investment: 10000,             // Maximum total $ allowed to invest in BTC
   bid_alignment: 0.998,                 // Bid align for competitive edge when placing bids 
                                         // EXAMPLE: BTC price is $600, to buy, we would place order at: 600 / 0.999 = 600.6
   max_number_of_deals_per_trader: 50,   // How many deals can a trader manage
