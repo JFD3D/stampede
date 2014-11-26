@@ -289,9 +289,10 @@ module.exports = function(STAMPEDE) {
 
   controller.refreshSimulationResults = function(results, done) {
     jade.renderFile(__dirname + "/../views/_simulator_serie_results.jade", {
-      serie_results: results, 
-    helpers: STAMPEDE.helpers
-  }, function(error, html) {
+      serie_results: results,
+      formatter: common.formatter,
+      helpers: STAMPEDE.helpers
+    }, function(error, html) {
       if (error) console.log("refreshSimulationResults | renderFile | error:", error)
       if (html) live.sendToAll("stampede_updates", {
         container: "simulator-series",
@@ -386,8 +387,9 @@ module.exports = function(STAMPEDE) {
     }
 
     setTimeout(function() {
-      Trader.viewTraders()
-      simulator.loadAllSets()
+      Trader.loadTraders(function() {
+        simulator.loadAllSets()  
+      })
     }, 2000)
   }
 
@@ -456,9 +458,9 @@ module.exports = function(STAMPEDE) {
   controller.simulatorSave = function(req, res) {
     console.log("Storage of generated data requested.")
     if (generated_data) {
-      simulator.saveSet(generated_data, function(errors, data_sets) {
-        console.log("Retrieved data_sets:", data_sets)
+      simulator.saveSet(generated_data, function(errors) {
         res.send({message: "Submitted the simulator dataset for save."})
+        simulator.loadAllSets()
       })
     }
     else {

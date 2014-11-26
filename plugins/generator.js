@@ -6,7 +6,7 @@ module.exports = function(STAMPEDE) {
   var hour = 60*minute
   var day = 24*hour
   var config = {
-        time_back: (30*day),
+        time_back: (60*day),
         low_high_window: 24*hour,
         min: 10,
         max: 2000,
@@ -72,12 +72,14 @@ module.exports = function(STAMPEDE) {
       }
       // Calculate time shift somewhere btw 5 - 7 seconds
       var time_shift = parseInt(
-            (5 + (2 * Math.random())) * 10000
-          ), // <<<<< if (10000), THIS is FORCED DATA THINNING!!! BAD
+            (5 + (2 * Math.random())) * 1000
+          ) // <<<<< if (10000), THIS is FORCED DATA THINNING!!! BAD
 
           // Initialize new data point
-          previous_data_point = data[data.length-1],
-          data_point = initializeDataPoint(time_point, time_shift, previous_data_point)
+      var previous_data_point = data[data.length-1]
+      var data_point = initializeDataPoint(
+            time_point, time_shift, previous_data_point
+          )
 
       data.push(data_point)
 

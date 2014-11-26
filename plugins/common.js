@@ -1,4 +1,7 @@
 module.exports = function(STAMPEDE) {
+  
+  var fs = require("fs")
+
   Array.prototype.lookup = function(key, value) {
     var i=0, result
     while (i < this.length && !result) {
@@ -54,7 +57,6 @@ module.exports = function(STAMPEDE) {
       return null
     }  
   }
-
 
   Array.prototype.extremesByKey = function(key) {
     var copy = this.slice(0)
@@ -113,6 +115,12 @@ module.exports = function(STAMPEDE) {
     return result
   }
 
+  function average(array) {
+    var ar_len = array.length
+    var ar_sum = sum(array)
+    return (ar_sum / ar_len)
+  }
+
 
   function getAltitudeLevels(min, max, drop) {
     var levels = [],
@@ -125,6 +133,17 @@ module.exports = function(STAMPEDE) {
       }
     }
     return levels
+  }
+
+  function timer(time_start, message) {
+    var time_now = Date.now()
+    if (message && time_start) {
+      var time_elapsed = time_now - time_start
+      var time_elapsed_s = time_elapsed / 1000
+      console.log(
+        "COMMON timer: " + time_elapsed.toFixed(3) + "s. (" + message + ")"
+      )
+    }
   }
 
   function getCurrentRatio(max_sum, altitude_levels, max_ratio, base) {
@@ -171,8 +190,77 @@ module.exports = function(STAMPEDE) {
     )
   }
 
+
+  function generateCSV(array, headers, include_headers) {
+    var raw_string = "" + (include_headers ? headers : "")
+    array.forEach(function(hash) {
+      raw_string += "\n"
+      headers.forEach(function(field, field_index) {
+        raw_string += 
+          '"' + (hash[field] || "NA") + 
+          ((field_index < headers.length - 1) ? '",' : '"')
+      })
+    })
+    return (raw_string)
+  }
+
+  function logPerformance(perf_timers) {
+    var cycle_counter = perf_timers.cycle_counter
+    console.log(
+      "--- PERF LOG (" + cycle_counter + 
+        ". cycle at " + formatter.tFormat(STAMPEDE.current_market.time) + 
+      ") ---\n")
+    for (var perf_timer_field in perf_timers) {
+      if (
+        perf_timers.hasOwnProperty(perf_timer_field) && 
+        perf_timer_field !== "cycle_counter"
+      ) console.log(
+        "| " + perf_timer_field + ": " + 
+        statF(perf_timers[perf_timer_field])
+      )
+    }
+    console.log("--- / PERF")
+    function statF(ms) {
+      return (((ms || 0) / cycle_counter).toFixed(3) + "ms/c")
+    }
+  }
+
+  function loadCSV(file_path, transformFn, callback) {
+    var csv = require("fast-csv")
+    var reader = fs.createReadStream(file_path)
+    var data = []
+    var csvStream = 
+      csv()
+        .on("data", function(data_point) {
+          var transformed_point = transformFn(data_point)
+          if (transformed_point) data.push(transformed_point)
+        })
+        .on("end", function(){
+          callback(null, data)
+        })
+
+    reader.pipe(csvStream);
+  }
+
+  function fileTo(file_path, content, callback) {
+    fs.writeFile(file_path, content, callback)
+  }
+
   function shortenIfLong(str, limit) {
     return (str.length > limit ? (str.substr(0, limit) + "..." ) : str)
+  }
+
+
+  // Computes median from values in array
+  function median(values) {
+    values.sort(function(a, b) { return (a - b) })
+    var half = Math.floor(values.length/2)
+    if (values.length % 2) {
+      return values[half]
+    }
+    else {
+      return (values[half-1] + values[half]) / 2.0
+    }
   }
 
   var time = {}
@@ -212,9 +300,17 @@ module.exports = function(STAMPEDE) {
     reassignProperties: reassignProperties,
     cumulate: cumulate,
     sum: sum,
+    average: average,
+    timer: timer,
+    time: time,
     extract: extract,
+    generateCSV: generateCSV,
+    fileTo: fileTo,
+    loadCSV: loadCSV,
     getAltitudeLevels: getAltitudeLevels,
-    getCurrentRatio: getCurrentRatio
+    getCurrentRatio: getCurrentRatio,
+    logPerformance: logPerformance,
+    median: median
   }
 
 }

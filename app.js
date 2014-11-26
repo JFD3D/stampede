@@ -1,6 +1,7 @@
 var START = (function() {
 
   var STAMPEDE = {
+    perf_timers: {},
     name: "stampede",
     environment: (process.env.NODE_ENV || 'development'),
     config: require("./configs/config"),

@@ -2,11 +2,17 @@ var series = {
 
   trading: {
 
-    greed: [0.01, 0.02, 0.03, 0.06],
+    base_currency_per_deal: [5],
 
-    altitude_drop: [1, 2, 3],
+    max_number_of_deals_per_trader: [100],
 
-    impatience: [0.1, 0.9]
+    momentum_time_span: [(30*60*1000)],
+
+    greed: [0.03, 0.06, 0.1],
+
+    altitude_drop: [3, 2, 1],
+
+    impatience: [0.1, 0.5, 0.9]
 
   },
 

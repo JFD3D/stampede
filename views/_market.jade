@@ -21,11 +21,13 @@ table.table.table-striped
   tr
     th EMA
     th Momentum average
+    th Momentum time span
     th Momentum healthy
     th Updated at
   tr
     td= current_market.EMA.toFixed(2)
     td= current_market.momentum_average.toFixed(5)
+    td= ((current_market.momentum_time_span||0) / 1000).toFixed(3) + "s"
     td= current_market.momentum_record_healthy ? "Yes" : "No"
     td= formatter.tFormat(current_market.time)
 - if (current_market.simulation_progress)

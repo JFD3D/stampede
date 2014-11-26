@@ -2,7 +2,7 @@
   table.table.table-striped
     tr
       each item in serie_results[0]
-        th= item.type + " / " + item.field
+        th #{formatter.standardize(item.field)}
     each result in serie_results
       tr
         each item in result

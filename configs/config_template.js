@@ -75,6 +75,9 @@ exports.logging = {
                         // Recommended to disable when running with simulator
 }
 
+// Path for storing stampede generated datasets
+exports.data_set_directory = "/var/www/stampede/data/"
+
 // Email addresses of ppl allowed to access this app (needs to be google authenticable)
 exports.allowed_user_emails = ["email@address.com", "email2@address.com"] 
 
