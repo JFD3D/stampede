@@ -6,7 +6,7 @@ module.exports = function(STAMPEDE) {
   var hour = 60*minute
   var day = 24*hour
   var config = {
-        time_back: (60*day),
+        time_back: (30*day),
         low_high_window: 24*hour,
         min: 10,
         max: 2000,

@@ -68,10 +68,11 @@ module.exports = function(STAMPEDE) {
        *
        */    
 
-  var MOMENTUM_ENABLED       // If purchases will be happening on momentum up trend
-  var TRAILING_STOP_ENABLED  // If sales will happen only after trailing stop is reached
-  var BELL_BOTTOM_ENABLED    // If purchases will be sized up going down the price per trader
-  var COMBINED_SELLING       // If to sell highest and lowest priced BTC combined
+  var MOMENTUM_ENABLED       // Purchases will be happening on momentum up trend
+  var TRAILING_STOP_ENABLED  // Sales will happen only after trailing stop is reached
+  var SHEDDING_ENABLED       // We sell all after value dropping below percentage
+  var BELL_BOTTOM_ENABLED    // Purchases will be sized up going down the price per trader
+  var COMBINED_SELLING       // Sell highest and lowest priced BTC combined
   var DYNAMIC_MULTIPLIER     // Purchase size adjustment
 
       /*
@@ -101,6 +102,7 @@ module.exports = function(STAMPEDE) {
     // Strategies now
     MOMENTUM_ENABLED = config.strategy.momentum_trading
     TRAILING_STOP_ENABLED = config.strategy.trailing_stop
+    SHEDDING_ENABLED = config.strategy.shedding
     BELL_BOTTOM_ENABLED = config.strategy.bell_bottom
     COMBINED_SELLING = config.strategy.combined_selling
     DYNAMIC_MULTIPLIER = config.strategy.dynamic_multiplier
@@ -455,12 +457,10 @@ module.exports = function(STAMPEDE) {
 
       return decision
     },
-
+ 
     isSelling: function(combined_deal) {
       var me = this
       var deals = me.deals
-          // Get min and max deal from all, initialize a combined deal for further calc
-      var borders = deals.extremesByKey("buy_price")
           // Initialize resulting decision
       var decision = false
           // Deal independent calculations
@@ -480,11 +480,10 @@ module.exports = function(STAMPEDE) {
           )
 
       // Build combined deal attributes
-      combined_deal.currency_amount = 0
-      combined_deal.max_currency_amount = 0
-      combined_deal.amount = 0
-      combined_deal.amounts = []
-      combined_deal.names = []
+      prepareCombinedDeal(combined_deal)
+
+      // Get min and max deal from all, initialize a combined deal for further calc
+      var borders = deals.extremesByKey("buy_price")
 
       // Calculate weighted price for deals from extremes (lowes and highest)
       // Only if COMBINED SELLING is enabled:
@@ -519,12 +518,18 @@ module.exports = function(STAMPEDE) {
       })
       
       if (combined_deal.amount > 0) {
-        combined_deal.buy_price = 
+        combined_deal.buy_price = (
           combined_deal.currency_amount / combined_deal.amount
-        combined_deal.max_price = 
+        )
+        combined_deal.currency_value = (
+          combined_deal.amount * current_sale_price
+        )
+        combined_deal.max_price = (
           combined_deal.max_currency_amount / combined_deal.amount
-        combined_deal.would_sell_at = 
-          (combined_deal.buy_price) * (1 + trader_greed + (1 - BID_ALIGN))
+        )
+        combined_deal.would_sell_at = (
+          combined_deal.buy_price) * (1 + trader_greed + (1 - BID_ALIGN)
+        )
       }
       
       /* 
@@ -591,16 +596,53 @@ module.exports = function(STAMPEDE) {
         )
       }
 
+      var possible_to_sell = (
+            structured_decision.managed &&
+            structured_decision.has_deals &&
+            structured_decision.cool
+          )
+
       // Check trailing stop, if enabled affect decision
       structured_decision.selling = (
-        structured_decision.managed &&
-        structured_decision.has_deals &&
-        structured_decision.cool &&
+        possible_to_sell &&
         (
           structured_decision.would_sell_price &&
           (!TRAILING_STOP_ENABLED || structured_decision.trailing_stop)
         )
       )
+
+      if (
+        SHEDDING_ENABLED && deals.length > 1 && !structured_decision.selling
+      ) {
+        prepareCombinedDeal(combined_deal)
+        deals.forEach(function(deal) {
+          combined_deal.names.push(deal.name)
+          combined_deal.amount += deal.amount
+          combined_deal.currency_amount += (deal.buy_price * deal.amount)
+        })
+        combined_deal.currency_value = (
+          combined_deal.amount * current_sale_price
+        )
+        structured_decision.managed = (
+          combined_deal.amount <= wallet.current.btc_balance
+        )
+        var deal_value_diff = (
+              combined_deal.currency_value / combined_deal.currency_amount
+            )
+
+        structured_decision.shedding = (
+          (1 - deal_value_diff) > (trader_greed / 2)
+        )
+
+        if (
+          structured_decision.shedding &&
+          structured_decision.managed &&
+          !me.solvent
+        ) {
+          structured_decision.selling = true
+          combined_deal.shed = true
+        }
+      }
 
       // Add the decision to array which will be rendered on client
       cycle_sell_decisions.push(structured_decision)
@@ -670,11 +712,11 @@ module.exports = function(STAMPEDE) {
       //wallet.current.investment += deal.buy_price
       if (!series_simulation) STAMPEDE.controller.notifyClient({
         message: 
-          "Decided to BUY " + deal.amount.toFixed(5) + 
-          "BTC for " + config.exchange.currency.toUpperCase() + 
-          " " + currency_buy_amount.toFixed(2) + 
-          " at " + config.exchange.currency.toUpperCase() + 
-          " " + deal.buy_price.toFixed(2)+" per BTC.", 
+          "+B " + deal.amount.toFixed(5) + 
+          "BTC for " + currency_buy_amount.toFixed(2) + 
+          " " + config.exchange.currency.toUpperCase() + 
+          " at " + deal.buy_price.toFixed(2) + 
+          " " + config.exchange.currency.toUpperCase()+" per BTC.", 
         permanent: true
       })
       
@@ -740,18 +782,22 @@ module.exports = function(STAMPEDE) {
       var buy_price = deal.buy_price
       deal.heat = deal.buy_price / MAX_SUM_INVESTMENT
       deal.aligned_sell_price = sell_price.toFixed(2)
+      var profit_loss = ((deal.currency_value - deal.currency_amount) || 0)
+      var currency_label = config.exchange.currency.toUpperCase()
       
       // Align current cool to avoid all sell / buy
       wallet.current.cool -= (market.current.spread * 10)
       
       if (!series_simulation) STAMPEDE.controller.notifyClient({
         message: 
-          (deal.trailing_stop ? "(STOP)" : "(REG)") +
-          "Decided to SELL " + deal.amount.toFixed(5) + 
-          "BTC for "+config.exchange.currency.toUpperCase() + 
-          " "+((market.current.last * BID_ALIGN)*deal.amount).toFixed(2) + 
-          " at "+config.exchange.currency.toUpperCase() + deal.aligned_sell_price + 
-          " per BTC.", 
+          "-S" + (deal.trailing_stop ? "(STOP)" : (deal.shed ? "(SHED)" : "(REG)")) +
+          " " + deal.amount.toFixed(5) + 
+          " BTC for " + ((market.current.last * BID_ALIGN)*deal.amount).toFixed(2) + 
+          " " + currency_label + 
+          " at " + deal.aligned_sell_price + 
+          " " + currency_label +
+          " per BTC. (" + (profit_loss > 0 ? "+" : "") + 
+          (profit_loss).toFixed(2) + ")",
         permanent: true
       })
 
@@ -1037,7 +1083,7 @@ module.exports = function(STAMPEDE) {
               (
                 process.env.NODE_ENV || 
                 "development"
-              ) === "development" ? 1000 : 2000) + (Math.random()*2000)
+              ) === "development" ? 500 : 2000) + (Math.random()*2000)
           )
       console.log(
         "... Cycle(wallet, market) CHECK again in:", 
@@ -1258,6 +1304,14 @@ module.exports = function(STAMPEDE) {
     initializeConfig()
   }
 
+  function prepareCombinedDeal(combined_deal) {
+    combined_deal.currency_amount = 0
+    combined_deal.currency_value = 0
+    combined_deal.max_currency_amount = 0
+    combined_deal.amount = 0
+    combined_deal.amounts = []
+    combined_deal.names = []
+  }
 
   // Trading config validation!
 
@@ -1359,16 +1413,15 @@ module.exports = function(STAMPEDE) {
       })
     }
 
-    LOG("removeAllDeals | queue.length:", queue.length())
+    queue.drain = (done ? done : function() { 
+      LOG("removeAllDeals") 
+    })
+
 
     if (queue.length()) {
-      queue.drain = (done ? done : function() { 
-        refreshAll()
-        LOG("removeAllDeals") 
-      })
+      LOG("removeAllDeals | queue.length:", queue.length())
     }
     else if (done) {
-      refreshAll()
       done()
     }
 

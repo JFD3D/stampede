@@ -2,9 +2,9 @@ var series = {
 
   trading: {
 
-    greed: [0.01, 0.02, 0.03, 0.06],
+    greed: [0.06, 0.04, 0.02],
 
-    altitude_drop: [1, 2, 3],
+    altitude_drop: [1, 1.5, 2],
 
     impatience: [0.1, 0.9]
 
@@ -16,7 +16,7 @@ var series = {
 
     trailing_stop: [true, false],
 
-    bell_bottom: [true],
+    shedding: [true, false],
 
     combined_selling: [true, false],
 

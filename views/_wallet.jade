@@ -29,7 +29,7 @@ table.table.table-striped
     th #{helpers.current_currency.toUpperCase()} available
     th #{helpers.current_currency.toUpperCase()} value
   tr
-    td= parseInt(current_wallet.cool*100) + "%"
+    td= parseInt((current_wallet.cool||0)*100) + "%"
     td= (current_wallet.average_buy_price || 0).toFixed(2)
     td= (current_wallet.available_to_traders || 0).toFixed(2)
     td= (current_wallet.currency_value || 0).toFixed(2)
@@ -42,5 +42,5 @@ table.table.table-striped
     th Updated at
   tr
     td= (current_wallet.initial_investment || 0).toFixed(2)
-    td= parseFloat(current_wallet.fee)+"%"
+    td= parseFloat(current_wallet.fee || 0)+"%"
     td= formatter.tFormat(current_wallet.time)

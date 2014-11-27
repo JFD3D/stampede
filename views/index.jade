@@ -1,21 +1,21 @@
 extends layout
-
+- var class_for_status = (traders_awake == true ? "active" : "inactive")
 - if (simulator_enabled)
   block head
     script(type='text/javascript', src='/internal/front-simulator.js')
 
 block navigation
+  nav.navbar.navbar-default.navbar-fixed-top
+    #live-overview(class="#{class_for_status}", style="display: none;")
+      //- h2 &sum; Overview
+      .content
+  
   .col-md-4#live-messages
     .content
 block content
 
-  - var class_for_status = (traders_awake == true ? "active" : "inactive")
-  .spacer(style="height: 100px")
 
-  .row
-    .col-md-10#live-overview(class="#{class_for_status}", style="display: none;")
-      h2 &sum; Overview
-      .content
+  
 
   .row.block#decision-indicators(class="#{class_for_status}", style="display: none;")
     .col-md-4
@@ -67,7 +67,6 @@ block content
   .block#live-sheets(class="#{class_for_status}", style="display: none;")
     h2 Current value change
     .content
-  include _shares
   .row.block#live-trading-config(class="#{class_for_status}")
     .col-md-4
       h2 Configuration
@@ -81,6 +80,7 @@ block content
       h3 Strategies
       include _trading_strategies
     .content
+  include _shares
 
 block footer
   

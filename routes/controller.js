@@ -409,6 +409,7 @@ module.exports = function(STAMPEDE) {
   controller.simulatorRemoveDeals = function(req, res) {
     Trader.removeAllDeals(function() {
       res.send({message: "All deals removed."})
+      controller.refreshTraders(Trader.live_traders)
     })
   }
 

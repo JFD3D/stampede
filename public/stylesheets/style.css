@@ -1,16 +1,16 @@
-/*a {
-  color: #00B7FF;
-}*/
+body {
+  padding-top: 7em;
+}
 
-#navigation, #live-simulation-progress {
+#live-messages, #live-simulation-progress {
   padding: 1em;
   position: fixed;
-  top: -1em;
   border: 1px solid #ccc;
   background-color: #eee;
   border-radius: .5em;
-  box-shadow: 0em .25em .5em 0em rgba(0, 0, 0, 0.1);
   z-index: 200;
+  box-shadow: 0em .25em .5em 0em rgba(0, 0, 0, 0.1);
+  bottom: -1em;
 }
 
 #content {
@@ -27,7 +27,8 @@
   min-width: 600px;
   line-height: 60%;
   overflow: auto;
-  float: right;
+  float: left;
+  left: 1em;
 }
 
 #live-messages:hover {
@@ -38,25 +39,6 @@
   font: 80%;
 }
 
-/*.block {
-  float: left;
-  width: 600px;
-  margin: 1em;
-  padding: 1em;
-  border: 1px solid #ccc;
-  max-height: 500px;
-  overflow: auto;
-}
-
-.block.wide {
-  width: 1200px;
-}*/
-
-/*.block.inactive {
-  color: #ccc;
-  background-color: #eee;
-}
-*/
 .error {
   color: red;
 }
