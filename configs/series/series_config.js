@@ -2,11 +2,11 @@ var series = {
 
   trading: {
 
-    greed: [0.06, 0.04, 0.02],
+    greed: [0.03, 0.05],
 
-    altitude_drop: [1, 1.5, 2],
+    altitude_drop: [0.5, 1, 2],
 
-    impatience: [0.1, 0.9]
+    impatience: [0.5]
 
   },
 

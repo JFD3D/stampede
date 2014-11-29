@@ -7,6 +7,7 @@ module.exports = function(STAMPEDE) {
   var data_sets_repo = "stampede_data_sets"
   var LOG = STAMPEDE.LOG("simulator")
   var _ = STAMPEDE._
+  var async = STAMPEDE.async
 
   function Simulator() {
     this.loaded_data_sets = []
@@ -14,7 +15,7 @@ module.exports = function(STAMPEDE) {
     this.series_simulation = false
   }
 
-  function Set(name) {
+  function Set(name, optional_ui_name) {
 
     name = name || ("stampede_data_set_" + Date.now())
 
@@ -24,6 +25,8 @@ module.exports = function(STAMPEDE) {
           ) + csv_file_name
 
     this.name = name
+    this.optional_ui_name = optional_ui_name
+    this.optional_name_key = "stampede_set_name:" + name
     this.headers = ["time", "high", "low", "last"]
     this.csv_file_name = csv_file_name
     this.csv_file_path = csv_file_path
@@ -39,6 +42,10 @@ module.exports = function(STAMPEDE) {
         var csv_content = common.generateCSV(
               data, set.headers, true
             )
+        // Save separate (no need to wait, the filing will take a lot longer ?)
+        if (set.optional_ui_name && set.optional_ui_name.length) {
+          db.set(set.optional_name_key, set.optional_ui_name)
+        }
         common.fileTo(set.csv_file_path, csv_content, function(error_writing) {
           common.timer(start_time, "saveSet(" + data_length + ")")
           if (callback) {
@@ -60,6 +67,14 @@ module.exports = function(STAMPEDE) {
           last: parseFloat(row[3])
         } : null)
       }, callback)
+    },
+
+    getUIName: function(callback) {
+      var set = this
+      db.get(set.optional_name_key, function(error, optional_ui_name) {
+        if (optional_ui_name) set.optional_ui_name = optional_ui_name
+        if (callback) callback(error)
+      })
     },
     remove: function(callback) {
       var set = this
@@ -86,16 +101,37 @@ module.exports = function(STAMPEDE) {
         })
       })
     },
-    saveSet: function(data, callback) {
-      var set = new Set()
+    saveSet: function(optional_ui_name, data, callback) {
+      var set = new Set(null, optional_ui_name)
       set.save(data, callback)
     },
     loadAllSets: function(callback) {
       var sim = this
       db.smembers(data_sets_repo, function(error, data_sets) {
-        if (data_sets.length > 0) sim.loaded_data_sets = data_sets
-        STAMPEDE.controller.refreshSimulationSets(data_sets)
-        if (callback) callback(error, data_sets)
+        
+        if (data_sets.length > 0) {
+          sim.loaded_data_sets = data_sets
+          var data_sets_results = []
+          
+          async.eachSeries(data_sets, function(data_set_name, internal_callback) {
+            var set = new Set(data_set_name)
+            set.getUIName(function() {
+              data_sets_results.push({
+                name: data_set_name,
+                optional_ui_name: set.optional_ui_name
+              })
+              internal_callback()
+            })
+          }, function() {
+            STAMPEDE.controller.refreshSimulationSets(data_sets_results)
+            if (callback) callback(error, data_sets_results)  
+          })
+        }
+        else {
+          STAMPEDE.controller.refreshSimulationSets([])
+          if (callback) callback(error, [])
+        }
+          
       })
     },
 
@@ -105,8 +141,8 @@ module.exports = function(STAMPEDE) {
       set.remove(function() {
         sim.loadAllSets(callback)
       })
-
     },
+
     loadSet: function(data_set_name, callback) {
       var sim = this
       var i = 0
@@ -157,7 +193,7 @@ module.exports = function(STAMPEDE) {
         var props = sim.current.data_set_properties
         var result = [
               {
-                value: sim.current.data_set_name, 
+                value: sim.current.data_set_properties.name || sim.current.data_set_name, 
                 field: "data_set", 
                 type: "data_sets"
               },
@@ -205,6 +241,7 @@ module.exports = function(STAMPEDE) {
           if (sim.current.serie_index % 10 === 0) {
             sim.analyseResults()
           }
+
           sim.processSerie()
         }
         else {
@@ -257,12 +294,19 @@ module.exports = function(STAMPEDE) {
         "analyseCurrentSet | data_set_properties, set_len, val_len, data_start_time, data_end_time, data_set[0], data_set[set_len - 1]:",
         data_set_properties, set_len, val_len, data_start_time, data_end_time, data_set[0], data_set[set_len - 1]
       )
+      var set = new Set(sim.current.data_set_name)
+      set.getUIName(function() {
+        data_set_properties.name = set.optional_ui_name || set.name
+      })
       sim.current.data_set_properties = data_set_properties
       return data_set_properties
     },
 
     resetDataSet: function() {
-      if (this.current.data_set_name) delete this.current.data_set_name
+      if (this.current.data_set_name) 
+        delete this.current.data_set_name
+      if (this.current.data_set_properties) 
+        delete this.current.data_set_properties
     },
 
     startSeries: function() {
@@ -329,7 +373,7 @@ module.exports = function(STAMPEDE) {
           serie_options = sim.current.series_array[sim.current.serie_index],
           serie_data_set_name = 
             sim.current.series_config.data_sets[serie_options[0]]
-
+      STAMPEDE.trader.stopAll()
       sim.applySerieConfig()
       sim.loadSerieSet(serie_data_set_name, function(error, set) {
         STAMPEDE.controller.simulatorWarmUp(set)

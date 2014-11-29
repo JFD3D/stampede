@@ -6,22 +6,23 @@ extends layout
 
 block navigation
   nav.navbar.navbar-default.navbar-fixed-top
-    #live-overview(class="#{class_for_status}", style="display: none;")
-      //- h2 &sum; Overview
+    .row
+      - if (simulator_enabled)
+        .col-md-2
+          button.btn.btn-success#simulator-run(style="display: none;") Simulate trading
+      #live-overview.col-md-10(class="#{class_for_status}", style="display: none;")
+        .content
+  
+  .row
+    .col-md-4#live-messages
       .content
-  
-  .col-md-4#live-messages
-    .content
+
 block content
-
-
-  
 
   .row.block#decision-indicators(class="#{class_for_status}", style="display: none;")
     .col-md-4
       h2 &plusmn; Decision indicators
     .content
-
 
   .row
     .col-md-5.block#live-balance(class="#{class_for_status}", style="display: none;")
@@ -30,8 +31,6 @@ block content
     .col-md-5.block#live-ticker(class="#{class_for_status}", style="display: none;")
       h2 &cap; Market
       .content
-
-
 
   .block.row#live-traders(class="#{class_for_status}", style="display: none;")
     .col-md-4
@@ -59,8 +58,10 @@ block content
         button.btn.btn-default#generator-launch Generate data
       .block.col-md-6#live-simulation
         .content
-          button.btn.btn-success#simulator-run(style="display: none;") Simulate trading
-          button.btn.btn-info#simulator-save-data(style="display: none;") Save data
+          #simulator-set-save-container(style="display: none;float:left;")
+            label(for="simulator-set-name") Optional set name
+              input.form-control#simulator-set-name(style="float:left;", type="text", name="data_set_name", placeholder="Optional set name")
+              button.btn.btn-info#simulator-save-data(style="float:left;") Save data
           .spacer
           #chart
        

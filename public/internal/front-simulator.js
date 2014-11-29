@@ -17,7 +17,7 @@ var Simulator = (function() {
   
   function renderData(data) {
     renderGeneratedData(data);
-    $("#simulator-run, #simulator-save-data").show();
+    $("#simulator-run, #simulator-set-save-container").show();
   };
 
   function loadSavedData(event) {
@@ -42,7 +42,9 @@ var Simulator = (function() {
   }
 
   function saveDataSet() {
-    $.post("/simulator/save_data_set", function(response) {
+    $.post("/simulator/save_data_set", {
+      set_name_ui: $("#simulator-set-name").val()
+    }, function(response) {
       if (response) {
         notify(response.message || "Submitted data set to storage.");
       }

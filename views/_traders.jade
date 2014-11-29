@@ -2,7 +2,7 @@ each trader, trader_name in traders
   .trader.col-md-5(id="#{formatter.standardize(trader_name)}")
     .spacer
     p
-      b #{'T' + trader_name.split('_')[1] || ''}: (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase()+" "+((trader.record || {}).current_investment || 0).toFixed(2)})
+      b #{'T' + trader_name.split('_')[1] || ''}: (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase()+" "+((trader.record || {}).current_investment || 0).toFixed(2)}) at avg #{(trader.average_buy_price || 0).toFixed(2)} #{helpers.current_currency.toUpperCase()}
       span  | 
       - if (trader.next_deal_amount)
         span= ("Next: " + trader.next_deal_amount.toFixed(2)+" USD")

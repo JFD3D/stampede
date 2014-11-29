@@ -1,10 +1,12 @@
 table.table.table-striped.deals
   tr
     th Data set
+    th Optional name
     th Removal
   each data_set in data_sets
     tr
       td
-        a.active-link.simulator-data-loader(href="/simulator/load_data_set/#{data_set}")= data_set
+        a.active-link.simulator-data-loader(href="/simulator/load_data_set/#{data_set.name}")= data_set.name
+      td= data_set.optional_ui_name || "-"
       td
-        a.active-link.simulator-data-remover(href="/simulator/remove_data_set/#{data_set}") Remove
+        a.active-link.simulator-data-remover(href="/simulator/remove_data_set/#{data_set.name}") Remove

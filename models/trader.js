@@ -489,10 +489,12 @@ module.exports = function(STAMPEDE) {
       // Only if COMBINED SELLING is enabled:
       // We will sell them at once if the -
       // Weighted average + fees and profit is below market last
-      var selected_extremes = (COMBINED_SELLING ? ["min", "max"] : ["min"])
+      var selected_extremes = COMBINED_SELLING ? ["min", "max"] : ["min"];
 
-      selected_extremes.forEach(function(extreme) {
-        var current = borders[extreme]
+      // If shedding is enabled, sell all
+      var deals_or_extremes = (SHEDDING_ENABLED ? deals : selected_extremes)
+      deals_or_extremes.forEach(function(extreme) {
+        var current = (SHEDDING_ENABLED ? extreme : borders[extreme])
         if (
           current && 
           combined_deal.names.indexOf(current.name) === -1
@@ -615,7 +617,10 @@ module.exports = function(STAMPEDE) {
         SHEDDING_ENABLED && deals.length > 1 && !structured_decision.selling
       ) {
         prepareCombinedDeal(combined_deal)
-        deals.forEach(function(deal) {
+        var expensive_deals = (
+              deals.slice(Math.ceil(deals.length / 2), deals.length)
+            )
+        expensive_deals.forEach(function(deal) {
           combined_deal.names.push(deal.name)
           combined_deal.amount += deal.amount
           combined_deal.currency_amount += (deal.buy_price * deal.amount)
@@ -631,7 +636,12 @@ module.exports = function(STAMPEDE) {
             )
 
         structured_decision.shedding = (
-          (1 - deal_value_diff) > (trader_greed / 2)
+          (1 - deal_value_diff) > (trader_greed)
+        )
+
+        structured_decision.trader += (
+          " (SHED:" + 
+            ((1 - (trader_greed / 2)) * me.average_buy_price).toFixed(2) + ")"
         )
 
         if (
@@ -683,7 +693,7 @@ module.exports = function(STAMPEDE) {
         if (me.isBuying(purchase_deal)) {
           me.buy(purchase_deal, done)
         }
-        else if (me.isSelling(sale_deal)) {
+        else if (me.deals.length && me.isSelling(sale_deal)) {
           me.sell(sale_deal, done)
         }
         else {
@@ -790,7 +800,7 @@ module.exports = function(STAMPEDE) {
       
       if (!series_simulation) STAMPEDE.controller.notifyClient({
         message: 
-          "-S" + (deal.trailing_stop ? "(STOP)" : (deal.shed ? "(SHED)" : "(REG)")) +
+          "-S" + ((deal.trailing_stop && !deal.shed) ? "(STOP)" : (deal.shed ? "(SHED)" : "(REG)")) +
           " " + deal.amount.toFixed(5) + 
           " BTC for " + ((market.current.last * BID_ALIGN)*deal.amount).toFixed(2) + 
           " " + currency_label + 
@@ -932,13 +942,18 @@ module.exports = function(STAMPEDE) {
     addCurrentMaximumPrice: function() {
       var me = this
       var current_market = market.current
-
+      
+      me.btc_amount = 0 
+      me.currency_amount = 0
       if (me.deals.length) {
         me.deals.forEach(function(deal) {
+          me.btc_amount += deal.amount
+          me.currency_amount += (deal.amount * deal.buy_price)
           deal.max_price = (
             deal.max_price > current_market.last
           ) ? deal.max_price : current_market.last
         })
+        me.average_buy_price = (me.currency_amount / me.btc_amount)
       }
     },
 

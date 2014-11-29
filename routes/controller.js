@@ -278,7 +278,7 @@ module.exports = function(STAMPEDE) {
       data_sets: data_sets, 
     helpers: STAMPEDE.helpers
   }, function(error, html) {
-      if (error) console.log("refreshSimulationDataSets | renderFile | error:", error)
+      if (error) console.log("refreshSimulationSets | renderFile | error:", error)
       if (html) live.sendToAll("stampede_updates", {
         container: "simulator-data-sets",
         html: html
@@ -458,8 +458,9 @@ module.exports = function(STAMPEDE) {
 
   controller.simulatorSave = function(req, res) {
     console.log("Storage of generated data requested.")
+    var optional_set_name = (req.body.set_name_ui || null)
     if (generated_data) {
-      simulator.saveSet(generated_data, function(errors) {
+      simulator.saveSet(optional_set_name, generated_data, function(errors) {
         res.send({message: "Submitted the simulator dataset for save."})
         simulator.loadAllSets()
       })
