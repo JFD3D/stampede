@@ -11,7 +11,7 @@ module.exports = function(STAMPEDE) {
   var LOG = STAMPEDE.LOG("controller")
   var config = STAMPEDE.config
   var common = STAMPEDE.common
-  var Exchange = STAMPEDE.exchange
+  var exchange = STAMPEDE.exchange
   var Trader = STAMPEDE.trader
   var live = STAMPEDE.live
   var simulator = new STAMPEDE.simulator()
@@ -42,6 +42,7 @@ module.exports = function(STAMPEDE) {
     function respond() {
 
       var response = {
+
         title: 'Stampede',
         current_user: req.current_user,
         traders_awake: traders_awake,
@@ -103,7 +104,7 @@ module.exports = function(STAMPEDE) {
   controller.addTrader = function(req, res) {
     var trader = new Trader.instance()
     trader.create(function(error, response) {
-      res.redirect("/")
+      res.send({message: "Trader added."})
     })
   }
 
@@ -357,12 +358,10 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.sell = function(amount, price, callback) {
-    //console.log("Selling bitcoins | amount, price:", amount, price)
     exchange.sell(amount, price, callback)
   }
 
   controller.balance = function(callback) {
-    //console.log("Getting ballance for user.")
     exchange.balance(callback)
   }
 
@@ -423,6 +422,7 @@ module.exports = function(STAMPEDE) {
       generated_data && generated_data.length && 
       config.exchange.selected === "simulated_exchange"
     ) {
+      exchange = new STAMPEDE.ExchangeInstance()
       simulatorWarmUp(generated_data)
       // simulator.startSeries()
       simulator.run(function(data) {
@@ -441,6 +441,7 @@ module.exports = function(STAMPEDE) {
   controller.simulatorRunSeries = function(req, res) {
     // MAKE SURE we run simulation on virtual exchange !!!
     if (config.exchange.selected === "simulated_exchange") {
+
       simulator.startSeries()
       res.render("series", {
         simulator_enabled: true,
@@ -496,6 +497,7 @@ module.exports = function(STAMPEDE) {
   controller.simulatorWarmUp = simulatorWarmUp
 
   function simulatorWarmUp(data) {
+    exchange = new STAMPEDE.ExchangeInstance()
     controller.generated_data = data
     if (data && data.length) exchange.load(STAMPEDE, data)
   }
@@ -503,6 +505,7 @@ module.exports = function(STAMPEDE) {
   // This is used to real time simulate data on index
   function simulatorRealtimePrep(done) {
     // No data is passed into simulated exchange, it will be a real time exchange
+    exchange = new STAMPEDE.ExchangeInstance()
     exchange.load(STAMPEDE)
     if (done) return done()
   }

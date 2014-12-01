@@ -25,11 +25,15 @@ h3 Calculations
 table.table.table-striped
   tr
     th Cool
+    th Anxiety
+    th Greed
     th Av. buy price
     th #{helpers.current_currency.toUpperCase()} available
     th #{helpers.current_currency.toUpperCase()} value
   tr
     td= parseInt((current_wallet.cool||0)*100) + "%"
+    td= parseFloat((current_wallet.anxiety||0)*100).toFixed(3) + "%"
+    td= parseFloat((current_wallet.greed||0)*100).toFixed(3) + "%"
     td= (current_wallet.average_buy_price || 0).toFixed(2)
     td= (current_wallet.available_to_traders || 0).toFixed(2)
     td= (current_wallet.currency_value || 0).toFixed(2)

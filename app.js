@@ -46,8 +46,8 @@ var START = (function() {
     initialize: function() {
       connectDatabase()
       setupApplication()
-      loadDependencies()
       initializeExchange()
+      loadDependencies()
       initiateAuthentication()
       assignRoutes()
       initiateLiveCommunication()
@@ -132,8 +132,9 @@ var START = (function() {
         require("./exchanges/" + config.exchange.selected)
     var credentials = config.credentials[config.exchange.selected]
 
-    this.exchange = new Exchange(
+    STAMPEDE.exchange = new Exchange(
       credentials.key, credentials.secret, credentials.client_id)
+    STAMPEDE.ExchangeInstance = Exchange
   }
 
   function initiateLiveCommunication() {

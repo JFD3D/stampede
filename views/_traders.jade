@@ -1,34 +1,42 @@
-each trader, trader_name in traders
-  .trader.col-md-5(id="#{formatter.standardize(trader_name)}")
-    .spacer
-    p
-      b #{'T' + trader_name.split('_')[1] || ''}: (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase()+" "+((trader.record || {}).current_investment || 0).toFixed(2)}) at avg #{(trader.average_buy_price || 0).toFixed(2)} #{helpers.current_currency.toUpperCase()}
-      span  | 
-      - if (trader.next_deal_amount)
-        span= ("Next: " + trader.next_deal_amount.toFixed(2)+" USD")
+- var trader_count = Object.keys(traders).length
+
+- if (trader_count)
+  each trader, trader_name in traders
+    .trader.col-md-5(id="#{formatter.standardize(trader_name)}")
+      .spacer
+      p
+        b #{'T' + trader_name.split('_')[1] || ''}: (#{trader.record.current_deals} / #{helpers.current_currency.toUpperCase() + " " + parseFloat(trader.record && trader.record.current_investment ? trader.record.current_investment : 0).toFixed(2)}) 
+        span at 
+        b avg #{trader.average_buy_price ? trader.average_buy_price.toFixed(2) : 0} #{helpers.current_currency.toUpperCase()}
         span  | 
-      - if (trader.next_deal_ratio)
-        span= ("Multi: " + trader.next_deal_ratio.toFixed(2)+"x")
-        span  | 
-      a.removal(href="#", data-trader="#{trader_name}") Remove
-    - if (trader.purchases || trader.sales || trader.profit)
-      span #{trader.purchases} purchases | #{trader.sales} sales | #{helpers.current_currency.toUpperCase() + " " + (trader.profit || 0).toFixed(2)} profit
-    span 
-    table.table.table-striped.deals
-      tr
-        th Buy price
-        th Amount
-        th
-        th
-      each deal in trader.deals
+        - if (trader.next_deal_amount)
+          span= ("Next: " + trader.next_deal_amount.toFixed(2)+" USD")
+          span  | 
+        - if (trader.next_deal_ratio)
+          span= ("Multi: " + trader.next_deal_ratio.toFixed(2)+"x")
+          span  | 
+        a.removal(href="#", data-trader="#{trader_name}") Remove
+      - if (trader.purchases || trader.sales || trader.profit)
+        span #{trader.purchases} purchases | #{trader.sales} sales | #{helpers.current_currency.toUpperCase() + " " + (trader.profit || 0).toFixed(2)} profit
+      span 
+      table.table.table-striped.deals
         tr
-          td= deal.buy_price.toFixed(2)
-            - if (deal.is_lowest)
-              span.lowest  (Min)
-            - if (deal.is_highest)
-              span.highest  (Max)
-          td= (deal.amount || 0).toFixed(7)+" BTC"
-          td
-            a.removal(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}") Remove
-          td
-            a.deal-sale(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}", title="Sell at current price") Sell
+          th Buy price
+          th Amount
+          th
+          th
+        each deal in trader.deals
+          tr
+            td= deal.buy_price.toFixed(2)
+              - if (deal.is_lowest)
+                span.lowest  (Min)
+              - if (deal.is_highest)
+                span.highest  (Max)
+            td= (deal.amount || 0).toFixed(7)+" BTC"
+            td
+              a.removal(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}") Remove
+            td
+              a.deal-sale(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}", title="Sell at current price") Sell
+- else
+  .col-md-5
+    h3 No traders added.

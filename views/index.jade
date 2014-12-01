@@ -8,9 +8,9 @@ block navigation
   nav.navbar.navbar-default.navbar-fixed-top
     .row
       - if (simulator_enabled)
-        .col-md-2
+        .col-md-1
           button.btn.btn-success#simulator-run(style="display: none;") Simulate trading
-      #live-overview.col-md-10(class="#{class_for_status}", style="display: none;")
+      #live-overview.col-md-11(class="#{class_for_status}", style="display: none;")
         .content
   
   .row
@@ -32,7 +32,7 @@ block content
       h2 &cap; Market
       .content
 
-  .block.row#live-traders(class="#{class_for_status}", style="display: none;")
+  .block.row#live-traders(class="#{class_for_status}")
     .col-md-4
       h2 &#9801; Traders (#{helpers.sanitizeVariableName(config.exchange.selected)})
       .clearer
@@ -44,8 +44,9 @@ block content
     .spacer
     .content
     .spacer
-    form.async-form(action="trader/create", method="post", style="margin-bottom: 10px;")
-      button.btn.btn-default Add trader
+    .col-md-1
+      form.async-form(action="trader/create", method="post", style="margin-bottom: 10px;")
+        button.btn.btn-default Add trader
   
   // Simulator stuff
   - if (simulator_enabled)

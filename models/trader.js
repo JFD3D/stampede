@@ -43,6 +43,7 @@ module.exports = function(STAMPEDE) {
   var cycle_sell_decisions = []
   var cycle_buy_decisions = []
   var currency_key = config.exchange.currency+"_available"
+  var exchange_simulated = (config.exchange.selected === "simulated_exchange")
 
       /*
        *
@@ -183,7 +184,7 @@ module.exports = function(STAMPEDE) {
 
     // Record and initialize(add to shared live_traders) new trader
 
-    create: function(callback) {
+    create: function(done) {
       var me = this
       db.incr(me.id_counter, function(error, number) {
         me.name = me.trader_prefix + number
@@ -194,9 +195,11 @@ module.exports = function(STAMPEDE) {
           }
           me.deals = []
           live_traders[me.name] = me
-          db.hmset(me.name, me.record, callback)
           me.record.current_investment = 0
           me.record.current_deals = 0
+          db.hmset(me.name, me.record, function() {
+            loadTraders(done)
+          })
         })
       })
     },
@@ -204,31 +207,40 @@ module.exports = function(STAMPEDE) {
     // Stop and remove trader
 
     remove: function(done) {
-      var me = live_traders[this.name],
-          my_book = me.record.book
-      me.checkRecord(function() {
-        db.srem(trader_main_list, me.name, function(error, response) {
-          db.del(my_book)
-          db.del(me.name, function() {
-            delete live_traders[me.name]
-            wakeAll(done)
-          })
-        })
+      var me = live_traders[this.name]
+      var my_book = me.record.book
+
+      async.series([
+        function(internal_callback) {
+          me.checkRecord(internal_callback)
+        },
+        function(internal_callback) {
+          db.srem(trader_main_list, me.name, internal_callback)
+        },
+        function(internal_callback) {
+          db.del(my_book, internal_callback)
+        },
+        function(internal_callback) {
+          db.del(me.name, internal_callback)
+        }
+      ], function() {
+        loadTraders(done)
       })
     },
     
     // Loads trader's deals
     checkInventory: function(callback) {
       var me = this
-      me.deals = me.deals || []
-      if (me.record && me.record.book) {
+      me.deals = []
+      if (
+        me.record && me.record.book && !exchange_simulated
+      ) {
         db.smembers(me.record.book, function(error, deals) {
-          me.deals = deals || []
-          me.deals.forEach(function(deal, index) {
-            me.deals[index] = parseDeal(deal)
+          deals.forEach(function(deal, index) {
+            me.deals.push(parseDeal(deal))
           })
           if (callback) {
-            return callback(error, me.record)
+            return callback(error)
           }
         })
       }
@@ -386,7 +398,7 @@ module.exports = function(STAMPEDE) {
       var current_market_greed = (market.current.spread / 2)
 
           // What potential is the trader looking at
-      var trader_greed = INITIAL_GREED + ((wallet.current.fee || 0.5) / (2*100))
+      var trader_greed = wallet.current.greed
 
           // If current wallet cool combined with greed exceeds 1
       var weighted_heat = wallet.current.cool + trader_greed
@@ -745,7 +757,7 @@ module.exports = function(STAMPEDE) {
           me.purchases++
           me.resetCurrentMaximumPrice()
           me.recordDeal(deal, done)
-          if (!config.simulation) email.send({
+          if (!exchange_simulated) email.send({
             to: config.owner.email,
             subject: "Stampede - Buying: " + deal.amount.toFixed(7) + "BTC",
             template: "purchase.jade",
@@ -760,7 +772,7 @@ module.exports = function(STAMPEDE) {
           })        
         }
         else {
-          if (!config.simulation) email.send({
+          if (!exchange_simulated) email.send({
             to: config.owner.email,
             subject: "Stampede: Error BUYING deal through bitstamp API",
             template: "error.jade",
@@ -839,7 +851,7 @@ module.exports = function(STAMPEDE) {
             me.removeDeal(deal_name, internal_callback)
           }, done)
 
-          if (!config.simulation) email.send({
+          if (!exchange_simulated) email.send({
             subject: "Stampede - Selling at: "+deal.name,
             template: "sale.jade",
             data: {
@@ -854,7 +866,7 @@ module.exports = function(STAMPEDE) {
         }
         else {
           deal.order_id = "freeze"
-          if (!config.simulation) email.send({
+          if (!exchange_simulated) email.send({
             subject: "Stampede: Error SELLING deal through bitstamp API",
             template: "error.jade",
             data: {error:error}
@@ -873,7 +885,7 @@ module.exports = function(STAMPEDE) {
       me.deals.push(deal)
       var deal_string = stringDeal(deal)
 
-      if (!config.simulation) {
+      if (!exchange_simulated) {
         db.sadd(me.record.book, deal.name, callback)
       }
       else callback()
@@ -886,7 +898,7 @@ module.exports = function(STAMPEDE) {
       //console.log("removeDeal | me.deals, deal_name:", me.deals, deal_name)
       if (deal_position > -1) {
         me.deals.splice(deal_position, 1)
-        if (!config.simulation) {
+        if (!exchange_simulated) {
           db.srem(me.record.book, deal_name, callback)
         }
         else callback()
@@ -1107,7 +1119,6 @@ module.exports = function(STAMPEDE) {
       )
       refreshSheets()
       if (market.timer) clearTimeout(market.timer)
-      console.log("market.timer, next_check:", next_check)
       market.timer = setTimeout(cycle, next_check)
     }
 
@@ -1214,7 +1225,6 @@ module.exports = function(STAMPEDE) {
   }
 
   function refreshSheets() {
-    console.log("refreshSheets | inititated.")
     var time_stamp = Date.now()
     var current_currency_value = wallet.current.currency_value
     var cur_sheets_len = sheets.length
@@ -1345,7 +1355,6 @@ module.exports = function(STAMPEDE) {
   }
 
   function checkTraders(trader_list, done) {
-    
     async.each(trader_list, function(trader_name, internal_callback) {
       var trader = new Trader(trader_name)
       trader.wake(internal_callback)
@@ -1373,6 +1382,7 @@ module.exports = function(STAMPEDE) {
   }
 
   function loadTraders(done) {
+    live_traders = new Object()
     db.smembers(trader_main_list, function(error, trader_list) {
       LOG("loadTraders, Viewing ("+trader_list.length+") traders...")
       trader_count = trader_list.length
@@ -1381,6 +1391,7 @@ module.exports = function(STAMPEDE) {
       }
       else {
         LOG("loadTraders | NO!! trader_list:", trader_list)
+        STAMPEDE.controller.refreshTraders(live_traders)
         done()
       }
     })

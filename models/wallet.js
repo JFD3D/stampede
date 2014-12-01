@@ -67,6 +67,12 @@ module.exports = function(STAMPEDE) {
         me.current[property] = parseFloat(data[property] || 0)
       })
       me.current.cool = (me.current.cool || me.cool)
+      me.current.greed = (
+        config.trading.greed + ((me.current.fee || 0.5) / (2*100))
+      )
+      if (config.strategy.shedding && me.current.anxiety) {
+        me.current.greed += (me.current.anxiety * me.current.greed)
+      }
       me.current.time = data.time || Date.now()
       me.summarizeDeals()
       return me
@@ -155,7 +161,6 @@ module.exports = function(STAMPEDE) {
           // Assign initial investment as maximum 
           // (this flies in case of simulator)
           var current_initial_investment = config.trading.maximum_investment
-          LOG("config.trading.maximum_investment:", config.trading.maximum_investment)
           me.current.initial_investment = current_initial_investment
 
           me.shares = [{
@@ -180,6 +185,9 @@ module.exports = function(STAMPEDE) {
       )
       me.current.profit_loss = (
         (me.current.profit_loss_currency / me.current.initial_investment)
+      )
+      me.current.anxiety = Math.abs(
+        me.current.profit_loss < 0 ? (me.current.profit_loss) : 0
       )
     },
 

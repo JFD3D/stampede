@@ -32,27 +32,28 @@ var initialization = (function() {
       generator = STAMPEDE.generator
       xc = config.exchange.currency
       controller = STAMPEDE.controller
+      var me = this
 
       console.log(
         "Loading data.",
           market_data ? market_data.length : "Starting real time simulation."
       )
       var now = Date.now()
-      this.real_time = (!market_data)
+      me.real_time = (!market_data)
 
       market_data = 
          market_data || [generator.initializeStartPoint(now)]
 
-      this.current_extremes = 
+      me.current_extremes = 
         generator.initializeCurrentExtremes(market_data, now)
 
-      this.ticks = market_data
-      this.ticks_length = market_data.length
-      this.current_tick = 0
-      var start_tick = this.ticks[this.current_tick]
+      me.ticks = market_data
+      me.ticks_length = market_data.length
+      me.current_tick = 0
+      var start_tick = me.ticks[me.current_tick]
       
       start_tick.starting_point = true
-      this.current_balance = {
+      me.current_balance = {
         btc_reserved: 0,
         fee: 0.4,
         btc_available: 0.0001,
@@ -60,12 +61,12 @@ var initialization = (function() {
         time: (start_tick.time || 0)
       }
 
-      this.current_balance[xc + "_reserved"] = 0
-      this.current_balance[xc + "_balance"] = 
-        this.current_balance[xc + "_available"] = config.trading.maximum_investment
+      me.current_balance[xc + "_reserved"] = 0
+      me.current_balance[xc + "_balance"] = 
+        me.current_balance[xc + "_available"] = config.trading.maximum_investment
 
       // Initialize container for future ticker data, that will be supplied by generator
-      this.volume = 10000
+      me.volume = 10000
     },
 
 
