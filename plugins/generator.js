@@ -17,11 +17,11 @@ module.exports = function(STAMPEDE) {
           },
           MT: {
             duration: 6*hour,
-            impact: 0.02
+            impact: 0.01
           },
           ST: {
             duration: 1*minute,
-            impact: 0.01 // 0.005 regular
+            impact: 0.005 // 0.005 regular
           }
         }
       }
@@ -93,7 +93,12 @@ module.exports = function(STAMPEDE) {
     }
     var end = Date.now()
 
-    console.log("generateData (Length:"+data.length+") | took "+((end-now)/1000).toFixed(2)+" seconds (Extremes: "+(extremes_calculation/1000).toFixed(2)+" seconds | "+(extremes_calculation/(end-now)*100).toFixed(2)+"%).")
+    console.log(
+      "generateData (Length:" + data.length + ") | took " + 
+      ((end-now)/1000).toFixed(2) + " seconds (Extremes: " + 
+      (extremes_calculation/1000).toFixed(2) + " seconds | " + 
+      (extremes_calculation/(end-now)*100).toFixed(2) + "%)."
+    )
     return data
 
   }

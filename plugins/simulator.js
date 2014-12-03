@@ -90,13 +90,12 @@ module.exports = function(STAMPEDE) {
       var sim = this
       STAMPEDE.trader.prepareForSimulation(sim.series_simulation)
       STAMPEDE.trader.loadTraders(function() {
-        STAMPEDE.trader.removeAllDeals(function() {
-          LOG("starting simulation removed AllDeals")
-          STAMPEDE.trader.wakeAll(function() {
-            LOG("starting simulation wakeAll")
-            if (callback) callback({
-              message: "Started Market simulation."
-            })
+        STAMPEDE.trader.removeAllDeals()
+        LOG("starting simulation removed AllDeals")
+        STAMPEDE.trader.wakeAll(function() {
+          LOG("starting simulation wakeAll")
+          if (callback) callback({
+            message: "Started Market simulation."
           })
         })
       })
@@ -276,7 +275,9 @@ module.exports = function(STAMPEDE) {
       var sim = this
       var data_set = sim.current.data_set
       var set_len = data_set.length
-      var last_values = _.pluck(data_set, "last").sort()
+      var last_values = _.pluck(data_set, "last").sort(function(a, b) { 
+            return (a - b) 
+          })
       var val_len = last_values.length
       var data_start_time = data_set[0].time
       var data_end_time = data_set[set_len - 1].time

@@ -408,7 +408,6 @@ module.exports = function(STAMPEDE) {
   controller.simulatorRemoveDeals = function(req, res) {
     Trader.removeAllDeals(function() {
       res.send({message: "All deals removed."})
-      controller.refreshTraders(Trader.live_traders)
     })
   }
 
@@ -422,7 +421,6 @@ module.exports = function(STAMPEDE) {
       generated_data && generated_data.length && 
       config.exchange.selected === "simulated_exchange"
     ) {
-      exchange = new STAMPEDE.ExchangeInstance()
       simulatorWarmUp(generated_data)
       // simulator.startSeries()
       simulator.run(function(data) {

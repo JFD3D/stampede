@@ -504,9 +504,9 @@ module.exports = function(STAMPEDE) {
       var selected_extremes = COMBINED_SELLING ? ["min", "max"] : ["min"];
 
       // If shedding is enabled, sell all
-      var deals_or_extremes = (SHEDDING_ENABLED ? deals : selected_extremes)
-      deals_or_extremes.forEach(function(extreme) {
-        var current = (SHEDDING_ENABLED ? extreme : borders[extreme])
+      // var deals_or_extremes = (SHEDDING_ENABLED ? deals : selected_extremes)
+      selected_extremes.forEach(function(extreme) {
+        var current = borders[extreme]
         if (
           current && 
           combined_deal.names.indexOf(current.name) === -1
@@ -565,7 +565,7 @@ module.exports = function(STAMPEDE) {
         trader: 
           "T"+me.name.split("_")[1] + 
           ": " + (combined_deal.would_sell_at || 0).toFixed(2) + "",
-        would_sell_price: (combined_deal.would_sell_at < current_sale_price),
+        sell_price: (combined_deal.would_sell_at < current_sale_price),
         has_deals: (
           selected_deal_count > 0// || (!COMBINED_SELLING && selected_deal_count)
         ),
@@ -595,7 +595,7 @@ module.exports = function(STAMPEDE) {
       if (
         !structured_decision.managed && 
         structured_decision.has_deals && 
-        structured_decision.would_sell_price
+        structured_decision.sell_price
       ) {
         LOG(
           "unmanaged |", 
@@ -620,7 +620,7 @@ module.exports = function(STAMPEDE) {
       structured_decision.selling = (
         possible_to_sell &&
         (
-          structured_decision.would_sell_price &&
+          structured_decision.sell_price &&
           (!TRAILING_STOP_ENABLED || structured_decision.trailing_stop)
         )
       )
@@ -632,7 +632,7 @@ module.exports = function(STAMPEDE) {
         var expensive_deals = (
               deals.slice(Math.ceil(deals.length / 2), deals.length)
             )
-        expensive_deals.forEach(function(deal) {
+        deals.forEach(function(deal) {
           combined_deal.names.push(deal.name)
           combined_deal.amount += deal.amount
           combined_deal.currency_amount += (deal.buy_price * deal.amount)
@@ -648,7 +648,7 @@ module.exports = function(STAMPEDE) {
             )
 
         structured_decision.shedding = (
-          (1 - deal_value_diff) > (trader_greed)
+          (1 - deal_value_diff) > (trader_greed / 2)
         )
 
         structured_decision.trader += (
@@ -793,7 +793,9 @@ module.exports = function(STAMPEDE) {
     deal = {
       buy_price: Num float,
       amount: Num float,
-      names: Array strings
+      names: Array strings,
+      currency_value: Num float,
+      currency_amount: Num float
     }
     */
 
@@ -805,6 +807,9 @@ module.exports = function(STAMPEDE) {
       deal.heat = deal.buy_price / MAX_SUM_INVESTMENT
       deal.aligned_sell_price = sell_price.toFixed(2)
       var profit_loss = ((deal.currency_value - deal.currency_amount) || 0)
+      var profit_loss_perc = (
+            1 - (deal.currency_amount / deal.currency_value)
+          ) * 100
       var currency_label = config.exchange.currency.toUpperCase()
       
       // Align current cool to avoid all sell / buy
@@ -819,7 +824,7 @@ module.exports = function(STAMPEDE) {
           " at " + deal.aligned_sell_price + 
           " " + currency_label +
           " per BTC. (" + (profit_loss > 0 ? "+" : "") + 
-          (profit_loss).toFixed(2) + ")",
+          (profit_loss).toFixed(2) + ", " + profit_loss_perc.toFixed(2) + "%)",
         permanent: true
       })
 
@@ -1422,32 +1427,14 @@ module.exports = function(STAMPEDE) {
 
   function removeAllDeals(done) {
 
-    var queue = async.queue(function(job, internal_callback) {
-      var trader = job.trader
-      trader.purchases = 0
-      trader.sales = 0
-      var deal_name = job.deal_name
-      trader.removeDeal(deal_name, internal_callback)
-    }, 4)
-
     for (var name in live_traders) {
       var trader = live_traders[name]
-      var trader_deals_copy = trader.deals.slice(0)
-      trader_deals_copy.forEach(function(deal) {
-        var deal_name = deal.name
-        queue.push({deal_name: deal_name, trader: trader})
-      })
+      trader.deals = []
     }
+    
+    STAMPEDE.controller.refreshTraders(live_traders)
 
-    queue.drain = (done ? done : function() { 
-      LOG("removeAllDeals") 
-    })
-
-
-    if (queue.length()) {
-      LOG("removeAllDeals | queue.length:", queue.length())
-    }
-    else if (done) {
+    if (done) {
       done()
     }
 

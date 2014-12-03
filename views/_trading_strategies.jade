@@ -11,4 +11,4 @@ mixin strategy_form_inputs(strategy_set)
           label(for="#{strategy}-input") 
             b #{helpers.sanitizeVariableName(strategy)}
         td
-          input(type="checkbox", name="#{strategy}", checked=(enabled?"checked":undefined))
+          input(id="#{strategy}-input", type="checkbox", name="#{strategy}", checked=(enabled?"checked":undefined))
