@@ -42,8 +42,10 @@ module.exports = function(STAMPEDE) {
   var series_simulation = false                           // Disables broadcast later, (when series of data are simulated)
   var cycle_sell_decisions = []
   var cycle_buy_decisions = []
-  var currency_key = config.exchange.currency+"_available"
+  var currency_key = config.exchange.currency + "_available"
   var exchange_simulated = (config.exchange.selected === "simulated_exchange")
+  var cycle_in_progress
+  var last_cycle_end = Date.now()
 
       /*
        *
@@ -75,6 +77,7 @@ module.exports = function(STAMPEDE) {
   var BELL_BOTTOM_ENABLED    // Purchases will be sized up going down the price per trader
   var COMBINED_SELLING       // Sell highest and lowest priced BTC combined
   var DYNAMIC_MULTIPLIER     // Purchase size adjustment
+  var DYNAMIC_DROP           // Increase altitude drop in fibonacci series
 
       /*
        *
@@ -95,9 +98,9 @@ module.exports = function(STAMPEDE) {
     MAX_SUM_INVESTMENT = config.trading.maximum_investment
     BASE_PER_DEAL = config.trading.base_currency_per_deal         
     MAX_DEALS_HELD = config.trading.max_number_of_deals_per_trader
-    INITIAL_GREED = config.trading.greed   
+    INITIAL_GREED = (config.trading.greed / 100)
     BID_ALIGN = config.trading.bid_alignment
-    IMPATIENCE = config.trading.impatience
+    IMPATIENCE = (config.trading.impatience / 100)
     ALTITUDE_DROP = config.trading.altitude_drop
 
     // Strategies now
@@ -107,6 +110,7 @@ module.exports = function(STAMPEDE) {
     BELL_BOTTOM_ENABLED = config.strategy.bell_bottom
     COMBINED_SELLING = config.strategy.combined_selling
     DYNAMIC_MULTIPLIER = config.strategy.dynamic_multiplier
+    DYNAMIC_DROP = config.strategy.dynamic_drop
 
     // Logging options load
     DECISION_LOGGING = (config.logging || {}).decisions || false
@@ -321,17 +325,28 @@ module.exports = function(STAMPEDE) {
       // Initial bought amount is the min per deal amount and ratio is 1
       var deal_ratio = 1
 
-      // Assign price levels to current object so we can display it
       // Cumulate new deal amount with ratio (static[fibonacci / 2], dynamic)
+      // Define altitude drop
+      var altitude_drop_float = ((ALTITUDE_DROP || 0) / 100)
+      var altitude_drop_ratio = 1 - (DYNAMIC_DROP ? (
+            (altitude_drop_float * common.fibonacci(deals.length))
+          ) : altitude_drop_float)
+
+      // Assign price levels to current object so we can display it
       if (
         BELL_BOTTOM_ENABLED &&
         deals.length
       ) {
+
         // Get array of price levels which the trader will traverse 
         // until hitting bottom of lowest price / through altitude drop
-        var price_levels = common.getAltitudeLevels(
-              (market.current.high / 2), market.current.high, ALTITUDE_DROP
-            )
+        var price_levels = getAltitudeLevels({
+              min: (market.current.last / 2),
+              max: market.current.last,
+              drop_float: altitude_drop_float,
+              dyn_drop: DYNAMIC_DROP,
+              cur_len: deals.length
+            })
 
         // For fibonacci static multiplier, get lowest 2 deals
         var last_2_deals = deals.slice(0, 2)
@@ -340,7 +355,6 @@ module.exports = function(STAMPEDE) {
 
         // Dynamic deal ratio if it is enabled (if not, default to 2)
         deal_ratio = (
-          price_levels.length &&
           DYNAMIC_MULTIPLIER
         ) ? common.getCurrentRatio(
           available_currency_amount, price_levels, 1.99, lowest_currency_amount
@@ -367,20 +381,17 @@ module.exports = function(STAMPEDE) {
           )
           // Calculate trader bid 
           // (aligned by bid alignment to make us competitive when bidding)
-      var trader_bid = (market.current.last / BID_ALIGN)
+      var trader_bid = (market.current.last / (1 - (BID_ALIGN / 100)))
 
           // Check if aligned bid is below threshold 
           // (which combines the impatience variable)
       var bid_below_threshold = trader_bid < market.current.threshold
 
-          // Define altitude drop
-      var altitude_drop_perc = ALTITUDE_DROP || 0
-
           // Projected buy price (dependent on existing lowest buy price, 
           // otherwise trader bid is selected)
-      var projected_buy_price = (
-            lowest_buy_price > 0
-          ) ? (lowest_buy_price * (1 - (altitude_drop_perc / 100))) : trader_bid
+      var projected_buy_price = (lowest_buy_price > 0 ? 
+            (lowest_buy_price * altitude_drop_ratio) : trader_bid
+          )
 
           // If existing deals, 
           // check that I am buying for price lower than the lowest existing
@@ -453,7 +464,7 @@ module.exports = function(STAMPEDE) {
         buying: decision,
         trader: 
           "T" + me.name.split("_")[1] + 
-          ": " + (projected_buy_price * BID_ALIGN).toFixed(2) + "",
+          ": " + (projected_buy_price * (1 - (BID_ALIGN / 100))).toFixed(2) + "",
         hands: has_free_hands,
         resources: available_resources,
         threshold: bid_below_threshold,
@@ -478,7 +489,7 @@ module.exports = function(STAMPEDE) {
           // Deal independent calculations
       var current_market_greed = (market.current.spread / 2)
           // Calculate for comparison on deal
-      var current_sale_price = (market.current.last * BID_ALIGN)
+      var current_sale_price = (market.current.last * (1 - (BID_ALIGN / 100)))
           // Calculate trader greed
       var trader_greed = INITIAL_GREED + ((wallet.current.fee || 0.5) / (2*100))
           // If wallet is ready
@@ -542,7 +553,7 @@ module.exports = function(STAMPEDE) {
           combined_deal.max_currency_amount / combined_deal.amount
         )
         combined_deal.would_sell_at = (
-          combined_deal.buy_price) * (1 + trader_greed + (1 - BID_ALIGN)
+          combined_deal.buy_price * (1 + trader_greed + (BID_ALIGN / 100))
         )
       }
       
@@ -714,7 +725,8 @@ module.exports = function(STAMPEDE) {
       }
       else {
         console.log(
-          "("+me.name+"): Market is not ready for my decisions yet (market)."
+          "("+me.name+"): Market is not ready for my decisions yet (market).",
+          market.current
         )
         done()
       }
@@ -802,7 +814,7 @@ module.exports = function(STAMPEDE) {
     sell: function(deal, done) {
 
       var me = this
-      var sell_price = (market.current.last * BID_ALIGN)
+      var sell_price = (market.current.last * (1 - (BID_ALIGN / 100)))
       var buy_price = deal.buy_price
       deal.heat = deal.buy_price / MAX_SUM_INVESTMENT
       deal.aligned_sell_price = sell_price.toFixed(2)
@@ -819,7 +831,7 @@ module.exports = function(STAMPEDE) {
         message: 
           "-S" + ((deal.trailing_stop && !deal.shed) ? "(STOP)" : (deal.shed ? "(SHED)" : "(REG)")) +
           " " + deal.amount.toFixed(5) + 
-          " BTC for " + ((market.current.last * BID_ALIGN)*deal.amount).toFixed(2) + 
+          " BTC for " + ((market.current.last * (1 - (BID_ALIGN / 100)))*deal.amount).toFixed(2) + 
           " " + currency_label + 
           " at " + deal.aligned_sell_price + 
           " " + currency_label +
@@ -999,6 +1011,25 @@ module.exports = function(STAMPEDE) {
 
   // END OF trader prototype definitions
 
+  // Generate altitude levels
+  function getAltitudeLevels(options) {
+    var levels = []
+    var price_cursor = options.max
+    var cur_len = options.cur_len
+    var drop_float = options.drop_float
+    var dyn_drop = options.dyn_drop
+
+    if (drop_float) {
+      while (price_cursor > options.min) {
+        levels.push(price_cursor)
+        price_cursor = price_cursor / (1 + (
+          dyn_drop ? (common.fibonacci(cur_len + levels.length
+        ) * drop_float) : drop_float))
+      }
+    }
+    LOG("getAltitudeLevels | levels:", levels, dyn_drop)
+    return levels
+  }
 
   // Create a hash by deal name to lookup deals and their traders
   function findByDeal(deal_name) {
@@ -1058,7 +1089,51 @@ module.exports = function(STAMPEDE) {
     return deal.name
   }
 
+  function wakeAll(done) {
+    STAMPEDE.stop = false
+    initializeConfig()
+    async.series([
+      loadTraders,
+      hook,
+      checkSheets
+    ], function(errors) {
+      LOG("wakeAll initiated.")
+      if (errors) {
+        console.log("Problems loading traders, market or wallet:", errors)
+      }
+      if (done) done()
+    })
+  }
+
+  function hook(callback) {
+    STAMPEDE.exchange.startTicking()
+    STAMPEDE.exchange.tickEmitter.on("tick", tick)
+    callback()
+  }
+
+  function unhook() {
+    STAMPEDE.exchange.stopTicking()
+  }
+
+  // Trigger ticking market per streaming API
+  function tick(data) {
+    market.current.last = data.price
+    var time_since_last_cycle = (Date.now() - last_cycle_end)
+    var delay_permitted = (exchange_simulated || time_since_last_cycle > 1000)
+
+    if (!cycle_in_progress && !STAMPEDE.stop && delay_permitted) {
+      cycle()
+    }
+    else {
+      LOG(
+        "tick | cycle disallow | delay_permitted, time_since_last_cycle:", 
+        delay_permitted, (time_since_last_cycle / 1000).toFixed(2), "seconds."
+      )
+    }
+  }
+
   function cycle(done) {
+    cycle_in_progress = true
     if (!config.simulation) console.log("Cycle initiated.")
 
     var cycle_start_timer = Date.now()
@@ -1085,10 +1160,10 @@ module.exports = function(STAMPEDE) {
       checkDecisions
     ], function() {
       perf_timers.cycle += (Date.now() - cycle_start_timer)
-      if (done) {
-        done()
-      }
       finalizeCycle(cycle_start_timer)
+      if (done) {
+        return done()
+      }
     })
   }
 
@@ -1105,31 +1180,10 @@ module.exports = function(STAMPEDE) {
     var stop_cycles = 
           (config.simulation && market.current.error) || STAMPEDE.stop
 
-    if (!stop_cycles && config.simulation) {
-      
-      setImmediate(cycle)
-    }
-    else if (!stop_cycles) {
-      var next_check = parseInt(
-            config.simulation ? 0 : ( 
-              (
-                process.env.NODE_ENV || 
-                "development"
-              ) === "development" ? 500 : 2000) + (Math.random()*2000)
-          )
-      console.log(
-        "... Cycle(wallet, market) CHECK again in:", 
-        (next_check / 1000).toFixed(2), 
-        "seconds. - "+(new Date())+"."
-      )
-      refreshSheets()
-      if (market.timer) clearTimeout(market.timer)
-      market.timer = setTimeout(cycle, next_check)
-    }
-
-    
     if (perf_timers.cycle_counter % 100000 === 0) logPerformance(perf_timers)
     perf_timers.finalize_cycle += (Date.now() - finalize_cycle_start)
+    cycle_in_progress = false
+    last_cycle_end = Date.now()
   }
 
   function checkDecisions(done) {
@@ -1180,7 +1234,9 @@ module.exports = function(STAMPEDE) {
         IMPATIENCE * (market.current.high - market.current.middle) + 
         market.current.middle
       )
-      market.current.trader_bid = (market.current.last / BID_ALIGN)
+      market.current.trader_bid = (
+        market.current.last / (1 - (BID_ALIGN / 100))
+      )
       wallet.current.currency_value = 
         (wallet.current.btc_balance || 0) * (market.current.last || 0) + 
         (wallet.current[config.exchange.currency + "_balance"] || 0)
@@ -1353,7 +1409,11 @@ module.exports = function(STAMPEDE) {
       trading_config.maximum_investment >= 0 &&
       !isNaN(trading_config.bid_alignment) &&
       trading_config.bid_alignment < 1 &&
-      trading_config.bid_alignment > 0.9 &&
+      trading_config.bid_alignment > 0 &&
+      trading_config.impatience <= 100 &&
+      trading_config.impatience >= 0 &&
+      trading_config.greed <= 50 &&
+      trading_config.greed >= 1 &&
       !isNaN(trading_config.max_number_of_deals_per_trader) &&
       trading_config.max_number_of_deals_per_trader > 0
     )
@@ -1370,21 +1430,6 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  function wakeAll(done) {
-    STAMPEDE.stop = false
-    initializeConfig()
-    async.series([
-      loadTraders,
-      cycle,
-      checkSheets
-    ], function(errors) {
-      LOG("wakeAll initiated.")
-      if (errors) {
-        console.log("Problems loading traders, market or wallet:", errors)
-      }
-      if (done) done()
-    })
-  }
 
   function loadTraders(done) {
     live_traders = new Object()
@@ -1459,6 +1504,8 @@ module.exports = function(STAMPEDE) {
     market = new STAMPEDE.market()
     sheets = []
     live_traders = {}
+
+    unhook()
     STAMPEDE.stop = true
     if (done) done()
   }

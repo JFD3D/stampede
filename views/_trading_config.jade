@@ -11,6 +11,9 @@ mixin config_form_input(config_set)
         td 
           label(for="#{attribute}-input") 
             b #{helpers.sanitizeVariableName(attribute)}
+            span(style="font-weight: normal;")  (#{helpers.labels.trading[attribute].label})
+          p.small #{helpers.labels.trading[attribute].desc}
         td
           input.form-control(type="text", name="#{attribute}", value="#{config}", id="{attribute}-input")
+
         

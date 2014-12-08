@@ -57,7 +57,7 @@ module.exports = function(STAMPEDE) {
 
 
       // Assign listed properties to market current
-      ticker_properties = ["last", "bid", "low", "high", "volume", "ask"]
+      ticker_properties = ["bid", "low", "high", "volume", "ask"]
       ticker_properties.forEach(function(property) {
         me.current[property] = parseFloat(data[property] || 0)
       })

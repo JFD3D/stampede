@@ -68,7 +68,7 @@ module.exports = function(STAMPEDE) {
       })
       me.current.cool = (me.current.cool || me.cool)
       me.current.greed = (
-        config.trading.greed + ((me.current.fee || 0.5) / (2*100))
+        (config.trading.greed / 100) + ((me.current.fee || 0.5) / (2*100))
       )
       if (config.strategy.shedding && me.current.anxiety) {
         me.current.greed += (me.current.anxiety * me.current.greed)

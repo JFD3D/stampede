@@ -86,12 +86,14 @@ module.exports = function(STAMPEDE) {
   }
 
   Simulator.prototype = {
+    
     run: function(callback) {
       var sim = this
       STAMPEDE.trader.prepareForSimulation(sim.series_simulation)
+      LOG("run | Loading traders for deal removal.")
       STAMPEDE.trader.loadTraders(function() {
         STAMPEDE.trader.removeAllDeals()
-        LOG("starting simulation removed AllDeals")
+        LOG("removed AllDeals | reloading traders")
         STAMPEDE.trader.wakeAll(function() {
           LOG("starting simulation wakeAll")
           if (callback) callback({
@@ -100,10 +102,12 @@ module.exports = function(STAMPEDE) {
         })
       })
     },
+
     saveSet: function(optional_ui_name, data, callback) {
       var set = new Set(null, optional_ui_name)
       set.save(data, callback)
     },
+    
     loadAllSets: function(callback) {
       var sim = this
       db.smembers(data_sets_repo, function(error, data_sets) {

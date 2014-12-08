@@ -13,6 +13,7 @@ function Exchange() {
    *
    */
   console.log("Initializing Simulated Exchange wrapper...")
+  this.initialization_start = Date.now()
 }
 
 var initialization = (function() {
@@ -22,6 +23,8 @@ var initialization = (function() {
   var generator
   var xc
   var controller
+  var ticker_interval
+  var stop_ticking_now
 
   Exchange.prototype = {
     
@@ -35,7 +38,7 @@ var initialization = (function() {
       var me = this
 
       console.log(
-        "Loading data.",
+        "Exchange (init:" + me.initialization_start + ") | Loading data.",
           market_data ? market_data.length : "Starting real time simulation."
       )
       var now = Date.now()
@@ -76,7 +79,7 @@ var initialization = (function() {
       callback(null, me.current_balance)
     },
 
-    ticker: function(callback) {
+    ticker: function(callback, no_shift) {
       // Take currently loaded data and move further by a tick
       
       var me = this,
@@ -93,7 +96,7 @@ var initialization = (function() {
         generator.assignExtremes(me.current_extremes, me.ticks, market_next, now)
       }
       
-      me.current_tick++
+      if (!no_shift) me.current_tick++
 
       if (market_current) {
         market_current.bid = market_current.last
@@ -110,6 +113,51 @@ var initialization = (function() {
       }
       
     },
+
+    startTicking: function() {
+      var me = this
+      var events = require("events")
+      var Ticker = new events.EventEmitter()
+
+      me.tickEmitter = Ticker
+      stop_ticking_now = false
+      if (ticker_interval) clearInterval(ticker_interval)
+      if (me.real_time) {
+        ticker_interval = setInterval(function() {
+          me.emitTick()
+        }, 1500)
+      }
+      else {
+        me.emitTick(true) // True to execute next tick right away
+      }
+    },
+
+    emitTick: function(recycle) {
+      var me = this
+      me.ticker(function(error, market_current) {
+        if (market_current) {
+          me.tickEmitter.emit("tick", {
+            price: market_current.last
+          })
+        }
+        else {
+          LOG("startTicking | stop")
+        }
+      }, true) // <- true for no shift to current tick
+      
+      if (recycle && !stop_ticking_now) {
+        setImmediate(function() {
+          me.emitTick(recycle)
+        })
+      }
+    },
+
+    stopTicking: function() {
+      console.log("simulated_exchange: stopTicking")
+      clearInterval(ticker_interval)
+      stop_ticking_now = true
+    },
+
     buy: function(amount, price, callback) {
 
       amount = parseFloat(amount)

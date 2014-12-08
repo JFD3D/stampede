@@ -44,6 +44,10 @@ body {
   color: red;
 }
 
+.small {
+  font-size: 80%;
+}
+
 .lefter {
   float: left;
 }

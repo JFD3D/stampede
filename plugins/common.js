@@ -1,6 +1,8 @@
 module.exports = function(STAMPEDE) {
   
   var fs = require("fs")
+  var fibonacci_cache = [0, 1]
+  var LOG = STAMPEDE.LOG("common")
 
   Array.prototype.lookup = function(key, value) {
     var i=0, result
@@ -121,20 +123,6 @@ module.exports = function(STAMPEDE) {
     return (ar_sum / ar_len)
   }
 
-
-  function getAltitudeLevels(min, max, drop) {
-    var levels = [],
-        price_cursor = max
-
-    if (drop) {
-      while (price_cursor > min) {
-        levels.push(price_cursor)
-        price_cursor = price_cursor / (1 + (drop / 100))
-      }
-    }
-    return levels
-  }
-
   function timer(time_start, message) {
     var time_now = Date.now()
     if (message && time_start) {
@@ -147,10 +135,10 @@ module.exports = function(STAMPEDE) {
   }
 
   function getCurrentRatio(max_sum, altitude_levels, max_ratio, base) {
-    var min_ratio = 1.1,
+    var min_ratio = 1.05,
         cur_ratio = min_ratio,
         sum = 0,
-        step = 0.1,
+        step = 0.05,
         result = {
           // Assign default(max) ratio in case no result fits
           ratio: min_ratio,
@@ -166,11 +154,13 @@ module.exports = function(STAMPEDE) {
       cur_ratio += step
     }
 
+    LOG("getCurrentRatio | result:", result)
     return result.ratio
 
     function getSeriesTotal(ratio) {
-      var len = altitude_levels.length,
-          total = base
+      var len = altitude_levels.length
+      var total = base
+
       while (len--) {
         var amount = base * Math.pow(ratio, len)
         total += amount
@@ -250,6 +240,14 @@ module.exports = function(STAMPEDE) {
     return (str.length > limit ? (str.substr(0, limit) + "..." ) : str)
   }
 
+  function fibonacci(n) {
+    if (n >= fibonacci_cache.length) {
+      for(var i = fibonacci_cache.length; i <= n; ++i) {
+        fibonacci_cache[i] = fibonacci_cache[i - 1] + fibonacci_cache[i - 2]
+      }
+    }
+    return fibonacci_cache[n]
+  }
 
   // Computes median from values in array
   function median(values) {
@@ -299,6 +297,7 @@ module.exports = function(STAMPEDE) {
     formatter: formatter,
     reassignProperties: reassignProperties,
     cumulate: cumulate,
+    fibonacci: fibonacci,
     sum: sum,
     average: average,
     timer: timer,
@@ -307,7 +306,6 @@ module.exports = function(STAMPEDE) {
     generateCSV: generateCSV,
     fileTo: fileTo,
     loadCSV: loadCSV,
-    getAltitudeLevels: getAltitudeLevels,
     getCurrentRatio: getCurrentRatio,
     logPerformance: logPerformance,
     median: median

@@ -421,10 +421,11 @@ module.exports = function(STAMPEDE) {
       generated_data && generated_data.length && 
       config.exchange.selected === "simulated_exchange"
     ) {
+      LOG("simulatorRun | generated_data.length:", generated_data.length)
       simulatorWarmUp(generated_data)
       // simulator.startSeries()
-      simulator.run(function(data) {
-        res.send({message: data.message})
+      simulator.run(function(response) {
+        res.send({message: response.message || "Submitted simulator launch."})
       })
     }
     else {
@@ -489,22 +490,21 @@ module.exports = function(STAMPEDE) {
 
   // Called from within simulated exchange once the end of data has been reached
   controller.simulatorFinish = function(exchange_data) {
+    Trader.stopAll()
     simulator.finish()
   }
 
   controller.simulatorWarmUp = simulatorWarmUp
 
   function simulatorWarmUp(data) {
-    exchange = new STAMPEDE.ExchangeInstance()
     controller.generated_data = data
-    if (data && data.length) exchange.load(STAMPEDE, data)
+    if (data && data.length) STAMPEDE.exchange.load(STAMPEDE, data)
   }
 
   // This is used to real time simulate data on index
   function simulatorRealtimePrep(done) {
     // No data is passed into simulated exchange, it will be a real time exchange
-    exchange = new STAMPEDE.ExchangeInstance()
-    exchange.load(STAMPEDE)
+    STAMPEDE.exchange.load(STAMPEDE)
     if (done) return done()
   }
 
