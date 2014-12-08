@@ -71,6 +71,10 @@ a.removal {
   font-weight: normal;
 }
 
+.projected-deal {
+  color: #aaa;
+}
+
 .decision-table {
   font-size: 90%;
 }

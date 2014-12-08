@@ -286,7 +286,33 @@ module.exports = function(STAMPEDE) {
      *
      *
      */
-     
+    
+    genFutureDeals: function(price_levels) {
+      var me = this
+
+      me.future_deals = []
+      me.future_deals_overlap = me.deals.slice(0, 2)
+
+      price_levels.forEach(function(price_level, level_index) {
+
+        var future_deal = {buy_price: price_level}
+
+        if (DYNAMIC_MULTIPLIER) {
+          future_deal.amount = (
+            me.lowest_buy_amount * Math.pow(me.deal_ratio, level_index + 1)
+          )
+        }
+        else {
+          var last_2_deals = me.future_deals_overlap.slice(0, 2)
+          var last_2_deal_amounts = common.extract(last_2_deals, "amount")
+          future_deal.amount = common.sum(last_2_deal_amounts)
+          me.future_deals_overlap.unshift(future_deal)
+        }
+        me.future_deals.push(future_deal)
+      })
+
+    },
+
     // decide if buying, define candidate deal
 
     isBuying: function(purchase) {
@@ -342,7 +368,7 @@ module.exports = function(STAMPEDE) {
         // until hitting bottom of lowest price / through altitude drop
         var price_levels = getAltitudeLevels({
               min: (market.current.last / 2),
-              max: market.current.last,
+              max: lowest_buy_price,
               drop_float: altitude_drop_float,
               dyn_drop: DYNAMIC_DROP,
               cur_len: deals.length
@@ -359,6 +385,12 @@ module.exports = function(STAMPEDE) {
         ) ? common.getCurrentRatio(
           available_currency_amount, price_levels, 1.99, lowest_currency_amount
         ) : (last_2_deals_sum ? (last_2_deals_sum / lowest_buy_amount) : 1)
+
+        me.deal_ratio = deal_ratio
+
+        me.last_2_deals_sum = last_2_deals_sum
+        me.lowest_buy_amount = lowest_buy_amount
+        me.genFutureDeals(price_levels)
       }
 
       purchase.currency_amount = (lowest_currency_amount * deal_ratio)
@@ -480,7 +512,8 @@ module.exports = function(STAMPEDE) {
 
       return decision
     },
- 
+
+
     isSelling: function(combined_deal) {
       var me = this
       var deals = me.deals
@@ -1020,12 +1053,12 @@ module.exports = function(STAMPEDE) {
     var dyn_drop = options.dyn_drop
 
     if (drop_float) {
-      while (price_cursor > options.min) {
-        levels.push(price_cursor)
+      do {
         price_cursor = price_cursor / (1 + (
           dyn_drop ? (common.fibonacci(cur_len + levels.length
         ) * drop_float) : drop_float))
-      }
+        levels.push(price_cursor)
+      } while (price_cursor > options.min)
     }
     LOG("getAltitudeLevels | levels:", levels, dyn_drop)
     return levels

@@ -18,14 +18,15 @@
         a.removal(href="#", data-trader="#{trader_name}") Remove
       - if (trader.purchases || trader.sales || trader.profit)
         span #{trader.purchases} purchases | #{trader.sales} sales | #{helpers.current_currency.toUpperCase() + " " + (trader.profit || 0).toFixed(2)} profit
-      span 
+      span
+      - var deals_sorted = trader.deals.sort(function(a, b) { return b.buy_price - a.buy_price })
       table.table.table-striped.deals
         tr
           th Buy price
           th Amount
           th
           th
-        each deal in trader.deals
+        each deal in deals_sorted
           tr
             td= deal.buy_price.toFixed(2)
               - if (deal.is_lowest)
@@ -37,6 +38,15 @@
               a.removal(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}") Remove
             td
               a.deal-sale(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}", title="Sell at current price") Sell
+        - if (trader.future_deals && trader.future_deals.length)
+          tr.projected-deal
+            td(colspan="4", style="text-align: right") 
+              b Projected deals
+          each future_deal in trader.future_deals
+            tr.projected-deal
+              td= future_deal.buy_price.toFixed(2)
+              td= (future_deal.amount || 0).toFixed(7)+" BTC"
+              td(colspan="2")
 - else
   .col-md-5
     h3 No traders added.
