@@ -46,6 +46,8 @@ module.exports = function(STAMPEDE) {
   var exchange_simulated = (config.exchange.selected === "simulated_exchange")
   var cycle_in_progress
   var last_cycle_end = Date.now()
+  var last_full_cycle_end = Date.now()
+  var cycles_until_full = 0
 
       /*
        *
@@ -118,6 +120,7 @@ module.exports = function(STAMPEDE) {
     // USD value sheet size limit
     SHEET_SIZE_LIMIT = config.sheet_size_limit || 300
 
+    // Set performance timers to zero
     perf_timers.cycle = 0
     perf_timers.decisions = 0
     perf_timers.wallet = 0
@@ -126,6 +129,12 @@ module.exports = function(STAMPEDE) {
     perf_timers.cycle_counter = 0
     perf_timers.trader_decision_prep = 0
     perf_timers.finalize_cycle = 0
+    perf_timers.is_buying = 0
+    perf_timers.alt_levels = 0
+    perf_timers.future_deals = 0
+    perf_timers.multiplier_calc = 0
+    perf_timers.is_selling = 0
+    cycles_until_full = 0
   }
 
 
@@ -197,7 +206,7 @@ module.exports = function(STAMPEDE) {
             book: me.book_prefix + me.name,
             deals: MAX_DEALS_HELD
           }
-          me.deals = []
+          me.deals = new Array()
           live_traders[me.name] = me
           me.record.current_investment = 0
           me.record.current_deals = 0
@@ -209,7 +218,6 @@ module.exports = function(STAMPEDE) {
     },
     
     // Stop and remove trader
-
     remove: function(done) {
       var me = live_traders[this.name]
       var my_book = me.record.book
@@ -235,7 +243,7 @@ module.exports = function(STAMPEDE) {
     // Loads trader's deals
     checkInventory: function(callback) {
       var me = this
-      me.deals = []
+      me.deals = new Array()
       if (
         me.record && me.record.book && !exchange_simulated
       ) {
@@ -289,8 +297,9 @@ module.exports = function(STAMPEDE) {
     
     genFutureDeals: function(price_levels) {
       var me = this
+      var future_start = Date.now()
 
-      me.future_deals = []
+      me.future_deals = new Array()
       me.future_deals_overlap = me.deals.slice(0, 2)
 
       price_levels.forEach(function(price_level, level_index) {
@@ -311,12 +320,14 @@ module.exports = function(STAMPEDE) {
         me.future_deals.push(future_deal)
       })
 
+      perf_timers.future_deals += (Date.now() - future_start)
+
     },
 
     // decide if buying, define candidate deal
 
     isBuying: function(purchase) {
-
+      var is_buying_start = Date.now()
       var me = this
       var decision = false
 
@@ -353,11 +364,14 @@ module.exports = function(STAMPEDE) {
 
       // Cumulate new deal amount with ratio (static[fibonacci / 2], dynamic)
       // Define altitude drop
+      
+      
       var altitude_drop_float = ((ALTITUDE_DROP || 0) / 100)
       var altitude_drop_ratio = 1 - (DYNAMIC_DROP ? (
             (altitude_drop_float * common.fibonacci(deals.length))
           ) : altitude_drop_float)
 
+      
       // Assign price levels to current object so we can display it
       if (
         BELL_BOTTOM_ENABLED &&
@@ -374,10 +388,12 @@ module.exports = function(STAMPEDE) {
               cur_len: deals.length
             })
 
+
         // For fibonacci static multiplier, get lowest 2 deals
         var last_2_deals = deals.slice(0, 2)
         var last_2_deal_amounts = common.extract(last_2_deals, "amount")
         var last_2_deals_sum = common.sum(last_2_deal_amounts)
+        var multi_calc_start = Date.now()
 
         // Dynamic deal ratio if it is enabled (if not, default to 2)
         deal_ratio = (
@@ -386,14 +402,18 @@ module.exports = function(STAMPEDE) {
           available_currency_amount, price_levels, 1.99, lowest_currency_amount
         ) : (last_2_deals_sum ? (last_2_deals_sum / lowest_buy_amount) : 1)
 
+        perf_timers.multiplier_calc += (Date.now() - multi_calc_start)
+
         me.deal_ratio = deal_ratio
 
         me.last_2_deals_sum = last_2_deals_sum
         me.lowest_buy_amount = lowest_buy_amount
-        me.genFutureDeals(price_levels)
+        if (!series_simulation) me.genFutureDeals(price_levels)
       }
 
       purchase.currency_amount = (lowest_currency_amount * deal_ratio)
+
+      
 
       // Assign calculated values to trader so that we can display them
       me.next_deal_ratio = deal_ratio
@@ -510,11 +530,14 @@ module.exports = function(STAMPEDE) {
 
       cycle_buy_decisions.push(structured_decision)
 
+      perf_timers.is_buying += (Date.now() - is_buying_start)
       return decision
     },
 
 
     isSelling: function(combined_deal) {
+      var is_selling_start = Date.now()
+
       var me = this
       var deals = me.deals
           // Initialize resulting decision
@@ -736,6 +759,7 @@ module.exports = function(STAMPEDE) {
         "\nDeal evaluated details:", combined_deal
       )
 
+      perf_timers.is_selling += (Date.now() - is_selling_start)
       return decision 
     },
     
@@ -776,6 +800,10 @@ module.exports = function(STAMPEDE) {
       )
       deal.heat = INITIAL_GREED
       wallet.current.cool -= (market.current.spread * 10)
+      
+      // Reset cycles to load all (market, wallet) details
+      cycles_until_full = 1
+
       //wallet.current.investment += deal.buy_price
       if (!series_simulation) STAMPEDE.controller.notifyClient({
         message: 
@@ -801,7 +829,6 @@ module.exports = function(STAMPEDE) {
           deal.order_id = order.id
           me.purchases++
           me.resetCurrentMaximumPrice()
-          me.recordDeal(deal, done)
           if (!exchange_simulated) email.send({
             to: config.owner.email,
             subject: "Stampede - Buying: " + deal.amount.toFixed(7) + "BTC",
@@ -814,7 +841,8 @@ module.exports = function(STAMPEDE) {
           }, function(success) {
             console.log("Email sending success?:", success)
             if (error_email_sent) error_email_sent = null
-          })        
+          })
+          me.recordDeal(deal, done)      
         }
         else {
           if (!exchange_simulated) email.send({
@@ -859,6 +887,9 @@ module.exports = function(STAMPEDE) {
       
       // Align current cool to avoid all sell / buy
       wallet.current.cool -= (market.current.spread * 10)
+
+      // Reset cycles to load all (market, wallet) details
+      cycles_until_full = 1
       
       if (!series_simulation) STAMPEDE.controller.notifyClient({
         message: 
@@ -1051,6 +1082,7 @@ module.exports = function(STAMPEDE) {
     var cur_len = options.cur_len
     var drop_float = options.drop_float
     var dyn_drop = options.dyn_drop
+    var alt_start = Date.now()
 
     if (drop_float) {
       do {
@@ -1060,7 +1092,8 @@ module.exports = function(STAMPEDE) {
         levels.push(price_cursor)
       } while (price_cursor > options.min)
     }
-    LOG("getAltitudeLevels | levels:", levels, dyn_drop)
+    //LOG("getAltitudeLevels | levels:", levels, dyn_drop)
+    perf_timers.alt_levels += (Date.now() - alt_start)
     return levels
   }
 
@@ -1192,6 +1225,13 @@ module.exports = function(STAMPEDE) {
       checkMarket,
       checkDecisions
     ], function() {
+
+      if (cycles_until_full === 0) {
+        cycles_until_full += 10
+      }
+      else {
+        cycles_until_full--
+      }
       perf_timers.cycle += (Date.now() - cycle_start_timer)
       finalizeCycle(cycle_start_timer)
       if (done) {
@@ -1248,20 +1288,34 @@ module.exports = function(STAMPEDE) {
         wallet.current.cool = (
           wallet.current.cool < 1 && 
           cool_up < (1 - wallet.current.cool)
-        ) ? wallet.current.cool + cool_up : 1
-        if (done) done()
+        ) ? (wallet.current.cool + cool_up) : 1
+        if (done) {
+          return done()
+        }
       })
     }
     else {
       console.log("No traders present or market simulation stopped.")
       STAMPEDE.stop_simulation = true
-      if (done) done()
+      if (done) { 
+        return done()
+      }
     }
   }
 
   function checkMarket(done) {
     var market_start_timer = Date.now()
-    market.check(function(error, market_current) {
+
+    if (cycles_until_full === 0) {
+      market.check(function(error, market_current) {
+        return finalize()
+      })
+    }
+    else {
+      return finalize()
+    }
+
+    function finalize() {
       var market_post_assignments_start = Date.now()
       market.current.threshold = (
         IMPATIENCE * (market.current.high - market.current.middle) + 
@@ -1279,12 +1333,14 @@ module.exports = function(STAMPEDE) {
         STAMPEDE.controller.refreshWallet(wallet.current)
         STAMPEDE.controller.refreshMarket(market.current)
       }
-      perf_timers.market += (Date.now() - market_start_timer)
       perf_timers.market_post_assignments += (
         Date.now() - market_post_assignments_start
       )
-      if (done) done()
-    })  
+      perf_timers.market += (Date.now() - market_start_timer)
+      if (done) {
+        return done()
+      }
+    }
   }
 
   function pullValueSheet(callback) {
@@ -1366,16 +1422,26 @@ module.exports = function(STAMPEDE) {
   function checkWallet(done) {
     // Initialize into global var, exposed on top
     var wallet_start_timer = Date.now()
-    if (!config.simulation && DECISION_LOGGING) console.log("* Checking wallet.")
-    wallet.check(live_traders, function() {
-      if (
-        !series_simulation && 
-        broadcast_time
-      ) STAMPEDE.controller.refreshShares(wallet.shares)
+    
+    if (cycles_until_full === 0) {
+      wallet.check(live_traders, function() {
+        return finalize()
+      })
+    }
+    else {
+      return finalize()
+    }
+
+    function finalize() {
+      if (!series_simulation && broadcast_time) {
+        STAMPEDE.controller.refreshShares(wallet.shares)
+      }
       wallet.assignAvailableResources(MAX_SUM_INVESTMENT)
       perf_timers.wallet += (Date.now() - wallet_start_timer)
-      if (done) done(null, wallet.current)
-    })
+      if (done) {
+        return done()
+      }      
+    }
   }
 
   function updateConfig(new_config) {
@@ -1504,11 +1570,9 @@ module.exports = function(STAMPEDE) {
   }
 
   function removeAllDeals(done) {
-
-    for (var name in live_traders) {
-      var trader = live_traders[name]
-      trader.deals = []
-    }
+    _.each(live_traders, function(trader, trader_name) {
+      trader.deals = new Array()
+    })
     
     STAMPEDE.controller.refreshTraders(live_traders)
 

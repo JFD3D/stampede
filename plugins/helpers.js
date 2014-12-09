@@ -48,7 +48,7 @@ module.exports = function(STAMPEDE) {
       dynamic_drop: {
         label: "On / Off",
         type: "boolean",
-        desc: "Increase the drop of next price purchase (Currently per fibonacci series only)."
+        desc: "Increase the drop of next price purchase (Currently per Fibonacci series only)."
       }
     },
     trading: {

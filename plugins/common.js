@@ -135,17 +135,18 @@ module.exports = function(STAMPEDE) {
   }
 
   function getCurrentRatio(max_sum, altitude_levels, max_ratio, base) {
-    var min_ratio = 1.05,
-        cur_ratio = min_ratio,
-        sum = 0,
-        step = 0.05,
-        result = {
+    var min_ratio = 1.1
+    var cur_ratio = min_ratio
+    var sum = 0
+    var step = 0.1
+    var result = {
           // Assign default(max) ratio in case no result fits
           ratio: min_ratio,
           // Assign default sum for projection in case I do not have any result
           projected_sum: getSeriesTotal(min_ratio)
         }
-    while (max_ratio > cur_ratio) {
+
+    while (result.projected_sum < max_sum && max_ratio > cur_ratio) {
       var cur_sum = getSeriesTotal(cur_ratio)
       if (cur_sum < max_sum && cur_sum > result.projected_sum) {
         result.ratio = cur_ratio
@@ -154,7 +155,7 @@ module.exports = function(STAMPEDE) {
       cur_ratio += step
     }
 
-    LOG("getCurrentRatio | result:", result)
+    // LOG("getCurrentRatio | result:", result)
     return result.ratio
 
     function getSeriesTotal(ratio) {

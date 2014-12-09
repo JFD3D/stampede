@@ -79,7 +79,7 @@ var initialization = (function() {
       callback(null, me.current_balance)
     },
 
-    ticker: function(callback, no_shift) {
+    ticker: function(callback, shift) {
       // Take currently loaded data and move further by a tick
       
       var me = this,
@@ -96,7 +96,7 @@ var initialization = (function() {
         generator.assignExtremes(me.current_extremes, me.ticks, market_next, now)
       }
       
-      if (!no_shift) me.current_tick++
+      if (shift) me.current_tick++
 
       if (market_current) {
         market_current.bid = market_current.last
