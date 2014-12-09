@@ -40,7 +40,7 @@
               a.deal-sale(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}", title="Sell at current price") Sell
         - if (trader.future_deals && trader.future_deals.length)
           tr.projected-deal
-            td(colspan="4", style="text-align: right") 
+            td(colspan="4", style="text-align: center;") 
               b Projected deals
           each future_deal in trader.future_deals
             tr.projected-deal

@@ -301,6 +301,7 @@ module.exports = function(STAMPEDE) {
 
       me.future_deals = new Array()
       me.future_deals_overlap = me.deals.slice(0, 2)
+      me.future_deals_sum = 0
 
       price_levels.forEach(function(price_level, level_index) {
 
@@ -317,7 +318,14 @@ module.exports = function(STAMPEDE) {
           future_deal.amount = common.sum(last_2_deal_amounts)
           me.future_deals_overlap.unshift(future_deal)
         }
-        me.future_deals.push(future_deal)
+        future_deal.currency_amount = (
+          future_deal.buy_price * future_deal.amount
+        )
+
+        me.future_deals_sum += future_deal.currency_amount
+        if (me.future_deals_sum < wallet.current.available_to_traders) {
+          me.future_deals.push(future_deal)
+        }
       })
 
       perf_timers.future_deals += (Date.now() - future_start)
