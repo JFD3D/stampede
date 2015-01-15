@@ -436,7 +436,6 @@ module.exports = function(STAMPEDE) {
       // Assign calculated values to trader so that we can display them
       me.next_deal_ratio = deal_ratio
       me.next_deal_amount = purchase.currency_amount
-      
 
       // Available resources, compare investment 
       // and current available in wallet
@@ -557,6 +556,7 @@ module.exports = function(STAMPEDE) {
       var is_selling_start = Date.now()
 
       var me = this
+          // Bring my deals into scope
       var deals = me.deals
           // Initialize resulting decision
       var decision = false
@@ -564,6 +564,8 @@ module.exports = function(STAMPEDE) {
       var current_market_greed = (market.current.spread / 2)
           // Calculate for comparison on deal
       var current_sale_price = (market.current.last * (1 - (BID_ALIGN / 100)))
+          // Assign the same to trader in order to reuse
+      me.current_sale_price = current_sale_price
           // Calculate trader greed
       var trader_greed = INITIAL_GREED + ((wallet.current.fee || 0.5) / (2*100))
           // If wallet is ready

@@ -164,7 +164,6 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.getValueSheet = function(req, res) {
-    //callback(error, data)
     Trader.pullValueSheet(function(value_sheet) {
       res.send({
         value_sheet: value_sheet,
@@ -174,13 +173,11 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.refreshMarket = function(market_data) {
-    //console.log("Updating market with data.", data)
     jade.renderFile(__dirname + "/../views/_market.jade", {
       current_market: market_data, 
       helpers: STAMPEDE.helpers,
       formatter: common.formatter
     }, function(error, html) {
-      //console.log("rendering updateMarket | error:", error)
       if (html) live.sendToAll("stampede_updates", {
         container: "live-ticker",
         html: html
@@ -192,14 +189,12 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.refreshOverview = function(market_data) {
-    //console.log("Updating market with data.", data)
     jade.renderFile(__dirname + "/../views/_overview.jade", {
       current_market: STAMPEDE.current_market,
       current_wallet: STAMPEDE.current_wallet,
       helpers: STAMPEDE.helpers,
       formatter: common.formatter
     }, function(error, html) {
-      //console.log("rendering updateMarket | error:", error)
       if (html) live.sendToAll("stampede_updates", {
         container: "live-overview",
         html: html
@@ -208,7 +203,6 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.drawSheets = function(data, update_type) {
-    //console.log("Drawing sheets ("+(data.length || "incremental")+").")
     var outgoing = {
       data: data,
       display_limit: config.sheet_size_limit,
@@ -219,7 +213,6 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.refreshWallet = function(wallet_data, done) {
-    //console.log("^^^^^ Updating wallet with data.", data)
     jade.renderFile(__dirname + "/../views/_wallet.jade", {
       current_wallet: wallet_data, 
       helpers: STAMPEDE.helpers,

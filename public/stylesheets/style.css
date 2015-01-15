@@ -87,11 +87,11 @@ a.removal {
   background-color: red;
 }
 
-.deals .highest {
+.deals .highest, .negative {
   color: red;
 }
 
-.deals .lowest {
+.deals .lowest, .positive {
   color: seagreen;
 }
 
