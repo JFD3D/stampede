@@ -18,6 +18,7 @@ module.exports = function(STAMPEDE) {
   var GOOGLE_CLIENT_ID = config.auth.client_id
   var GOOGLE_CLIENT_SECRET = config.auth.client_secret
   var passport = require("passport")
+  var LOG = STAMPEDE.LOG("auth")
       
       //colors for console :)
   var cl = {
@@ -121,11 +122,12 @@ module.exports = function(STAMPEDE) {
       res.redirect('/login')
     })
 
-    app.get('/login', function(req, res){
+    app.get('/login', function(req, res) {
       res.render('login', { title: "Stampede | Login", "currentpage":"login" })
     })
 
-    app.get('/noaccess', function(req, res){
+    app.get('/noaccess', function(req, res) {
+      LOG("noaccess | res:", res)
       res.render('noaccess', { title: "No stampede.", "currentpage":"login" })
     })
 

@@ -376,7 +376,12 @@ module.exports = function(STAMPEDE) {
       
       var altitude_drop_float = ((ALTITUDE_DROP || 0) / 100)
       var altitude_drop_ratio = 1 - (DYNAMIC_DROP ? (
-            (altitude_drop_float * common.fibonacci(deals.length))
+            (DYNAMIC_MULTIPLIER ? (
+                altitude_drop_float * (deals.length)
+              ) : (
+                altitude_drop_float * common.fibonacci(deals.length)
+              )
+            )
           ) : altitude_drop_float)
 
       
@@ -393,6 +398,8 @@ module.exports = function(STAMPEDE) {
               max: lowest_buy_price,
               drop_float: altitude_drop_float,
               dyn_drop: DYNAMIC_DROP,
+              dyn_multi: DYNAMIC_MULTIPLIER,
+              impatience: IMPATIENCE,
               cur_len: deals.length
             })
 
@@ -1090,13 +1097,19 @@ module.exports = function(STAMPEDE) {
     var cur_len = options.cur_len
     var drop_float = options.drop_float
     var dyn_drop = options.dyn_drop
+    var impatience = options.impatience
+    var dyn_multi = options.dyn_multi
     var alt_start = Date.now()
 
     if (drop_float) {
       do {
         price_cursor = price_cursor / (1 + (
-          dyn_drop ? (common.fibonacci(cur_len + levels.length
-        ) * drop_float) : drop_float))
+          dyn_drop ? (dyn_multi ? (
+            drop_float * (cur_len + levels.length)
+          ) : (
+            common.fibonacci(cur_len + levels.length) * drop_float
+          )
+        ) : drop_float))
         levels.push(price_cursor)
       } while (price_cursor > options.min)
     }
