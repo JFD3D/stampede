@@ -395,7 +395,10 @@ module.exports = function(STAMPEDE) {
         // until hitting bottom of lowest price / through altitude drop
         var price_levels = getAltitudeLevels({
               min: (market.current.last / 2),
-              max: lowest_buy_price,
+              max: (
+                lowest_buy_price < market.current.last ? 
+                  lowest_buy_price : market.current.last
+              ),
               drop_float: altitude_drop_float,
               dyn_drop: DYNAMIC_DROP,
               dyn_multi: DYNAMIC_MULTIPLIER,
