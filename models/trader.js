@@ -572,7 +572,7 @@ module.exports = function(STAMPEDE) {
       var weighted_heat = wallet.current.cool + trader_greed
           // Check if wallet is ready
       var potential_better_than_heat = (weighted_heat > 1)
-          // Check if market has negative momentum
+          // XXX: Check if market has negative momentum
       var market_momentum_low = (
             market.current.momentum_record_healthy &&
             market.current.momentum_average <= 0

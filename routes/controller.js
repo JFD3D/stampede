@@ -52,11 +52,10 @@ module.exports = function(STAMPEDE) {
         trading_strategies: config.strategy,
         helpers: STAMPEDE.helpers
       }
-
-
-      console.log("Traders are awake:", traders_awake)
-      if (traders_awake) Trader.refreshAll()
       res.render('index', response)
+      // Delay displaying all information on front end
+      // Beats the waiting for cycle refresh
+      setTimeout(Trader.refreshAll, 2000)
     }
 
   }
@@ -373,6 +372,7 @@ module.exports = function(STAMPEDE) {
         trading_strategies: config.strategy,
         helpers: STAMPEDE.helpers
       })
+
     }
     else {
       res.redirect("/")
@@ -380,7 +380,8 @@ module.exports = function(STAMPEDE) {
 
     setTimeout(function() {
       Trader.loadTraders(function() {
-        simulator.loadAllSets()  
+        simulator.loadAllSets()
+        Trader.refreshAll() 
       })
     }, 2000)
   }
