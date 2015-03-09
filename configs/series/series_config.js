@@ -2,11 +2,11 @@ var series = {
 
   trading: {
 
-    greed: [3, 5, 7],
+    greed: [0.6, 3, 5],
 
-    altitude_drop: [0.1, 0.5, 1, 2],
+    altitude_drop: [0.2, 0.5, 1],
 
-    impatience: [10, 50]
+    impatience: [50, 100]
 
   },
 
@@ -14,15 +14,15 @@ var series = {
 
     momentum_trading: [false],
 
-    trailing_stop: [true, false],
+    trailing_stop: [true],
 
-    shedding: [false, true],
+    shedding: [true],
 
-    combined_selling: [true, false],
+    combined_selling: [true],
 
     dynamic_multiplier: [true, false],
 
-    dynamic_drop: [true, false]
+    dynamic_drop: [true]
 
   }
 

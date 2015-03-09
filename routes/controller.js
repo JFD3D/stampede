@@ -42,7 +42,6 @@ module.exports = function(STAMPEDE) {
     function respond() {
 
       var response = {
-
         title: 'Stampede',
         current_user: req.current_user,
         traders_awake: traders_awake,

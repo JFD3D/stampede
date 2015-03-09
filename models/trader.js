@@ -468,12 +468,6 @@ module.exports = function(STAMPEDE) {
             lowest_buy_price > 0
           ) ? (trader_bid < projected_buy_price) : bid_below_threshold
 
-          // Check if current market span (high - low / last) is favorable 
-          // and wider than fee
-      var potential_better_than_fee = (
-            market.current.spread / 2
-          ) > (2 * (wallet.current.fee / 100))
-
           // What is the current market acceleration
       var current_market_greed = (market.current.spread / 2)
 
@@ -492,7 +486,7 @@ module.exports = function(STAMPEDE) {
       
       purchase.buy_price = trader_bid
       me.solvent = (available_resources)
-      me.inspired = (potential_better_than_heat && potential_better_than_fee)
+      me.inspired = (potential_better_than_heat)
 
       // Decision process takes place on whether to buy
       if (
@@ -501,7 +495,6 @@ module.exports = function(STAMPEDE) {
         (!MOMENTUM_ENABLED || market_momentum_significant) &&
         bid_below_threshold &&
         bid_below_lowest &&
-        potential_better_than_fee &&
         potential_better_than_heat
       ) decision = true
       
@@ -516,8 +509,6 @@ module.exports = function(STAMPEDE) {
           market.current.middle.toFixed(2),
         "\n|- Bid is lowest among deals (..., lowest_buy_price):", 
           bid_below_lowest, lowest_buy_price.toFixed(2),
-        "\n|- Projected profit is better than fee (..., market.current.spread):", 
-          potential_better_than_fee, market.current.spread.toFixed(2),
         "\n|- Projected profit better than heat (..., wallet.current.cool, weighted_heat):", 
           potential_better_than_heat, wallet.current.cool.toFixed(2), 
           weighted_heat,
@@ -538,7 +529,7 @@ module.exports = function(STAMPEDE) {
         resources: available_resources,
         threshold: bid_below_threshold,
         lowest: bid_below_lowest,
-        potential: (potential_better_than_heat && potential_better_than_fee)
+        potential: (potential_better_than_heat)
       }
 
       if (MOMENTUM_ENABLED) {
@@ -1538,7 +1529,7 @@ module.exports = function(STAMPEDE) {
       trading_config.impatience <= 100 &&
       trading_config.impatience >= 0 &&
       trading_config.greed <= 50 &&
-      trading_config.greed >= 1 &&
+      trading_config.greed > 0 &&
       !isNaN(trading_config.max_number_of_deals_per_trader) &&
       trading_config.max_number_of_deals_per_trader > 0
     )
