@@ -168,6 +168,7 @@ module.exports = function(STAMPEDE) {
     finish: function() {
       var current_wallet = STAMPEDE.current_wallet
       var current_market = STAMPEDE.current_market
+      var current_traders = STAMPEDE.current_traders
       var sim = this
       console.log(
         "Ended simulation | current_market, current_wallet:", 
@@ -225,6 +226,28 @@ module.exports = function(STAMPEDE) {
           }
         })
 
+
+
+        var sales = 0
+        var purchases = 0
+
+        _.each(current_traders, function(live_trader) {
+          sales += (live_trader.sales || 0)
+          purchases += (live_trader.purchases || 0)
+        })
+
+        result.push({
+          value: sales,
+          field: "sales",
+          type: "sales"
+        })
+
+        result.push({
+          value: purchases,
+          field: "purchases",
+          type: "purchases"
+        })
+
         result.push({
           value: final_ratio,
           type: "ratio",
@@ -241,10 +264,7 @@ module.exports = function(STAMPEDE) {
         if (sim.current.series_array.length > sim.current.serie_index) {
           // Continue with next simulation
           console.log("Continuing with next serie ("+sim.current.serie_index+").")
-          if (sim.current.serie_index % 10 === 0) {
-            sim.analyseResults()
-          }
-
+          sim.analyseResults()
           sim.processSerie()
         }
         else {
@@ -270,9 +290,6 @@ module.exports = function(STAMPEDE) {
       var top_ratio = top_ratio_result[top_ratio_result.length -1].value
       var lowest_ratio = lowest_ratio_result[lowest_ratio_result.length -1].value
 
-      function getResultValues(result, field) {
-
-      }
     },
 
     analyseCurrentSet: function() {

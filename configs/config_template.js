@@ -48,7 +48,8 @@ exports.strategy = {
   bell_bottom: true,        // Purchases will be sized up going down the price per trader
   combined_selling: true,   // Sell the highest and lowest priced BTC combined
   dynamic_multiplier: true, // Calculate deal multiplication per altitude drop and current high
-  dynamic_drop: true        // Dynamically increase altitude drop per fibonacci series
+  dynamic_drop: true,       // Dynamically increase altitude drop per fibonacci series
+  sell_out: true
 }
 
 // Google authentication keys

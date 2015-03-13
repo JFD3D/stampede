@@ -17,10 +17,28 @@
           span= ("Multi: " + trader.next_deal_ratio.toFixed(2)+"x")
           span  | 
         a.removal(href="#", data-trader="#{trader_name}") Remove
-      - if (trader.purchases || trader.sales || trader.profit)
-        span #{trader.purchases} purchases | #{trader.sales} sales | #{currency_label + " " + (trader.profit || 0).toFixed(2)} profit
       span
       - var deals_sorted = trader.deals.sort(function(a, b) { return b.buy_price - a.buy_price })
+      - if (trader.purchases || trader.sales || trader.profit)
+        h3 Trading overview
+        table.table.table-striped
+          tr
+            th Purchase #
+            th Purchase vol #{currency_label}
+            th Purchase vol BTC
+            th Sale #
+            th Sale vol #{currency_label}
+            th Sale vol BTC
+            th Profit #{currency_label}
+          tr
+            td #{trader.purchases}
+            td #{trader.purchases_amount_currency.toFixed(2)}
+            td #{trader.purchases_amount_btc.toFixed(5)}
+            td #{trader.sales}
+            td #{trader.sales_amount_currency.toFixed(2)}
+            td #{trader.sales_amount_btc.toFixed(5)}
+            td #{trader.profit.toFixed(2)}
+      h3 Current deals
       table.table.table-striped.deals
         tr
           th Buy price

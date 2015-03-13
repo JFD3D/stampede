@@ -49,6 +49,16 @@ module.exports = function(STAMPEDE) {
         label: "On / Off",
         type: "boolean",
         desc: "Increase the drop of next price purchase (Currently per Fibonacci series only)."
+      },
+      sell_out: {
+        label: "On / Off",
+        type: "boolean",
+        desc: "Sell all deals at once when sell price for them reaches 'would sell' price."
+      },
+      rebalance_deals: {
+        label: "On / Off",
+        type: "boolean",
+        desc: "Enable to rebalance deal amounts after sale."
       }
     },
     trading: {

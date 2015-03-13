@@ -55,22 +55,17 @@ module.exports = function(STAMPEDE) {
       var me = this
       var assign_start = Date.now()
 
-
       // Assign listed properties to market current
       ticker_properties = ["bid", "low", "high", "volume", "ask"]
       ticker_properties.forEach(function(property) {
         me.current[property] = parseFloat(data[property] || 0)
       })
-
       if (data.simulation_progress) {
         me.current.simulation_progress = data.simulation_progress
       }
-
       me.current.starting_point = (data.starting_point)
-
       // Further market calculations
       me.current.time = (data.time || Date.now())
-
       me.current.middle = (me.current.high + me.current.low) / 2
       me.current.top = me.top = (
         me.top && me.top > me.current.high
@@ -78,9 +73,7 @@ module.exports = function(STAMPEDE) {
       me.current.spread = (
         me.current.high - me.current.low
       ) / (me.current.high || 0 + 0.00001)
-
       perf_timers.market_assignment += (Date.now() - assign_start)
-
     },
 
     tickMomentum: function() {

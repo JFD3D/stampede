@@ -27,8 +27,8 @@ module.exports = function(STAMPEDE) {
        *
        */
 
-  var market = new STAMPEDE.market()
-  var wallet = new STAMPEDE.wallet()
+  var market
+  var wallet
 
       // Additional shared variables
 
@@ -64,6 +64,7 @@ module.exports = function(STAMPEDE) {
   var BID_ALIGN              // Align bid before buying to allow competitive price
   var IMPATIENCE             // Where do I buy up from middle
   var ALTITUDE_DROP          // Defined lower price percentage to buy at
+  var ALTITUDE_DROP_FL
 
       /*
        *
@@ -80,6 +81,8 @@ module.exports = function(STAMPEDE) {
   var COMBINED_SELLING       // Sell highest and lowest priced BTC combined
   var DYNAMIC_MULTIPLIER     // Purchase size adjustment
   var DYNAMIC_DROP           // Increase altitude drop in fibonacci series
+  var SELL_OUT               // Sell all deals out
+  var REBALANCE_DEALS        // Whether to rebalance the deal amounts after sale
 
       /*
        *
@@ -104,6 +107,7 @@ module.exports = function(STAMPEDE) {
     BID_ALIGN = config.trading.bid_alignment
     IMPATIENCE = (config.trading.impatience / 100)
     ALTITUDE_DROP = config.trading.altitude_drop
+    ALTITUDE_DROP_FL = ((ALTITUDE_DROP || 0) / 100)
 
     // Strategies now
     MOMENTUM_ENABLED = config.strategy.momentum_trading
@@ -113,6 +117,8 @@ module.exports = function(STAMPEDE) {
     COMBINED_SELLING = config.strategy.combined_selling
     DYNAMIC_MULTIPLIER = config.strategy.dynamic_multiplier
     DYNAMIC_DROP = config.strategy.dynamic_drop
+    SELL_OUT = config.strategy.sell_out
+    REBALANCE_DEALS = config.strategy.rebalance_deals
 
     // Logging options load
     DECISION_LOGGING = (config.logging || {}).decisions || false
@@ -162,8 +168,21 @@ module.exports = function(STAMPEDE) {
 
     
     this.name = name
+    
+    // Assign profit tracking
+    this.profit = 0
+
+    // Assign purchase tracking
     this.purchases = 0
+    this.purchases_amount_currency = 0
+    this.purchases_amount_btc = 0
+
+    // Assign sales tracking
     this.sales = 0
+    this.sales_amount_currency = 0
+    this.sales_amount_btc = 0
+
+    // Initialize empty deals
     this.deals = []
 
     /*
@@ -374,15 +393,14 @@ module.exports = function(STAMPEDE) {
       // Define altitude drop
       
       
-      var altitude_drop_float = ((ALTITUDE_DROP || 0) / 100)
       var altitude_drop_ratio = 1 - (DYNAMIC_DROP ? (
             (DYNAMIC_MULTIPLIER ? (
-                altitude_drop_float * (deals.length)
+                ALTITUDE_DROP_FL * (deals.length)
               ) : (
-                altitude_drop_float * common.fibonacci(deals.length)
+                ALTITUDE_DROP_FL * common.fibonacci(deals.length)
               )
             )
-          ) : altitude_drop_float)
+          ) : ALTITUDE_DROP_FL)
 
       
       // Assign price levels to current object so we can display it
@@ -399,10 +417,6 @@ module.exports = function(STAMPEDE) {
                 lowest_buy_price < market.current.last ? 
                   lowest_buy_price : market.current.last
               ),
-              drop_float: altitude_drop_float,
-              dyn_drop: DYNAMIC_DROP,
-              dyn_multi: DYNAMIC_MULTIPLIER,
-              impatience: IMPATIENCE,
               cur_len: deals.length
             })
 
@@ -579,12 +593,13 @@ module.exports = function(STAMPEDE) {
       // Only if COMBINED SELLING is enabled:
       // We will sell them at once if the -
       // Weighted average + fees and profit is below market last
-      var selected_extremes = COMBINED_SELLING ? ["min", "max"] : ["min"];
+      var selected_extremes = (
+            SELL_OUT ? deals : (COMBINED_SELLING ? ["min", "max"] : ["min"])
+          )
 
       // If shedding is enabled, sell all
-      // var deals_or_extremes = (SHEDDING_ENABLED ? deals : selected_extremes)
-      selected_extremes.forEach(function(extreme) {
-        var current = borders[extreme]
+      selected_extremes.forEach(function(cur_key) {
+        var current = (SELL_OUT ? cur_key : borders[cur_key])
         if (
           current && 
           combined_deal.names.indexOf(current.name) === -1
@@ -839,6 +854,9 @@ module.exports = function(STAMPEDE) {
         ) {
           deal.order_id = order.id
           me.purchases++
+          me.purchases_amount_currency += currency_buy_amount
+          me.purchases_amount_btc += deal.amount
+
           me.resetCurrentMaximumPrice()
           if (!exchange_simulated) email.send({
             to: config.owner.email,
@@ -933,7 +951,9 @@ module.exports = function(STAMPEDE) {
           var sell_fee = sell_currency_amount * (wallet.current.fee / 100)
 
           me.sales++
-          me.profit = (me.profit || 0) + (
+          me.sales_amount_currency += sell_currency_amount
+          me.sales_amount_btc += deal.amount
+          me.profit += (
             sell_currency_amount - buy_currency_amount - buy_fee - sell_fee
           )
 
@@ -941,7 +961,14 @@ module.exports = function(STAMPEDE) {
           // purge sold deals from redis and live traders
           async.each(deal.names, function(deal_name, internal_callback) {
             me.removeDeal(deal_name, internal_callback)
-          }, done)
+          }, function() {
+            if (REBALANCE_DEALS) {
+              me.rebalanceDeals(done)
+            }
+            else {
+              done()
+            }
+          })
 
           if (!exchange_simulated) email.send({
             subject: "Stampede - Selling at: "+deal.name,
@@ -971,6 +998,31 @@ module.exports = function(STAMPEDE) {
       })
       
     },
+
+    rebalanceDeals: function(done) {
+      var me = this
+      me.average_buy_price = 0
+      
+      // This will recalculate average price and deal price / value amounts
+      me.addCurrentMaximumPrice()
+
+      if (me.average_buy_price) {
+        var rebalanced_deals = []
+        var extremes = me.deals.extremesByKey("buy_price")
+        var highest_buy_price = extremes["max"].buy_price
+        var start_price = market.current.last
+
+        var price_levels = getAltitudeLevels({
+              min: start_price,
+              max: highest_buy_price,
+              cur_len: 0
+            })
+
+        //LOG("rebalanceDeals | price_levels:", price_levels)
+      }
+      done()
+
+    },
     
     recordDeal: function(deal, callback) {
       var me = this
@@ -987,7 +1039,6 @@ module.exports = function(STAMPEDE) {
       var me = this
       var deal_position = me.deals.lookupIndex("name", deal_name)
 
-      //console.log("removeDeal | me.deals, deal_name:", me.deals, deal_name)
       if (deal_position > -1) {
         me.deals.splice(deal_position, 1)
         if (!exchange_simulated) {
@@ -1091,14 +1142,15 @@ module.exports = function(STAMPEDE) {
     var levels = []
     var price_cursor = options.max
     var cur_len = options.cur_len
-    var drop_float = options.drop_float
-    var dyn_drop = options.dyn_drop
-    var impatience = options.impatience
-    var dyn_multi = options.dyn_multi
+    var drop_float = ALTITUDE_DROP_FL
+    var dyn_drop = DYNAMIC_DROP
+    var impatience = IMPATIENCE
+    var dyn_multi = DYNAMIC_MULTIPLIER
     var alt_start = Date.now()
 
     if (drop_float) {
       do {
+        if (cur_len === 0) console.log("getAltitudeLevels | options:", options)
         price_cursor = price_cursor / (1 + (
           dyn_drop ? (dyn_multi ? (
             drop_float * (cur_len + levels.length)
@@ -1109,7 +1161,6 @@ module.exports = function(STAMPEDE) {
         levels.push(price_cursor)
       } while (price_cursor > options.min)
     }
-    //LOG("getAltitudeLevels | levels:", levels, dyn_drop)
     perf_timers.alt_levels += (Date.now() - alt_start)
     return levels
   }
@@ -1207,12 +1258,12 @@ module.exports = function(STAMPEDE) {
     if (!cycle_in_progress && !STAMPEDE.stop && delay_permitted) {
       cycle()
     }
-    else {
-      LOG(
-        "tick | cycle disallow | delay_permitted, time_since_last_cycle:", 
-        delay_permitted, (time_since_last_cycle / 1000).toFixed(2), "seconds."
-      )
-    }
+    // else {
+    //   LOG(
+    //     "tick | cycle disallow | delay_permitted, time_since_last_cycle:", 
+    //     delay_permitted, (time_since_last_cycle / 1000).toFixed(2), "seconds."
+    //   )
+    // }
   }
 
   function cycle(done) {
@@ -1262,6 +1313,7 @@ module.exports = function(STAMPEDE) {
     // Export current market and wallet data
     STAMPEDE.current_market = market.current
     STAMPEDE.current_wallet = wallet.current
+    STAMPEDE.current_traders = live_traders
     
     if (broadcast_time) {
       STAMPEDE.controller.refreshOverview()
@@ -1548,7 +1600,9 @@ module.exports = function(STAMPEDE) {
 
 
   function loadTraders(done) {
-    live_traders = new Object()
+    live_traders = {}
+    market = new STAMPEDE.market()
+    wallet = new STAMPEDE.wallet()
     db.smembers(trader_main_list, function(error, trader_list) {
       LOG("loadTraders, Viewing ("+trader_list.length+") traders...")
       trader_count = trader_list.length
