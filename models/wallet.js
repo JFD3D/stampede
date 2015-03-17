@@ -74,7 +74,6 @@ module.exports = function(STAMPEDE) {
         me.current.greed += (me.current.anxiety * me.current.greed)
       }
       me.current.time = data.time || Date.now()
-      me.summarizeDeals()
       return me
     },
 
@@ -88,35 +87,6 @@ module.exports = function(STAMPEDE) {
         ) < available_currency ? 
           MAX_SUM_INVESTMENT - me.current.investment : 
           available_currency
-    },
-
-    summarizeDeals: function() {
-      var me = this
-      me.current.investment = 0
-      me.current.btc_amount_managed = 0
-      for (var trader_name in live_traders) {
-        var current_trader_deals = (live_traders[trader_name].deals || [])
-        var trader_record = live_traders[trader_name].record || {}
-        trader_record.current_investment = 0
-        trader_record.current_deals = 
-          current_trader_deals.length
-
-        current_trader_deals.forEach(function(current_trader_deal) {
-          var deal_buy_price = current_trader_deal.buy_price,
-              deal_amount = current_trader_deal.amount
-          me.current.btc_amount_managed += parseFloat(deal_amount)
-          if (
-            !isNaN(deal_amount * deal_buy_price)
-          ) me.current.investment += (deal_amount * deal_buy_price)
-          trader_record.current_investment += 
-            isNaN(deal_amount * deal_buy_price) ? 
-              0 : (deal_amount * deal_buy_price)
-        })
-
-        me.current.average_buy_price = 
-          (me.current.investment / me.current.btc_amount_managed) || 0
-      }
-      
     },
 
     summarizeShares: function(callback) {
