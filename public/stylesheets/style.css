@@ -44,6 +44,11 @@ body {
   color: red;
 }
 
+.scrollable {
+  max-height: 200px;
+  overflow: auto;
+}
+
 .small {
   font-size: 80%;
 }

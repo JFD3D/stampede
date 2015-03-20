@@ -2,29 +2,27 @@ var series = {
 
   trading: {
 
-    greed: [0.6, 3, 5],
+    greed: [0.6, 1, 2, 5],
 
-    altitude_drop: [0.2, 1, 2],
-
-    impatience: [50, 100]
+    impatience: [0, 50, 100]
 
   },
 
   strategies: {
 
-    momentum_trading: [false],
+    // momentum_trading: [false],
 
     trailing_stop: [true],
 
-    shedding: [true, false],
+    // shedding: [true, false],
 
-    combined_selling: [true],
+    // combined_selling: [true],
 
-    dynamic_multiplier: [true, false],
+    // dynamic_multiplier: [true, false],
 
-    dynamic_drop: [true],
+    // dynamic_drop: [true],
 
-    sell_out: [true, false]
+    // sell_out: [true, false]
 
   }
 

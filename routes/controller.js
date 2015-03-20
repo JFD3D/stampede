@@ -482,7 +482,6 @@ module.exports = function(STAMPEDE) {
 
   // Called from within simulated exchange once the end of data has been reached
   controller.simulatorFinish = function(exchange_data) {
-    Trader.stopAll()
     simulator.finish()
   }
 

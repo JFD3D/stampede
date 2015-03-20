@@ -17,7 +17,7 @@
         table.table.table-striped
           tr
             th Type
-            th Number
+            th Count
             th Volume #{currency_label}
             th Volume BTC
           tr
@@ -30,6 +30,22 @@
             td #{trader.sales}
             td #{trader.sales_amount_currency.toFixed(2)}
             td #{trader.sales_amount_btc.toFixed(5)}
+      .spacer
+      - if (trader.book.entries && trader.book.entries.length)
+        h3 Trader book
+        .scrollable
+          table.table.table-striped
+            tr
+              th Type
+              th Price
+              th Amount #{currency_label}
+              th Amount BTC
+            each entry in trader.book.entries
+              tr
+                td #{formatter.standardize(entry.type)}
+                td #{entry.price.toFixed(2)}
+                td #{(entry.amount * entry.price).toFixed(2)}
+                td #{entry.amount.toFixed(5)}
 
 - else
   .col-md-5

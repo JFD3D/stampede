@@ -166,6 +166,7 @@ module.exports = function(STAMPEDE) {
     // Trigger check if series is running that dataset has been finished
     // If we have worked with a stored data set
     finish: function() {
+
       var current_wallet = STAMPEDE.current_wallet
       var current_market = STAMPEDE.current_market
       var current_traders = STAMPEDE.current_traders
@@ -184,7 +185,7 @@ module.exports = function(STAMPEDE) {
             sim.current.series_array ? 
             (
               sim.current.series_array[sim.current.serie_index] + " / (" + 
-              sim.current.serie_index + " of " + 
+              (sim.current.serie_index + 1) + " of " + 
               sim.current.series_array.length + ")"
             ) : 
             "Interactive"
@@ -270,12 +271,14 @@ module.exports = function(STAMPEDE) {
         else {
           // End simulation series
           sim.series_simulation = false
+          STAMPEDE.trader.stopAll()
           console.log("!!!!!!! Series simulations ended.")
         }
       }
       else {
         console.log("Finishing interactive simulation, refreshing all.")
         STAMPEDE.trader.refreshAll()
+        STAMPEDE.trader.stopAll()
       }
     },
 

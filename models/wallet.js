@@ -14,7 +14,9 @@ module.exports = function(STAMPEDE) {
   function Wallet() {
     this.current = {
       currency: currency,
-      initial_investment: config.trading.maximum_investment
+      initial_investment: config.trading.maximum_investment,
+      investment: 0,
+      btc_amount_managed: 0
     }
     this.shares = []
     // Assign lower cool, in order not to start trading right away

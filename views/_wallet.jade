@@ -14,7 +14,7 @@ table.table.table-striped
     td= (current_wallet[helpers.current_currency+"_balance"] || 0).toFixed(2)
     td= (current_wallet[helpers.current_currency+"_available"] || 0).toFixed(2)
     td= (current_wallet[helpers.current_currency+"_reserved"] || 0).toFixed(2)
-    td= (current_wallet.investment || 0).toFixed(2)
+    td= (current_wallet.available_to_traders || 0).toFixed(2)
   tr
     td= "BTC"
     td= (current_wallet.btc_balance || 0).toFixed(2)
