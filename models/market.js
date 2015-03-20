@@ -31,7 +31,7 @@ module.exports = function(STAMPEDE) {
   }
 
   Market.prototype = {
-    check: function(callback) {
+    check: function(done) {
       var me = this
       me.current.error = null
       var tick_start = Date.now()
@@ -48,7 +48,7 @@ module.exports = function(STAMPEDE) {
           if (config.strategy.momentum_trading) me.tickMomentum()
           error_email_sent = null
         }
-        callback(error, me.current)      
+        done(error, me.current)      
       }) 
     },
     assign: function(data) {

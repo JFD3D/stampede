@@ -35,7 +35,7 @@ module.exports = function(STAMPEDE) {
   var ID_COUNTER = "stampede_trader_number"
   var VALUE_SHEET_KEY = "stampede_value"            // Repository unsorted list for USD value history
   var TRADER_LIST_KEY = "stampede_traders"        // Main repository in redis for keeping list of traders
-
+  var CURRENCY_LABEL = config.exchange.currency.toUpperCase()
 
   // Additional shared variables
   var trader_count                                 // Current trader count
@@ -164,6 +164,11 @@ module.exports = function(STAMPEDE) {
     this.sales_amount_currency = 0
     this.sales_amount_btc = 0
 
+    this.average_buy_price = 0
+    this.amount = 0
+
+    // Book-keeping for purchase/sale entries
+    this.book = new STAMPEDE.book(name)
 
     /*
      *
@@ -175,7 +180,7 @@ module.exports = function(STAMPEDE) {
      */
 
     
-    this.book_name = "book_for_" + name
+    
     this.main_list = TRADER_LIST_KEY
   }
 
@@ -191,6 +196,14 @@ module.exports = function(STAMPEDE) {
    *
    */
 
+  function cleanBooks(done) {
+    _.each(live_traders, function(trader) {
+      trader.clean()
+    })
+    if (done) return done()
+  }
+
+
   Trader.prototype = {
 
     // Record and initialize(add to shared live_traders) new trader
@@ -200,34 +213,45 @@ module.exports = function(STAMPEDE) {
         me.name = TRADER_PREFIX + number
         db.sadd(TRADER_LIST_KEY, me.name, function(error, response) {
           live_traders[me.name] = me
-          me.record = {
-            amount: 0,
-            average_buy_price: 0
-          }
-          db.hmset(me.name, me.record, function() {
+          me.saveRecord(function() {
             loadTraders(done)
           })
         })
       })
     },
+    saveRecord: function(done) {
+      var me = this
+      db.hmset(me.name, {
+        amount: me.amount,
+        average_buy_price: me.average_buy_price,
+        purchases: me.purchases,
+        sales: me.sales
+      }, done)
+    },
     
+    // Used for simulation
+    clean: function() {
+      var me = this
+      me = new Trader(me.name)
+    },
+
     // Stop and remove trader
     remove: function(done) {
       var me = live_traders[this.name]
       var my_book = me.book_name
 
       async.series([
-        function(internal_callback) {
-          me.checkRecord(internal_callback)
+        function(next) {
+          me.checkRecord(next)
         },
-        function(internal_callback) {
-          db.srem(TRADER_LIST_KEY, me.name, internal_callback)
+        function(next) {
+          db.srem(TRADER_LIST_KEY, me.name, next)
         },
-        function(internal_callback) {
-          db.del(my_book, internal_callback)
+        function(next) {
+          db.del(my_book, next)
         },
-        function(internal_callback) {
-          db.del(me.name, internal_callback)
+        function(next) {
+          db.del(me.name, next)
         }
       ], function() {
         loadTraders(done)
@@ -235,45 +259,131 @@ module.exports = function(STAMPEDE) {
     },
     
     // Loads trader record from repository and then loads trader's history
-    checkRecord: function(callback) {
-      var trader = this
-      db.hgetall(trader.name, function(error, my_record) {
-        trader.record = my_record
-        trader.checkBooks(callback)
-      })
-    },
-
-    checkBooks: function(callback) {
+    checkRecord: function(done) {
       var me = this
-      var book = []
-      db.smembers(me.book_name, function(errors, book_records) {
-        if (book_records && book_records.length) {
-          book_records.forEach(function(book_record) {
-            
-          })
-        }
+      db.hgetall(me.name, function(error, my_record) {
 
+        me.average_buy_price = parseFloat(my_record.average_buy_price || 0),
+        me.amount = parseFloat(my_record.amount || 0)
+        me.book.load(done)
       })
-
     },
 
 
     /*
      *
-     * Awaken trader = Load all associations
+     * Awaken trader = Load associations
      *
      *
      *
      *
      */
     
-    wake: function(callback) {
+    wake: function(done) {
       var me = this
       live_traders[me.name] = me
-      me.checkRecord(callback)
+      //LOG("wake | me:", me)
+      if (!config.simulation) {
+        me.checkRecord(done)
+      }
+      else return done()
     },
-    
-    // Decide if buying, define candidate deal
+
+    validBuyPrice: function(purchase) {
+      var me = this
+
+      // Check if price is below threshold
+      // (which combines the impatience variable)
+      var price_below_threshold = (purchase.price < market.current.threshold)
+
+      // LOG(
+      //   "validBuyPrice | price_below_threshold, me.amount, me.average_buy_price:",
+      //   price_below_threshold, me.amount, me.average_buy_price
+      // )
+      // Check if purchase price lower my average buy price - greed
+      return (
+        price_below_threshold && (
+          me.amount === 0 || 
+          me.average_buy_price > purchase.price
+        )
+      )
+    },
+
+    validBuyAmount: function(purchase) {
+      var me = this
+      var target_amount
+      // Current allowed investment (on top of existing)
+      var current_allowed_investment = (
+            MAX_SUM_INVESTMENT - wallet.current.investment
+          )
+      // Amount I can invest according to available and allowed
+      me.available_currency_amount = (
+        current_allowed_investment > wallet.current[currency_key]
+      ) ? wallet.current[currency_key] : current_allowed_investment
+
+      // What amount is possible to buy at current price and available funds
+      var amount_possible = (me.available_currency_amount / purchase.price)
+
+      // Calculate equalizing amount to reach a desirable average price
+      if (me.amount) {
+        var avg_price = me.average_buy_price
+        var cur_amount = me.amount
+        var cur_price = purchase.price
+        var target_avg_price = (cur_price * (1 + INITIAL_GREED))
+        var equalizer = (
+              (cur_amount * (avg_price - target_avg_price)) /
+              (target_avg_price - cur_price)
+            )
+        var equalizer_currency = (equalizer * purchase.price)
+        target_amount = equalizer
+        // LOG(
+        //   "validBuyAmount | me.average_buy_price, target_amount:", 
+        //   me.average_buy_price, target_amount
+        // )
+      }
+      // Assign basic amount (up by 10% to make sure our purchase goes through)
+      else {
+        target_amount = ((1.1 * MIN_PURCHASE) / purchase.price)
+      }
+
+      // Assign purchase amount (if over available, then use available amout)
+      purchase.amount = (
+        target_amount > amount_possible ? amount_possible : target_amount
+      )
+      // Check if amount is over minimum purchase
+      return (purchase.amount > (MIN_PURCHASE / purchase.price))
+    },
+
+    // SELL checks
+    validSellPrice: function(sale) {
+      var me = this
+      var avg_price = me.average_buy_price
+      var target_price = (me.target_price || avg_price)
+
+      return (sale.price > target_price)
+    },
+
+    validSellAmount: function(sale) {
+      var me = this
+      var available_amount = me.amount
+      var available_currency_amount = (me.amount * sale.price)
+      sale.amount = (MIN_PURCHASE / sale.price * 2)
+
+      return (sale.amount < available_amount)
+    },
+
+    checkTrailingStop: function(sale) {
+      // If trailing stop enabled, add to structured decision
+      // Set the stop deal as deal to sell if not selling combined deal
+      // And if trailing stop was hit
+      var trailing_stop = (
+        sale.stop_price >= sale.price
+      )
+
+      return trailing_stop
+    },
+   
+    // Decide if buying, define purchase
 
     /* INPUT:
         purchase: Object(will be assigned by the end)
@@ -284,219 +394,101 @@ module.exports = function(STAMPEDE) {
         controller (amount, price)
 
     */
+    
+
     isBuying: function(purchase) {
 
       /* Will buy if
           - price is favorable
           - available resources
-          - wallet is cool (to avoid fast consequent purchases)
+
+         Define checklist for buying. 
+         Assign checklist entries whether they are required or not.
       */
 
-      var is_buying_start = Date.now()
       var me = this
-      var decision = false
+      var is_buying_start = Date.now()
+      var buy_checklist = [
+            {required: true, fn: me.validBuyPrice, name: "buy_price"},
+            {required: true, fn: me.validBuyAmount, name: "valid_amount"}
+          ]
 
-          // Current allowed investment (on top of existing)
-      var current_allowed_investment = (
-            MAX_SUM_INVESTMENT - wallet.current.investment
-          )
+      // Calculate trader bid 
+      // (aligned by bid alignment to make us competitive when bidding)
+      var current_buy_price = (market.current.last / (1 - (BID_ALIGN / 100)))
 
-          // Amount I can invest according to available and allowed
-      var available_currency_amount = (
-            current_allowed_investment > wallet.current[currency_key]
-          ) ? wallet.current[currency_key] : current_allowed_investment
-
-      // Available resources, compare investment 
-      // and current available in wallet
-      var available_resources = (
-            // Check if I am not running over allowed investment amount
-            (wallet.current.investment < MAX_SUM_INVESTMENT) &&
-            // This serves to knock out trading 
-            // (if I assign less investment than deal)
-            (MAX_SUM_INVESTMENT > purchase.currency_amount) &&
-            // Check if I have enough fiat to buy
-            (wallet.current.available_to_traders > purchase.currency_amount)
-          )
-          // Calculate trader bid 
-          // (aligned by bid alignment to make us competitive when bidding)
-      var trader_bid = (market.current.last / (1 - (BID_ALIGN / 100)))
-
-          // Check if aligned bid is below threshold 
-          // (which combines the impatience variable)
-      var bid_below_threshold = trader_bid < market.current.threshold
-
-          // Projected buy price (dependent on existing lowest buy price, 
-          // otherwise trader bid is selected)
-      var projected_buy_price = (lowest_buy_price > 0 ? 
-            (lowest_buy_price * altitude_drop_ratio) : trader_bid
-          )
-
-
-      // check that I am buying for price lower than the lowest existing
-      var bid_below_lowest = (
-            lowest_buy_price > 0
-          ) ? (trader_bid < projected_buy_price) : bid_below_threshold
-
-          // What is the current market acceleration
-      var current_market_greed = (market.current.spread / 2)
-
-          // What potential is the trader looking at
-      var trader_greed = wallet.current.greed
-
-          // If current wallet cool combined with greed exceeds 1
-      var weighted_heat = wallet.current.cool + trader_greed
-      var potential_better_than_heat = (weighted_heat > 1)
-
-          // Check if market has positive momentum
-      var market_momentum_significant = (
-            market.current.momentum_record_healthy &&
-            market.current.momentum_average > 0
-          )
+      purchase.price = current_buy_price
       
-      purchase.buy_price = trader_bid
-      me.solvent = (available_resources)
-      me.inspired = (potential_better_than_heat)
+      var structured_decision = me.checkOut(buy_checklist, {
+            trader: 
+              "T" + me.name.split("_")[1] + 
+              ": " + (current_buy_price).toFixed(2) + "",
+            criteria: {}
+          }, purchase)
 
-      // Decision process takes place on whether to buy
-      if (
-        has_free_hands &&
-        available_resources &&
-        (!MOMENTUM_ENABLED || market_momentum_significant) &&
-        bid_below_threshold &&
-        bid_below_lowest &&
-        potential_better_than_heat
-      ) decision = true
-      
       if (DECISION_LOGGING) LOG(
-        "*** Buying? ***",
-        "\n|- Available resources (..., wallet.current.investment):", 
-          available_resources, wallet.current.investment,
-        "\n|- Bid is below threshold (..., market.current.last, market.current.middle):", 
-          bid_below_threshold, market.current.last.toFixed(2), 
-          market.current.middle.toFixed(2),
-        "\n|- Projected profit better than heat (..., wallet.current.cool, weighted_heat):", 
-          potential_better_than_heat, wallet.current.cool.toFixed(2), 
-          weighted_heat,
-        "\n|- Market momentum is significant (..., momentum_indicator, momentum_healthy)", 
-          market_momentum_significant, 
-          market.current.momentum_indicator, 
-          market.current.momentum_record_healthy,
-        "\n_BUY__ Decision:", decision ? "BUYING" : "HOLDING",
-        "\n******"
+        "isBuying | structured_decision, purchase:", structured_decision, purchase
       )
       
-      var structured_decision = {
-        buying: decision,
-        trader: 
-          "T" + me.name.split("_")[1] + 
-          ": " + (projected_buy_price * (1 - (BID_ALIGN / 100))).toFixed(2) + "",
-        resources: available_resources,
-        threshold: bid_below_threshold,
-        lowest: bid_below_lowest,
-        potential: (potential_better_than_heat)
-      }
-
-      if (MOMENTUM_ENABLED) {
-        structured_decision.momentum = market_momentum_significant
-      }
-
       cycle_buy_decisions.push(structured_decision)
-
       perf_timers.is_buying += (Date.now() - is_buying_start)
-      return decision
+      return structured_decision.decision
+    },
+
+    checkOut: function(check_list, structured_decision, deal) {
+      var me = this
+      var decision = true
+      // Cycle through checklist now
+      for (var i = 0; i < check_list.length; i++) {
+        var entry = check_list[i]
+        
+        if (entry.required && entry.fn) {
+          var entry_pass = entry.fn.apply(me, [deal])
+          
+          structured_decision.criteria[entry.name] = entry_pass
+          if (!entry_pass) {
+            decision = false
+            break
+          }
+        }
+      }
+      structured_decision.decision = decision
+      return structured_decision
     },
 
 
-    isSelling: function(combined_deal) {
+    isSelling: function(sale) {
       var is_selling_start = Date.now()
 
       var me = this
-          // Initialize resulting decision
-      var decision = false
-          // Deal independent calculations
-      var current_market_greed = (market.current.spread / 2)
-          // Calculate for comparison on deal
-      var current_sale_price = (market.current.last * (1 - (BID_ALIGN / 100)))
-          // Assign the same to trader in order to reuse
-      me.current_sale_price = current_sale_price
-          // Calculate trader greed
-      var trader_greed = INITIAL_GREED + ((wallet.current.fee || 0.5) / (2*100))
-          // If wallet is ready
-      var weighted_heat = wallet.current.cool + trader_greed
-          // Check if wallet is ready
-      var potential_better_than_heat = (weighted_heat > 1)
-          // XXX: Check if market has negative momentum
-      var market_momentum_low = (
-            market.current.momentum_record_healthy &&
-            market.current.momentum_average <= 0
-          )
+      // Calculate trader bid 
+      // (aligned by bid alignment to make us competitive when bidding)
+      var current_sell_price = (market.current.last / (1 + (BID_ALIGN / 100)))
+      var sell_checklist = [
+            { required: true, fn: me.validSellPrice, name: "sell_price" },
+            // {
+            //   required: TRAILING_STOP_ENABLED, 
+            //   fn: me.checkTrailingStop, 
+            //   name: "trailing_stop"
+            // },
+            { required: true, fn: me.validSellAmount, name: "sell_amount" }
+          ]
+      // Initialize decision
 
-
-      var structured_decision = {
-        selling: false,
-        trader: 
-          "T"+me.name.split("_")[1] + 
-          ": " + (combined_deal.would_sell_at || 0).toFixed(2) + "",
-        sell_price: (combined_deal.would_sell_at < current_sale_price),
-        cool: potential_better_than_heat
-      }
-
-      // If trailing stop enabled, add to structured decision
-      // Set the stop deal as deal to sell if not selling combined deal
-      // And if trailing stop was hit
-      if (TRAILING_STOP_ENABLED) {
-        structured_decision.trailing_stop = (
-          combined_deal.stop_price >= current_sale_price && 
-          selected_deal_count > 0
-        )
-        combined_deal.trailing_stop = structured_decision.trailing_stop
-        if (combined_deal.currency_amount) {
-          structured_decision.trader += (
-            " (STOP:" + combined_deal.stop_price.toFixed(2) + ")"
-          )
-        }
-      }
-
-      structured_decision.managed = (
-        combined_deal.amount <= wallet.current.btc_balance
-      )
-
-      if (
-        !structured_decision.managed && 
-        structured_decision.sell_price
-      ) {
-        LOG(
-          "unmanaged |", 
-          "amount:", 
-          combined_deal.amount, 
-          "btc_balance:", wallet.current.btc_balance, 
-          "bal/am", 
-          (wallet.current.btc_balance / combined_deal.amount).toFixed(3), "%",
-          "bal-am",
-          (wallet.current.btc_balance - combined_deal.amount).toFixed(6), "BTC"
-        )
-      }
-
-      var possible_to_sell = (
-            structured_decision.managed &&
-            structured_decision.cool
-          )
-
-      // Check trailing stop, if enabled affect decision
-      structured_decision.selling = (
-        possible_to_sell &&
-        (
-          structured_decision.sell_price &&
-          (!TRAILING_STOP_ENABLED || structured_decision.trailing_stop)
-        )
-      )
+      sale.price = current_sell_price
+      var structured_decision = me.checkOut(sell_checklist, {
+            trader: 
+              "T" + me.name.split("_")[1] + 
+              ": " + (current_sell_price).toFixed(2) + "",
+            criteria: {}
+          }, sale)
 
       // Add the decision to array which will be rendered on client
       cycle_sell_decisions.push(structured_decision)
 
       // Log the success!
       if (
-        structured_decision.selling && 
+        structured_decision.decision && 
         DECISION_LOGGING
       ) console.log(
         "||| trader | sellingCheck | " + 
@@ -505,20 +497,10 @@ module.exports = function(STAMPEDE) {
       )
 
       // Check all outstanding factors and make final decision
-      var decision = structured_decision.selling
-
-      if (decision && DECISION_LOGGING) console.log(
-        "*** Selling deal? ***",
-        "\n|- amount is managed (amount):", 
-          (combined_deal.amount <= wallet.current.btc_balance), 
-          combined_deal.amount,
-        "\n|- potential_better_than_heat:", potential_better_than_heat,
-        "\n_SALE_ Decision:", decision ? "SELLING" : "HOLDING",
-        "\nDeal evaluated details:", combined_deal
-      )
+      var decision = structured_decision.decision
 
       perf_timers.is_selling += (Date.now() - is_selling_start)
-      return decision 
+      return structured_decision.decision
     },
     
     decide: function(done) {
@@ -549,14 +531,8 @@ module.exports = function(STAMPEDE) {
     
     buy: function(purchase, done) {
       var me = this
-      var currency_buy_amount = purchase.currency_amount
+      var currency_buy_amount = (purchase.amount * purchase.price)
 
-      purchase.amount = parseFloat(
-        (currency_buy_amount / purchase.buy_price).toFixed(7))
-      purchase.sell_price = (
-        purchase.buy_price * (1 + INITIAL_GREED + (wallet.current.fee / 100))
-      )
-      purchase.heat = INITIAL_GREED
       wallet.current.cool -= (market.current.spread * 10)
       
       // Reset cycles to load all (market, wallet) details
@@ -567,15 +543,15 @@ module.exports = function(STAMPEDE) {
         message: 
           "+B " + purchase.amount.toFixed(5) + 
           "BTC for " + currency_buy_amount.toFixed(2) + 
-          " " + config.exchange.currency.toUpperCase() + 
-          " at " + purchase.buy_price.toFixed(2) + 
-          " " + config.exchange.currency.toUpperCase()+" per BTC.", 
+          " " + CURRENCY_LABEL + 
+          " at " + purchase.price.toFixed(2) + 
+          " " + CURRENCY_LABEL+" per BTC.", 
         permanent: true
       })
       
       STAMPEDE.controller.buy(
         purchase.amount.toFixed(7), 
-        purchase.buy_price.toFixed(2),
+        purchase.price.toFixed(2),
       function(error, order) {
         if (DECISION_LOGGING) console.log(
           "trader | buy | order, error:", order, error
@@ -584,14 +560,11 @@ module.exports = function(STAMPEDE) {
           order &&
           order.id
         ) {
-          deal.order_id = order.id
-          me.purchases++
-          me.purchases_amount_currency += currency_buy_amount
-          me.purchases_amount_btc += deal.amount
+          purchase.order_id = order.id
 
           if (!exchange_simulated) email.send({
             to: config.owner.email,
-            subject: "Stampede - Buying: " + deal.amount.toFixed(7) + "BTC",
+            subject: "Stampede - Buying: " + purchase.amount.toFixed(7) + "BTC",
             template: "purchase.jade",
             data: {
               purchase: purchase,
@@ -609,7 +582,7 @@ module.exports = function(STAMPEDE) {
             to: config.owner.email,
             subject: "Stampede: Error BUYING deal through bitstamp API",
             template: "error.jade",
-            data: {error: error}
+            data: { error: error }
           }, function(success) {
             console.log("ERROR Email sending success?:", success)
             error_email_sent = true
@@ -619,32 +592,58 @@ module.exports = function(STAMPEDE) {
       })
     },
 
-    
+    recordPurchase: function(purchase, done) {
+      var me = this
+      var currency_buy_amount = (purchase.price * purchase.amount)
 
-    // Takes
-    /*
-    deal = {
-      buy_price: Num float,
-      amount: Num float,
-      names: Array strings,
-      currency_value: Num float,
-      currency_amount: Num float
-    }
-    */
+      me.purchases++
+      me.purchases_amount_currency += currency_buy_amount
+      me.average_buy_price = (
+        (me.average_buy_price * me.amount) + currency_buy_amount
+      ) / (me.amount + purchase.amount)
+      me.amount += purchase.amount
+      me.purchases_amount_btc += purchase.amount
+
+      async.parallel([
+        function(next) {
+          // Only save the record to db if we are not simulating
+          if (!exchange_simulated) {
+            me.saveRecord(next)  
+          }
+          else return next()
+        },
+        function(next) {
+          me.book.add("purchase", purchase, next)
+        }
+      ], done)
+    },
+
+    recordSale: function(sale, done) {
+      var me = this
+      var currency_sell_amount = (sale.price * sale.amount)
+      me.sales++
+      me.sales_amount_currency += currency_sell_amount
+      me.sales_amount_btc += sale.amount
+      me.amount -= sale.amount
+      async.parallel([
+        function(next) {
+          // Only save the record to db if we are not simulating
+          if (!exchange_simulated) {
+            me.saveRecord(next)
+          }
+          else return next()
+        },
+        function(next) {
+          me.book.add("sale", sale, next)
+        }
+      ], done)
+    },
 
     sell: function(sale, done) {
 
       var me = this
-      var sell_price = (market.current.last * (1 - (BID_ALIGN / 100)))
-      var buy_price = sale.buy_price
-      sale.heat = sale.buy_price / MAX_SUM_INVESTMENT
-      sale.aligned_sell_price = sell_price.toFixed(2)
-      var profit_loss = ((sale.currency_value - sale.currency_amount) || 0)
-      var profit_loss_perc = (
-            1 - (sale.currency_amount / sale.currency_value)
-          ) * 100
-      var currency_label = config.exchange.currency.toUpperCase()
-      
+      var sell_price = sale.price
+
       // Align current cool to avoid all sell / buy
       wallet.current.cool -= (market.current.spread * 10)
 
@@ -652,21 +651,20 @@ module.exports = function(STAMPEDE) {
       cycles_until_full = 1
       
       if (!series_simulation) STAMPEDE.controller.notifyClient({
-        message: 
-          "-S" + ((sale.trailing_stop && !sale.shed) ? "(STOP)" : (sale.shed ? "(SHED)" : "(REG)")) +
-          " " + deal.amount.toFixed(5) + 
+        message: (
+          "-S" + ((sale.stop && !sale.shed) ? "(STOP)" : (sale.shed ? "(SHED)" : "(REG)")) +
+          " " + sale.amount.toFixed(5) + 
           " BTC for " + ((market.current.last * (1 - (BID_ALIGN / 100)))*sale.amount).toFixed(2) + 
-          " " + currency_label + 
-          " at " + sale.aligned_sell_price + 
-          " " + currency_label +
-          " per BTC. (" + (profit_loss > 0 ? "+" : "") + 
-          (profit_loss).toFixed(2) + ", " + profit_loss_perc.toFixed(2) + "%)",
+          " " + CURRENCY_LABEL + 
+          " at " + sale.price + 
+          " " + CURRENCY_LABEL
+        ),
         permanent: true
       })
 
       STAMPEDE.controller.sell(
         sale.amount.toFixed(7), 
-        sale.aligned_sell_price, 
+        sale.price, 
       function(error, order) {
         if (DECISION_LOGGING) console.log(
           "EXCHANGE: Response after attempt to sell | error, order:", 
@@ -676,23 +674,9 @@ module.exports = function(STAMPEDE) {
           order && 
           order.id
         ) {
-          var sell_currency_amount = sell_price * sale.amount
-          var buy_currency_amount = buy_price * sale.amount
-          var buy_fee = buy_currency_amount * (wallet.current.fee / 100)
-          var sell_fee = sell_currency_amount * (wallet.current.fee / 100)
-
-          me.sales++
-          me.sales_amount_currency += sell_currency_amount
-          me.sales_amount_btc += sale.amount
-          me.profit += (
-            sell_currency_amount - buy_currency_amount - buy_fee - sell_fee
-          )
-
-          // Record sale to history
-          me.recordSale(sale, done)
 
           if (!exchange_simulated) email.send({
-            subject: "Stampede - Selling at: "+deal.name,
+            subject: "Stampede - Selling at: "+sale.price,
             template: "sale.jade",
             data: {
               sale: sale,
@@ -703,13 +687,16 @@ module.exports = function(STAMPEDE) {
             console.log("Email sending success?:", success)
             if (error_email_sent) error_email_sent = null
           })
+
+          // Record sale to history
+          me.recordSale(sale, done)
         }
         else {
           sale.order_id = "freeze"
           if (!exchange_simulated) email.send({
             subject: "Stampede: Error SELLING through bitstamp API",
             template: "error.jade",
-            data: {error:error}
+            data: { error: error }
           }, function(success) {
             console.log("ERROR Email sending success?:", success)
             error_email_sent = true
@@ -738,10 +725,10 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  function hook(callback) {
+  function hook(done) {
     STAMPEDE.exchange.startTicking()
     STAMPEDE.exchange.tickEmitter.on("tick", tick)
-    callback()
+    done()
   }
 
   function unhook() {
@@ -834,9 +821,9 @@ module.exports = function(STAMPEDE) {
     var trader_names = _.keys(live_traders)
     
     if (trader_names.length) {
-      async.each(trader_names, function(trader_name, internal_callback) {
+      async.each(trader_names, function(trader_name, next) {
         var trader = live_traders[trader_name]
-        trader.decide(internal_callback)
+        trader.decide(next)
       }, function() {
         perf_timers.decisions += (Date.now() - decisions_start_timer)
         var cool_up = INITIAL_GREED
@@ -898,8 +885,8 @@ module.exports = function(STAMPEDE) {
     }
   }
 
-  function pullValueSheet(callback) {
-    callback(sheets)
+  function pullValueSheet(done) {
+    return done(sheets)
   }
 
   function checkSheets(done) {
@@ -1063,9 +1050,9 @@ module.exports = function(STAMPEDE) {
   }
 
   function checkTraders(trader_list, done) {
-    async.each(trader_list, function(trader_name, internal_callback) {
+    async.each(trader_list, function(trader_name, next) {
       var trader = new Trader(trader_name)
-      trader.wake(internal_callback)
+      trader.wake(next)
     }, function() {
       LOG("checkTraders | trader_list:", trader_list)
       STAMPEDE.controller.refreshTraders(live_traders)
@@ -1102,8 +1089,8 @@ module.exports = function(STAMPEDE) {
       series_simulation = true
       config.series_simulation =
         market.series_simulation =
-        wallet.series_simulation =
-        true
+          wallet.series_simulation =
+            true
     }
     cleanSheets()
   }
@@ -1132,7 +1119,6 @@ module.exports = function(STAMPEDE) {
     market = new STAMPEDE.market()
     sheets = []
     live_traders = {}
-
     unhook()
     STAMPEDE.stop = true
     if (done) done()
@@ -1164,6 +1150,7 @@ module.exports = function(STAMPEDE) {
     config: config,
     prepareForSimulation: prepareForSimulation,
     cleanSheets: cleanSheets,
+    cleanBooks: cleanBooks,
     loadTraders: loadTraders
   }
 }

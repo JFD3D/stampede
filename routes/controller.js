@@ -15,6 +15,7 @@ module.exports = function(STAMPEDE) {
   var Trader = STAMPEDE.trader
   var live = STAMPEDE.live
   var simulator = new STAMPEDE.simulator()
+  var simulated_exchange = (config.exchange.selected === "simulated_exchange")
   var jade = STAMPEDE.jade
   var async = STAMPEDE.async
   var generated_data = []
@@ -22,9 +23,9 @@ module.exports = function(STAMPEDE) {
   var controller = {}
 
   controller.index = function(req, res) {
-    if (config.exchange.selected === "simulated_exchange") {
+    if (simulated_exchange) {
 
-      var removeTraderDeals = Trader.removeAllDeals
+      var cleanBooks = Trader.cleanBooks
       var wakeTraders = controller.wakeTraders
       var cleanSheets = Trader.cleanSheets
 
@@ -32,7 +33,7 @@ module.exports = function(STAMPEDE) {
         simulatorRealtimePrep,
         cleanSheets,
         wakeTraders,
-        removeTraderDeals
+        cleanBooks
       ], respond)
     }
     else {
@@ -41,6 +42,7 @@ module.exports = function(STAMPEDE) {
 
     function respond() {
 
+      LOG("Index respond")
       var response = {
         title: 'Stampede',
         current_user: req.current_user,
@@ -359,7 +361,7 @@ module.exports = function(STAMPEDE) {
   // GENERATOR SPECific
 
   controller.simulatorHome = function(req, res) {
-    if (config.exchange.selected === "simulated_exchange") {
+    if (simulated_exchange) {
       res.render('index', {
         title: 'Stampede: Simulator',
         current_user: req.current_user,
@@ -398,8 +400,8 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  controller.simulatorRemoveDeals = function(req, res) {
-    Trader.removeAllDeals(function() {
+  controller.simulatorCleanUp = function(req, res) {
+    Trader.cleanBooks(function() {
       res.send({message: "All deals removed."})
     })
   }
@@ -410,10 +412,7 @@ module.exports = function(STAMPEDE) {
     )
     
     // MAKE SURE we run simulation on virtual exchange !!!
-    if (
-      generated_data && generated_data.length && 
-      config.exchange.selected === "simulated_exchange"
-    ) {
+    if (generated_data && generated_data.length && simulated_exchange) {
       LOG("simulatorRun | generated_data.length:", generated_data.length)
       simulatorWarmUp(generated_data)
       // simulator.startSeries()
@@ -432,7 +431,7 @@ module.exports = function(STAMPEDE) {
 
   controller.simulatorRunSeries = function(req, res) {
     // MAKE SURE we run simulation on virtual exchange !!!
-    if (config.exchange.selected === "simulated_exchange") {
+    if (simulated_exchange) {
 
       simulator.startSeries()
       res.render("series", {

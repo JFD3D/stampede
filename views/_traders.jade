@@ -6,75 +6,31 @@
     .trader.col-md-5(id="#{formatter.standardize(trader_name)}")
       .spacer
       p
-        b #{'T' + trader_name.split('_')[1] || ''}: (#{trader.record.current_deals} / #{currency_label + " " + parseFloat(trader.record && trader.record.current_investment ? trader.record.current_investment : 0).toFixed(2)}) 
-        span at 
-        b avg #{trader.average_buy_price ? trader.average_buy_price.toFixed(2) : 0} #{currency_label}
+        b #{'T' + trader_name.split('_')[1] || ''}
+        span  at average buy price
+        b  #{trader.average_buy_price ? trader.average_buy_price.toFixed(2) : 0} #{currency_label}
         span  | 
-        - if (trader.next_deal_amount)
-          span= ("Next: " + trader.next_deal_amount.toFixed(2)+" USD")
-          span  | 
-        - if (trader.next_deal_ratio)
-          span= ("Multi: " + trader.next_deal_ratio.toFixed(2)+"x")
-          span  | 
-        a.removal(href="#", data-trader="#{trader_name}") Remove
+        a.removal(href="#", data-trader="#{trader_name}") Remove trader
       span
-      - var deals_sorted = trader.deals.sort(function(a, b) { return b.buy_price - a.buy_price })
       - if (trader.purchases || trader.sales || trader.profit)
         h3 Trading overview
         table.table.table-striped
           tr
-            th Purchase #
-            th Purchase vol #{currency_label}
-            th Purchase vol BTC
-            th Sale #
-            th Sale vol #{currency_label}
-            th Sale vol BTC
-            th Profit #{currency_label}
+            th Type
+            th Number
+            th Volume #{currency_label}
+            th Volume BTC
           tr
+            td Purchases
             td #{trader.purchases}
             td #{trader.purchases_amount_currency.toFixed(2)}
             td #{trader.purchases_amount_btc.toFixed(5)}
+          tr
+            td Sales
             td #{trader.sales}
             td #{trader.sales_amount_currency.toFixed(2)}
             td #{trader.sales_amount_btc.toFixed(5)}
-            td #{trader.profit.toFixed(2)}
-      h3 Current deals
-      table.table.table-striped.deals
-        tr
-          th Buy price
-          th Amount BTC (#{currency_label}) (Profit/Loss)
-          th
-          th
-        each deal in deals_sorted
-          tr
-            td= deal.buy_price.toFixed(2)
-              - if (deal.is_lowest)
-                span.lowest  (Min)
-              - if (deal.is_highest)
-                span.highest  (Max)
-            - var current_value = (deal.amount * trader.current_sale_price)
-            - var purchase_value = (deal.amount * deal.buy_price)
-            - var profit_loss = (current_value - purchase_value)
-            - var profit_loss_perc = (profit_loss / purchase_value * 100)
-            td #{(deal.amount || 0).toFixed(7)} (#{(deal.amount * deal.buy_price).toFixed(2)})
-              span (
-              span(class="#{profit_loss > 0 ? 'positive' : 'negative'}") #{(profit_loss > 0 ? '+' : '') + (profit_loss_perc).toFixed(2) + '%'} 
-              span )
-            td
-              a.removal(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}") Remove
-            td
-              a.deal-sale(href="#", data-deal="#{deal.name}", data-trader="#{trader_name}", title="Sell at current price") Sell
-        - var future_deals_len = (trader.future_deals || []).length
-        - if (future_deals_len)
-          tr.projected-deal
-            td(colspan="4", style="text-align: center;") 
-              b #{future_deals_len} projected deals 
-          each future_deal, f_deal_index in trader.future_deals
-            - if (f_deal_index < 14)
-              tr.projected-deal
-                td= future_deal.buy_price.toFixed(2)
-                td= (future_deal.amount || 0).toFixed(7)+" BTC"
-                td(colspan="2")
+
 - else
   .col-md-5
     h3 No traders added.
