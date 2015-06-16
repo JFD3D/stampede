@@ -13,7 +13,6 @@ Exchange.prototype.startTicking = function() {
 
   me.tickEmitter = Ticker
   trades_channel.bind("trade", function(data) {
-    console.log("incoming:", data)
     Ticker.emit("tick", data)
   })
 }

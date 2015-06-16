@@ -1268,7 +1268,7 @@ module.exports = function(STAMPEDE) {
 
   function cycle(done) {
     cycle_in_progress = true
-    if (!config.simulation) console.log("Cycle initiated.")
+    //if (!config.simulation) console.log("Cycle initiated.")
 
     var cycle_start_timer = Date.now()
     perf_timers.cycle_counter++
