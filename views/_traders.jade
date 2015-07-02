@@ -40,12 +40,14 @@
               th Price
               th Amount #{currency_label}
               th Amount BTC
+              th Time
             each entry in trader.book.entries
               tr
                 td #{formatter.standardize(entry.type)}
                 td #{entry.price.toFixed(2)}
                 td #{(entry.amount * entry.price).toFixed(2)}
                 td #{entry.amount.toFixed(5)}
+                td #{formatter.tFormat(entry.time)}
 
 - else
   .col-md-5

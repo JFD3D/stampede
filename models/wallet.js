@@ -2,14 +2,14 @@
 
 module.exports = function(STAMPEDE) {
 
-  var async = STAMPEDE.async
-  var config = STAMPEDE.config
-  var db = STAMPEDE.db
-  var email = STAMPEDE.email
+  var async             = STAMPEDE.async
+  var config            = STAMPEDE.config
+  var db                = STAMPEDE.db
+  var email             = STAMPEDE.email
+  var LOG               = STAMPEDE.LOG("wallet")
+  var currency          = (config.exchange.currency || "usd")
   var live_traders
   var error_email_sent
-  var LOG = STAMPEDE.LOG("wallet")
-  var currency = (config.exchange.currency || "usd")
 
   function Wallet() {
     this.current = {

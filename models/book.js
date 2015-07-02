@@ -15,7 +15,6 @@ module.exports = function(STAMPEDE) {
     // Add entry to array and record it if we are not simulating
     add: function(type, entry, done) {
       var book = this
-      entry.time = Date.now()
       entry.type = type
       var book_entry = stringBookRecord(entry)
       book.entries.push(entry)

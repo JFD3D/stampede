@@ -2,21 +2,21 @@
 
 module.exports = function(STAMPEDE) {
 
-  var config = STAMPEDE.config
-  var common = STAMPEDE.common
-  var async = STAMPEDE.async
-  var db = STAMPEDE.db
-  var email = STAMPEDE.email
-  var LOG = STAMPEDE.LOG("trader")
-  var _ = STAMPEDE._
+  var config          = STAMPEDE.config
+  var common          = STAMPEDE.common
+  var async           = STAMPEDE.async
+  var db              = STAMPEDE.db
+  var email           = STAMPEDE.email
+  var LOG             = STAMPEDE.LOG("trader")
+  var _               = STAMPEDE._
 
       // All traders will be loaded into this object
-  var live_traders = {}
+  var live_traders    = {}
 
       // Trading performance timers initialization for benchmarking
-  var perf_timers = STAMPEDE.perf_timers
+  var perf_timers     = STAMPEDE.perf_timers
+  var logPerformance  = common.logPerformance
 
-  var logPerformance = common.logPerformance
       // Load Market and Walled models to initialize instances below
       /*
        *
@@ -31,27 +31,30 @@ module.exports = function(STAMPEDE) {
   var wallet
 
   // Shared constants
-  var TRADER_PREFIX = "trader_"
-  var ID_COUNTER = "stampede_trader_number"
-  var VALUE_SHEET_KEY = "stampede_value"            // Repository unsorted list for USD value history
-  var TRADER_LIST_KEY = "stampede_traders"        // Main repository in redis for keeping list of traders
-  var CURRENCY_LABEL = config.exchange.currency.toUpperCase()
+  var TRADER_PREFIX   = "trader_"
+  var ID_COUNTER      = "stampede_trader_number"
+  // Repository unsorted list for USD value history
+  var VALUE_SHEET_KEY = "stampede_value"
+  // Main repository in redis for keeping list of traders
+  var TRADER_LIST_KEY = "stampede_traders"
+  var CURRENCY_LABEL  = config.exchange.currency.toUpperCase()
+
 
   // Additional shared variables
-  var trader_count                                 // Current trader count
-  var sheets = []                                  // Current USD value history list
-  var error_email_sent                             // Indicate if email for certain error has already been sent
-  var cycle_counter = perf_timers.cycle_counter    // For simulation purposes so that notification is only emitted
-  var broadcast_time                               // Will compute leftover on this
-  var series_simulation = false                           // Disables broadcast later, (when series of data are simulated)
-  var cycle_sell_decisions = []
+  var sheets              = []                                  // Current USD value history list
+  var cycle_counter       = perf_timers.cycle_counter    // For simulation purposes so that notification is only emitted
+  var series_simulation   = false                           // Disables broadcast later, (when series of data are simulated)
+  var cycle_sell_decisions= []
   var cycle_buy_decisions = []
-  var currency_key = config.exchange.currency + "_available"
-  var exchange_simulated = (config.exchange.selected === "simulated_exchange")
-  var cycle_in_progress
-  var last_cycle_end = Date.now()
+  var currency_key        = config.exchange.currency + "_available"
+  var exchange_simulated  = (config.exchange.selected === "simulated_exchange")
+  var last_cycle_end      = Date.now()
   var last_full_cycle_end = Date.now()
-  var cycles_until_full = 0
+  var cycles_until_full   = 0
+  var trader_count                                 // Current trader count
+  var error_email_sent                             // Indicate if email for certain error has already been sent
+  var broadcast_time                               // Will compute leftover on this
+  var cycle_in_progress
 
       /*
        *
@@ -75,7 +78,8 @@ module.exports = function(STAMPEDE) {
        *
        */    
 
-  var TRAILING_STOP_ENABLED  // Sales will happen only after trailing stop is reached
+  // Sales will happen only after trailing stop is reached
+  var TRAILING_STOP_ENABLED  
 
       /*
        *
@@ -86,36 +90,36 @@ module.exports = function(STAMPEDE) {
        */    
   var DECISION_LOGGING
 
-      // USD value sheet size limit
+  // USD value sheet size limit
   var SHEET_SIZE_LIMIT
 
 
   function initializeConfig() {
 
     // Trading config
-    MAX_SUM_INVESTMENT = config.trading.maximum_investment
-    MIN_PURCHASE = config.trading.min_purchase         
-    INITIAL_GREED = (config.trading.greed / 100)
-    BID_ALIGN = config.trading.bid_alignment
-    IMPATIENCE = (config.trading.impatience / 100)
+    MAX_SUM_INVESTMENT    = config.trading.maximum_investment
+    MIN_PURCHASE          = config.trading.min_purchase         
+    INITIAL_GREED         = (config.trading.greed / 100)
+    BID_ALIGN             = config.trading.bid_alignment
+    IMPATIENCE            = (config.trading.impatience / 100)
     // Strategies now
     TRAILING_STOP_ENABLED = config.strategy.trailing_stop
     // Logging options load
-    DECISION_LOGGING = (config.logging || {}).decisions || false
+    DECISION_LOGGING      = (config.logging || {}).decisions || false
     // USD value sheet size limit
-    SHEET_SIZE_LIMIT = config.sheet_size_limit || 300
+    SHEET_SIZE_LIMIT      = config.sheet_size_limit || 300
 
     // Set performance timers to zero
-    perf_timers.cycle = 0
-    perf_timers.decisions = 0
-    perf_timers.wallet = 0
-    perf_timers.market = 0
+    perf_timers.cycle                   = 0
+    perf_timers.decisions               = 0
+    perf_timers.wallet                  = 0
+    perf_timers.market                  = 0
     perf_timers.market_post_assignments = 0
-    perf_timers.cycle_counter = 0
-    perf_timers.finalize_cycle = 0
-    perf_timers.is_buying = 0
-    perf_timers.is_selling = 0
-    cycles_until_full = 0
+    perf_timers.cycle_counter           = 0
+    perf_timers.finalize_cycle          = 0
+    perf_timers.is_buying               = 0
+    perf_timers.is_selling              = 0
+    cycles_until_full                   = 0
   }
 
 
@@ -140,28 +144,26 @@ module.exports = function(STAMPEDE) {
      *
      *
      */
-
     
-    this.name = name
+    this.name                       = name
     
     // Assign profit tracking
-    this.profit = 0
+    this.profit                     = 0
 
     // Assign purchase tracking
-    this.purchases = 0
-    this.purchases_amount_currency = 0
-    this.purchases_amount_btc = 0
+    this.purchases                  = 0
+    this.purchases_amount_currency  = 0
+    this.purchases_amount_btc       = 0
 
     // Assign sales tracking
-    this.sales = 0
-    this.sales_amount_currency = 0
-    this.sales_amount_btc = 0
-
-    this.average_buy_price = 0
-    this.amount = 0
+    this.sales                      = 0
+    this.sales_amount_currency      = 0
+    this.sales_amount_btc           = 0
+    this.average_buy_price          = 0
+    this.amount                     = 0
 
     // Book-keeping for purchase/sale entries
-    this.book = new STAMPEDE.book(name)
+    this.book                       = new STAMPEDE.book(name)
 
     /*
      *
@@ -171,13 +173,8 @@ module.exports = function(STAMPEDE) {
      *
      *
      */
-
-    
-    
-    this.main_list = TRADER_LIST_KEY
+    this.main_list                  = TRADER_LIST_KEY
   }
-
-
 
 
   /*
@@ -347,10 +344,8 @@ module.exports = function(STAMPEDE) {
     // SELL checks
     validSellPrice: function(sale) {
       var me = this
-      var avg_price = me.average_buy_price
-      var target_price = (me.target_price || avg_price)
 
-      return (sale.price > target_price)
+      return (sale.price > me.target_price)
     },
 
     validSellAmount: function(sale) {
@@ -456,16 +451,12 @@ module.exports = function(STAMPEDE) {
       var current_sell_price = (market.current.last / (1 + (BID_ALIGN / 100)))
       var sell_checklist = [
             { required: true, fn: me.validSellPrice, name: "sell_price" },
-            // {
-            //   required: TRAILING_STOP_ENABLED, 
-            //   fn: me.checkTrailingStop, 
-            //   name: "trailing_stop"
-            // },
             { required: true, fn: me.validSellAmount, name: "sell_amount" }
           ]
       // Initialize decision
 
       sale.price = current_sell_price
+
       var structured_decision = me.checkOut(sell_checklist, {
             trader: 
               "T" + me.name.split("_")[1] + 
@@ -495,20 +486,27 @@ module.exports = function(STAMPEDE) {
     
     decide: function(done) {
       var me = this
+      var cur_price = market.current.last
+      
       //Sanity check
-      if (market.current.last > 5) {
-        var purchase = {},
-            sale = {}
+      if (cur_price > 5) {
+        me.target_price = me.average_buy_price * (1 + INITIAL_GREED)
 
+        var purchase = {
+              time: market.current.time
+            }
+        var sale = {
+              time: market.current.time
+            } 
+
+        
         if (me.isBuying(purchase)) {
           me.buy(purchase, done)
         }
-        else if (me.isSelling(sale)) {
+        else if (me.amount && me.isSelling(sale)) {
           me.sell(sale, done)
         }
-        else {
-          done()
-        }
+        else return done()
       }
       else {
         LOG(
@@ -516,7 +514,7 @@ module.exports = function(STAMPEDE) {
           "): Market not ready for decisions (current_market)",
           market.current
         )
-        done()
+        return done()
       }
     },
     
@@ -558,8 +556,8 @@ module.exports = function(STAMPEDE) {
             template: "purchase.jade",
             data: {
               purchase: purchase,
-              market: market,
-              wallet: wallet
+              market: market.current,
+              wallet: wallet.current
             }
           }, function(success) {
             console.log("Email sending success?:", success)
@@ -611,6 +609,7 @@ module.exports = function(STAMPEDE) {
     recordSale: function(sale, done) {
       var me = this
       var currency_sell_amount = (sale.price * sale.amount)
+      
       me.sales++
       me.sales_amount_currency += currency_sell_amount
       me.sales_amount_btc += sale.amount
@@ -636,8 +635,6 @@ module.exports = function(STAMPEDE) {
 
       // Align current cool to avoid all sell / buy
       wallet.current.cool -= (market.current.spread * 10)
-      wallet.current.investment -= (sale.amount * me.average_buy_price)
-      wallet.current.btc_amount_managed -= sale.amount
       // Reset cycles to load all (market, wallet) details
       cycles_until_full = 1
       
@@ -665,7 +662,6 @@ module.exports = function(STAMPEDE) {
           order && 
           order.id
         ) {
-
           if (!exchange_simulated) email.send({
             subject: "Stampede - Selling at: "+sale.price,
             template: "sale.jade",
@@ -678,9 +674,10 @@ module.exports = function(STAMPEDE) {
             console.log("Email sending success?:", success)
             if (error_email_sent) error_email_sent = null
           })
-
           // Record sale to history
           me.recordSale(sale, done)
+          wallet.current.investment -= (sale.amount * me.average_buy_price)
+          wallet.current.btc_amount_managed -= sale.amount
         }
         else {
           sale.order_id = "freeze"
@@ -1110,14 +1107,13 @@ module.exports = function(STAMPEDE) {
   }
 
   function refreshAll() {
-    var CON = STAMPEDE.controller
-    CON.refreshTraders(live_traders)
-    CON.refreshOverview()
-    CON.refreshMarket(market.current)
-    CON.refreshWallet(wallet.current)
-    CON.refreshShares(wallet.shares)
+    STAMPEDE.controller.refreshTraders(live_traders)
+    STAMPEDE.controller.refreshOverview()
+    STAMPEDE.controller.refreshMarket(market.current)
+    STAMPEDE.controller.refreshWallet(wallet.current)
+    STAMPEDE.controller.refreshShares(wallet.shares)
     console.log("trader | refreshAll | sheets.length :", sheets.length)
-    setTimeout(CON.drawSheets(sheets, "full"), 5000)
+    setTimeout(STAMPEDE.controller.drawSheets(sheets, "full"), 2000)
   }
 
 

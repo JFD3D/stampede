@@ -183,9 +183,14 @@ module.exports = function(STAMPEDE) {
         html: html
       })
     })
-    if (market_data.last) live.sendToAll(
-      "stampede_updates", {current_last_price: "$"+market_data.last.toFixed(2)}
-    )
+    if (market_data.last) {
+      live.sendToAll(
+        "stampede_updates", { 
+        current_last_price: "$"+market_data.last.toFixed(2),
+        price: market_data.last,
+        time: market_data.time
+      })
+    }
   }
 
   controller.refreshOverview = function(market_data) {
@@ -392,7 +397,7 @@ module.exports = function(STAMPEDE) {
     generated_data = STAMPEDE.generator.launch()
     controller.generated_data = generated_data
     simulator.resetDataSet()
-    var binned_data = STAMPEDE.generator.bin(generated_data, 20000)
+    var binned_data = STAMPEDE.generator.bin(generated_data, 300)
 
     res.send({
       message: "Generated data.",
