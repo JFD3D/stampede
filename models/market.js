@@ -8,6 +8,7 @@ module.exports = function(STAMPEDE) {
   var email = STAMPEDE.email
   var perf_timers = STAMPEDE.perf_timers
   var error_email_sent
+  var TICKER_PROPS = ["bid", "low", "high", "volume", "ask"]
 
   perf_timers.market_assignment = 0
   perf_timers.market_tick = 0
@@ -22,8 +23,9 @@ module.exports = function(STAMPEDE) {
   Market.prototype = {
     check: function(done) {
       var me = this
-      me.current.error = null
       var tick_start = Date.now()
+
+      me.current.error = null
       STAMPEDE.controller.ticker(function(error, data) {
         perf_timers.market_tick += (Date.now() - tick_start)
         if (error && !data) {
@@ -44,8 +46,7 @@ module.exports = function(STAMPEDE) {
       var assign_start = Date.now()
 
       // Assign listed properties to market current
-      ticker_properties = ["bid", "low", "high", "volume", "ask"]
-      ticker_properties.forEach(function(property) {
+      TICKER_PROPS.forEach(function(property) {
         me.current[property] = parseFloat(data[property] || 0)
       })
       if (data.simulation_progress) {
@@ -53,18 +54,17 @@ module.exports = function(STAMPEDE) {
       }
       me.current.starting_point = (data.starting_point)
       // Further market calculations
-      me.current.time = (data.time || Date.now())
+      me.current.time = (data.time || assign_start)
       me.current.middle = (me.current.high + me.current.low) / 2
       me.current.top = me.top = (
         me.top && me.top > me.current.high
       ) ? me.top : me.current.high
       me.current.spread = (
         me.current.high - me.current.low
-      ) / (me.current.high || 0 + 0.00001)
+      ) / me.current.high
       perf_timers.market_assignment += (Date.now() - assign_start)
     }
   }
 
   return Market
-
 }

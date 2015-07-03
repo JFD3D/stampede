@@ -472,7 +472,7 @@ module.exports = function(STAMPEDE) {
     simulator.loadSet(set_name, function(error, data) {
       generated_data = data
       controller.generated_data = generated_data
-      var binned_data = STAMPEDE.generator.bin(data, 20000)
+      var binned_data = STAMPEDE.generator.bin(data, 300)
       res.send({
         message: "Loaded data.",
         data: binned_data

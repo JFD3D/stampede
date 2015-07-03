@@ -2,7 +2,9 @@ var series = {
 
   trading: {
 
-    greed: [0.6, 1, 2, 5],
+    min_purchase: [6, 10, 20],
+
+    greed: [1, 2, 5],
 
     impatience: [0, 50, 100]
 
@@ -12,7 +14,7 @@ var series = {
 
     // momentum_trading: [false],
 
-    trailing_stop: [true],
+    trailing_stop: [true, false],
 
     // shedding: [true, false],
 

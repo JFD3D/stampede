@@ -41,9 +41,12 @@ module.exports = function(STAMPEDE) {
 
 
   // Additional shared variables
-  var sheets              = []                                  // Current USD value history list
-  var cycle_counter       = perf_timers.cycle_counter    // For simulation purposes so that notification is only emitted
-  var series_simulation   = false                           // Disables broadcast later, (when series of data are simulated)
+  // Current USD value history list
+  var sheets              = []                                  
+  // For simulation purposes so that notification is only emitted
+  var cycle_counter       = perf_timers.cycle_counter    
+  // Disables broadcast later, (when series of data are simulated)
+  var series_simulation   = false                           
   var cycle_sell_decisions= []
   var cycle_buy_decisions = []
   var currency_key        = config.exchange.currency + "_available"
@@ -358,14 +361,18 @@ module.exports = function(STAMPEDE) {
     },
 
     checkTrailingStop: function(sale) {
+      var me = this
+
       // If trailing stop enabled, add to structured decision
       // Set the stop deal as deal to sell if not selling combined deal
       // And if trailing stop was hit
-      var trailing_stop = (
+      // Stop price is the max price reduced by half of greed
+      sale.stop_price = 
+        (me.max_price) * (1 - (INITIAL_GREED / 2))
+
+      return (
         sale.stop_price >= sale.price
       )
-
-      return trailing_stop
     },
    
     // Decide if buying, define purchase
@@ -451,7 +458,12 @@ module.exports = function(STAMPEDE) {
       var current_sell_price = (market.current.last / (1 + (BID_ALIGN / 100)))
       var sell_checklist = [
             { required: true, fn: me.validSellPrice, name: "sell_price" },
-            { required: true, fn: me.validSellAmount, name: "sell_amount" }
+            { required: true, fn: me.validSellAmount, name: "sell_amount" },
+            { 
+              required: TRAILING_STOP_ENABLED, 
+              fn: me.checkTrailingStop, 
+              name: "trailing_stop" 
+            }
           ]
       // Initialize decision
 
@@ -490,6 +502,7 @@ module.exports = function(STAMPEDE) {
       
       //Sanity check
       if (cur_price > 5) {
+        me.max_price = (me.max_price > cur_price) ? me.max_price : cur_price
         me.target_price = me.average_buy_price * (1 + INITIAL_GREED)
 
         var purchase = {
@@ -498,8 +511,6 @@ module.exports = function(STAMPEDE) {
         var sale = {
               time: market.current.time
             } 
-
-        
         if (me.isBuying(purchase)) {
           me.buy(purchase, done)
         }
@@ -592,6 +603,9 @@ module.exports = function(STAMPEDE) {
       me.amount += purchase.amount
       me.purchases_amount_btc += purchase.amount
 
+      // Reset current max_price
+      me.max_price = market.current.last
+
       async.parallel([
         function(next) {
           // Only save the record to db if we are not simulating
@@ -614,6 +628,11 @@ module.exports = function(STAMPEDE) {
       me.sales_amount_currency += currency_sell_amount
       me.sales_amount_btc += sale.amount
       me.amount -= sale.amount
+      
+      // Recalculate average buy price (raise it with greed)
+      me.average_buy_price = (me.amount * (
+        me.average_buy_price * (1 + INITIAL_GREED))) / me.amount
+
       async.parallel([
         function(next) {
           // Only save the record to db if we are not simulating
@@ -809,8 +828,16 @@ module.exports = function(STAMPEDE) {
     var trader_names = _.keys(live_traders)
     
     if (trader_names.length) {
+      var currency_amount = 0
+      var btc_amount = 0
+
       async.each(trader_names, function(trader_name, next) {
         var trader = live_traders[trader_name]
+
+        currency_amount += (
+          trader.purchases_amount_currency - trader.sales_amount_currency
+        )
+        btc_amount += trader.amount
         trader.decide(next)
       }, function() {
         perf_timers.decisions += (Date.now() - decisions_start_timer)
@@ -819,6 +846,7 @@ module.exports = function(STAMPEDE) {
           wallet.current.cool < 1 && 
           cool_up < (1 - wallet.current.cool)
         ) ? (wallet.current.cool + cool_up) : 1
+        wallet.current.average_buy_price = (currency_amount / btc_amount)
         if (done) {
           return done()
         }
@@ -1040,7 +1068,7 @@ module.exports = function(STAMPEDE) {
       trader.wake(next)
     }, function() {
       STAMPEDE.controller.refreshTraders(live_traders)
-      done()
+      return done()
     })
   }
 
@@ -1056,7 +1084,7 @@ module.exports = function(STAMPEDE) {
       }
       else {
         STAMPEDE.controller.refreshTraders(live_traders)
-        done()
+        return done()
       }
     })
   }

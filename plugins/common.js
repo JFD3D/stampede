@@ -200,7 +200,7 @@ module.exports = function(STAMPEDE) {
     console.log(
       "--- PERF LOG (" + cycle_counter + 
         ". cycle at " + formatter.tFormat(STAMPEDE.current_market.time) + 
-      ") ---\n")
+      ") " + parseInt(cycle_counter / (perf_timers.cycle / 1000)) + " c/s ---\n")
     for (var perf_timer_field in perf_timers) {
       if (
         perf_timers.hasOwnProperty(perf_timer_field) && 
