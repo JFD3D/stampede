@@ -8,16 +8,20 @@ module.exports = function(STAMPEDE) {
     this.name = "book_for_" + trader_name
     this.trader_name = trader_name
     this.entries = []
+    this.purchases_amount_currency = 0
+    this.purchases_amount_btc = 0
+    this.sales_amount_currency = 0
+    this.sales_amount_btc = 0
   }
 
   Book.prototype = {
 
     // Add entry to array and record it if we are not simulating
-    add: function(type, entry, done) {
+    add: function(entry, done) {
       var book = this
-      entry.type = type
       var book_entry = stringBookRecord(entry)
-      book.entries.push(entry)
+      
+      book.accountFor(entry)
       // Only save the book entry to db if we are not simulating
       if (!exchange_simulated) {
         db.sadd(book.name, book_entry, done)
@@ -27,20 +31,46 @@ module.exports = function(STAMPEDE) {
       }
     },
 
+    accountFor: function(entry) {
+      var book = this
+
+      book.entries.push(entry)
+      book[entry.type + "s_amount_currency"] += (entry.price * entry.amount)
+      book[entry.type + "s_amount_btc"] += (entry.amount)
+    },
+
+    resetBalances: function() {
+      var book = this
+
+      book.entries = []
+      book.purchases_amount_currency = 0
+      book.purchases_amount_btc = 0
+      book.sales_amount_currency = 0
+      book.sales_amount_btc = 0
+    },
+
     // Load book entries from set stored in redis, parse them and populate the 
     // array of entries
     load: function(done) {
       var book = this
-      book.entries = []
+
       db.smembers(book.name, function(errors, book_records) {
+        book.resetBalances()
         if (book_records && book_records.length) {
           book_records.forEach(function(book_record) {
-            var rec = parseBookRecord(book_record)
-            if (rec) book.entries.push(rec)
+            var entry = parseBookRecord(book_record)
+
+            if (entry) {
+              book.accountFor(entry)
+            }
           })
         }
         if (done) return done(errors)
       })
+    },
+
+    rebalance: function() {
+
     }
   }
 

@@ -12,7 +12,7 @@
         span  | 
         a.removal(href="#", data-trader="#{trader_name}") Remove trader
       span
-      - if (trader.purchases || trader.sales || trader.profit)
+      - if (trader.purchases || trader.sales)
         h3 Trading overview
         table.table.table-striped
           tr
@@ -23,13 +23,13 @@
           tr
             td Purchases
             td #{trader.purchases}
-            td #{trader.purchases_amount_currency.toFixed(2)}
-            td #{trader.purchases_amount_btc.toFixed(5)}
+            td #{trader.book.purchases_amount_currency.toFixed(2)}
+            td #{trader.book.purchases_amount_btc.toFixed(5)}
           tr
             td Sales
             td #{trader.sales}
-            td #{trader.sales_amount_currency.toFixed(2)}
-            td #{trader.sales_amount_btc.toFixed(5)}
+            td #{trader.book.sales_amount_currency.toFixed(2)}
+            td #{trader.book.sales_amount_btc.toFixed(5)}
       .spacer
       - if (trader.book.entries && trader.book.entries.length)
         h3 Trader book

@@ -155,13 +155,10 @@ module.exports = function(STAMPEDE) {
 
     // Assign purchase tracking
     this.purchases                  = 0
-    this.purchases_amount_currency  = 0
-    this.purchases_amount_btc       = 0
 
     // Assign sales tracking
     this.sales                      = 0
-    this.sales_amount_currency      = 0
-    this.sales_amount_btc           = 0
+
     this.average_buy_price          = 0
     this.amount                     = 0
 
@@ -214,6 +211,7 @@ module.exports = function(STAMPEDE) {
     },
     saveRecord: function(done) {
       var me = this
+
       db.hmset(me.name, {
         amount: me.amount,
         average_buy_price: me.average_buy_price,
@@ -257,6 +255,8 @@ module.exports = function(STAMPEDE) {
       db.hgetall(me.name, function(error, my_record) {
         me.average_buy_price = parseFloat(my_record.average_buy_price || 0),
         me.amount = parseFloat(my_record.amount || 0)
+        me.purchases = parseInt(my_record.purchases || 0)
+        me.sales = parseInt(my_record.sales || 0)
         me.book.load(done)
         // Assign shared values to wallet
         wallet.current.investment += (me.amount * me.average_buy_price)
@@ -506,10 +506,12 @@ module.exports = function(STAMPEDE) {
         me.target_price = me.average_buy_price * (1 + INITIAL_GREED)
 
         var purchase = {
-              time: market.current.time
+              time: market.current.time,
+              type: "purchase"
             }
         var sale = {
-              time: market.current.time
+              time: market.current.time,
+              type: "sale"
             } 
         if (me.isBuying(purchase)) {
           me.buy(purchase, done)
@@ -567,8 +569,8 @@ module.exports = function(STAMPEDE) {
             template: "purchase.jade",
             data: {
               purchase: purchase,
-              market: market.current,
-              wallet: wallet.current
+              market: market,
+              wallet: wallet
             }
           }, function(success) {
             console.log("Email sending success?:", success)
@@ -596,12 +598,10 @@ module.exports = function(STAMPEDE) {
       var currency_buy_amount = (purchase.price * purchase.amount)
 
       me.purchases++
-      me.purchases_amount_currency += currency_buy_amount
       me.average_buy_price = (
         (me.average_buy_price * me.amount) + currency_buy_amount
       ) / (me.amount + purchase.amount)
       me.amount += purchase.amount
-      me.purchases_amount_btc += purchase.amount
 
       // Reset current max_price
       me.max_price = market.current.last
@@ -615,18 +615,15 @@ module.exports = function(STAMPEDE) {
           else return next()
         },
         function(next) {
-          me.book.add("purchase", purchase, next)
+          me.book.add(purchase, next)
         }
       ], done)
     },
 
     recordSale: function(sale, done) {
       var me = this
-      var currency_sell_amount = (sale.price * sale.amount)
       
       me.sales++
-      me.sales_amount_currency += currency_sell_amount
-      me.sales_amount_btc += sale.amount
       me.amount -= sale.amount
       
       // Recalculate average buy price (raise it with greed)
@@ -642,7 +639,7 @@ module.exports = function(STAMPEDE) {
           else return next()
         },
         function(next) {
-          me.book.add("sale", sale, next)
+          me.book.add(sale, next)
         }
       ], done)
     },
@@ -835,7 +832,7 @@ module.exports = function(STAMPEDE) {
         var trader = live_traders[trader_name]
 
         currency_amount += (
-          trader.purchases_amount_currency - trader.sales_amount_currency
+          trader.book.purchases_amount_currency - trader.book.sales_amount_currency
         )
         btc_amount += trader.amount
         trader.decide(next)
@@ -1135,13 +1132,16 @@ module.exports = function(STAMPEDE) {
   }
 
   function refreshAll() {
-    STAMPEDE.controller.refreshTraders(live_traders)
-    STAMPEDE.controller.refreshOverview()
-    STAMPEDE.controller.refreshMarket(market.current)
-    STAMPEDE.controller.refreshWallet(wallet.current)
-    STAMPEDE.controller.refreshShares(wallet.shares)
-    console.log("trader | refreshAll | sheets.length :", sheets.length)
-    setTimeout(STAMPEDE.controller.drawSheets(sheets, "full"), 2000)
+    if (market && wallet) {
+      STAMPEDE.controller.refreshMarket(market.current)
+      STAMPEDE.controller.refreshWallet(wallet.current)  
+      STAMPEDE.controller.refreshTraders(live_traders)
+      STAMPEDE.controller.refreshOverview()
+      STAMPEDE.controller.refreshShares(wallet.shares)
+      console.log("trader | refreshAll | sheets.length :", sheets.length)
+      setTimeout(STAMPEDE.controller.drawSheets(sheets, "full"), 2000)
+    }
+
   }
 
 
