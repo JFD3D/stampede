@@ -355,9 +355,12 @@ module.exports = function(STAMPEDE) {
       var me = this
       var available_amount = me.amount
       var available_currency_amount = (me.amount * sale.price)
-      sale.amount = (MIN_PURCHASE / sale.price * 2)
+      var target_amount = (available_amount / 2)
+      var target_currency_amount = (target_amount * sale.price)
 
-      return (sale.amount < available_amount)
+      sale.amount = target_amount
+
+      return (target_currency_amount > MIN_PURCHASE)
     },
 
     checkTrailingStop: function(sale) {
@@ -472,7 +475,8 @@ module.exports = function(STAMPEDE) {
       var structured_decision = me.checkOut(sell_checklist, {
             trader: 
               "T" + me.name.split("_")[1] + 
-              ": " + (current_sell_price).toFixed(2) + "",
+              ": " + (current_sell_price).toFixed(2) + 
+              " (" + (me.target_price).toFixed(2) + ")",
             criteria: {}
           }, sale)
 
@@ -726,6 +730,7 @@ module.exports = function(STAMPEDE) {
         console.log("Problems loading traders, market or wallet:", errors)
       }
       if (done) done()
+      cycle()
     })
   }
 
@@ -748,12 +753,6 @@ module.exports = function(STAMPEDE) {
     if (!cycle_in_progress && !STAMPEDE.stop && delay_permitted) {
       cycle()
     }
-    // else {
-    //   LOG(
-    //     "tick | cycle disallow | delay_permitted, time_since_last_cycle:", 
-    //     delay_permitted, (time_since_last_cycle / 1000).toFixed(2), "seconds."
-    //   )
-    // }
   }
 
   function cycle(done) {
@@ -1141,7 +1140,6 @@ module.exports = function(STAMPEDE) {
       console.log("trader | refreshAll | sheets.length :", sheets.length)
       setTimeout(STAMPEDE.controller.drawSheets(sheets, "full"), 2000)
     }
-
   }
 
 
