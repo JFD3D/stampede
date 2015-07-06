@@ -320,11 +320,8 @@ module.exports = function(STAMPEDE) {
               (target_avg_price - cur_price)
             )
         var equalizer_currency = (equalizer * purchase.price)
+
         target_amount = equalizer
-        // LOG(
-        //   "validBuyAmount | me.average_buy_price, target_amount:", 
-        //   me.average_buy_price, target_amount
-        // )
       }
       // Assign basic amount (up by 10% to make sure our purchase goes through)
       else {
@@ -706,10 +703,10 @@ module.exports = function(STAMPEDE) {
             template: "error.jade",
             data: { error: error }
           }, function(success) {
-            console.log("ERROR Email sending success?:", success)
+            console.log("ERROR Email sending success?:", success, error)
             error_email_sent = true
           })   
-          done()
+          return done()
         }
       })
       
