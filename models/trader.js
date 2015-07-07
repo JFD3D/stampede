@@ -575,12 +575,12 @@ module.exports = function(STAMPEDE) {
             }
           }, function(success) {
             console.log("Email sending success?:", success)
-            if (error_email_sent) error_email_sent = null
+            if (error_email_sent) error_email_sent = false
           })
           me.recordPurchase(purchase, done)
         }
         else {
-          if (!exchange_simulated) email.send({
+          if (!exchange_simulated && !error_email_sent) email.send({
             to: config.owner.email,
             subject: "Stampede: Error BUYING deal through bitstamp API",
             template: "error.jade",
@@ -689,7 +689,7 @@ module.exports = function(STAMPEDE) {
             }
           }, function(success) {
             console.log("Email sending success?:", success)
-            if (error_email_sent) error_email_sent = null
+            if (error_email_sent) error_email_sent = false
           })
           // Record sale to history
           me.recordSale(sale, done)
@@ -698,7 +698,7 @@ module.exports = function(STAMPEDE) {
         }
         else {
           sale.order_id = "freeze"
-          if (!exchange_simulated) email.send({
+          if (!exchange_simulated && !error_email_sent) email.send({
             subject: "Stampede: Error SELLING through bitstamp API",
             template: "error.jade",
             data: { error: error }
