@@ -214,6 +214,7 @@ module.exports = function(STAMPEDE) {
 
       db.hmset(me.name, {
         amount: me.amount,
+        max_price: me.max_price,
         average_buy_price: me.average_buy_price,
         purchases: me.purchases,
         sales: me.sales
@@ -254,6 +255,7 @@ module.exports = function(STAMPEDE) {
       var me = this
       db.hgetall(me.name, function(error, my_record) {
         me.average_buy_price = parseFloat(my_record.average_buy_price || 0),
+        me.max_price = parseFloat(my_record.max_price || 0),
         me.amount = parseFloat(my_record.amount || 0)
         me.purchases = parseInt(my_record.purchases || 0)
         me.sales = parseInt(my_record.sales || 0)
@@ -369,7 +371,10 @@ module.exports = function(STAMPEDE) {
       // Stop price is the max price reduced by half of greed
       sale.stop_price = 
         (me.max_price) * (1 - (INITIAL_GREED / 2))
-
+      me.target_price = (
+        sale.stop_price > sale.price ? sale.stop_price : me.target_price
+      )
+      
       return (
         sale.stop_price >= sale.price
       )
