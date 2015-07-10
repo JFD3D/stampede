@@ -372,7 +372,7 @@ module.exports = function(STAMPEDE) {
       sale.stop_price = 
         (me.max_price) * (1 - (INITIAL_GREED / 2))
       me.target_price = (
-        sale.stop_price > sale.price ? sale.stop_price : me.target_price
+        sale.stop_price > me.target_price ? sale.stop_price : me.target_price
       )
       
       return (
