@@ -553,7 +553,7 @@ module.exports = function(STAMPEDE) {
       })
       
       STAMPEDE.controller.buy(
-        purchase.amount.toFixed(7), 
+        purchase.amount.toFixed(6), 
         purchase.price.toFixed(2),
       function(error, order) {
         if (DECISION_LOGGING) console.log(
@@ -668,8 +668,8 @@ module.exports = function(STAMPEDE) {
       })
 
       STAMPEDE.controller.sell(
-        sale.amount.toFixed(7), 
-        sale.price, 
+        sale.amount.toFixed(6), 
+        sale.price.toFixed(2), 
       function(error, order) {
         if (DECISION_LOGGING) console.log(
           "EXCHANGE: Response after attempt to sell | error, order:", 
