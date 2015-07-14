@@ -312,7 +312,7 @@ module.exports = function(STAMPEDE) {
           )
 
       // Calculate equalizing amount to reach a desirable average price
-      if (me.amount) {
+      if (me.amount > (2 * MIN_PURCHASE / purchase.price)) {
         var avg_price = me.average_buy_price
         var cur_amount = me.amount
         var cur_price = purchase.price
@@ -374,7 +374,7 @@ module.exports = function(STAMPEDE) {
       me.target_price = (
         sale.stop_price > me.target_price ? sale.stop_price : me.target_price
       )
-      
+
       return (
         sale.stop_price >= sale.price
       )
@@ -616,7 +616,7 @@ module.exports = function(STAMPEDE) {
         function(next) {
           // Only save the record to db if we are not simulating
           if (!exchange_simulated) {
-            me.saveRecord(next)  
+            me.saveRecord(next)
           }
           else return next()
         },
@@ -628,13 +628,14 @@ module.exports = function(STAMPEDE) {
 
     recordSale: function(sale, done) {
       var me = this
+      var sale_ratio = (sale.amount / me.amount)
       
       me.sales++
       me.amount -= sale.amount
       
       // Recalculate average buy price (raise it with greed)
       me.average_buy_price = (me.amount * (
-        me.average_buy_price * (1 + INITIAL_GREED))) / me.amount
+        me.average_buy_price * (1 + (INITIAL_GREED * sale_ratio)))) / me.amount
 
       async.parallel([
         function(next) {

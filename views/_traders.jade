@@ -6,7 +6,7 @@
     .trader.col-md-5(id="#{formatter.standardize(trader_name)}")
       .spacer
       p
-        b #{'T' + trader_name.split('_')[1] || ''}
+        b #{'T' + trader_name.split('_')[1] || ''} (#{trader.amount.toFixed(5)} BTC)
         span  at average buy price
         b  #{trader.average_buy_price ? trader.average_buy_price.toFixed(2) : 0} #{currency_label}
         span  | 
@@ -34,6 +34,7 @@
       - if (trader.book.entries && trader.book.entries.length)
         h3 Trader book
         .scrollable
+          - var book_entries = trader.book.entries.sort(function(a, b) { return b.time - a.time })
           table.table.table-striped
             tr
               th Type
@@ -41,7 +42,7 @@
               th Amount #{currency_label}
               th Amount BTC
               th Time
-            each entry in trader.book.entries
+            each entry in book_entries
               tr
                 td #{formatter.standardize(entry.type)}
                 td #{entry.price.toFixed(2)}

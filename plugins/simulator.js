@@ -236,19 +236,19 @@ module.exports = function(STAMPEDE) {
 
         _.each(current_traders, function(live_trader) {
           sales += (live_trader.sales || 0)
-          sales_vol += (live_trader.sales_amount_currency || 0)
+          sales_vol += (live_trader.book.sales_amount_currency || 0)
           purchases += (live_trader.purchases || 0)
-          purchases_vol += (live_trader.purchases_amount_currency || 0)
+          purchases_vol += (live_trader.book.purchases_amount_currency || 0)
         })
 
         result.push({
-          value: sales + " (" + xc + parseInt(sales_vol) + ")",
+          value: sales + " (" + xc.toUpperCase() + " " + parseInt(sales_vol) + ")",
           field: "sales",
           type: "sales"
         })
 
         result.push({
-          value: purchases + " (" + xc + parseInt(purchases_vol) + ")",
+          value: purchases + " (" + xc.toUpperCase() + " " + parseInt(purchases_vol) + ")",
           field: "purchases",
           type: "purchases"
         })
