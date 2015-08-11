@@ -295,7 +295,7 @@ module.exports = function(STAMPEDE) {
       // Check if purchase price lower my average buy price - greed
       return (
         price_below_threshold && (
-          me.amount < ((2 * MIN_PURCHASE) / purchase.price) || 
+          me.amount < (2 * MIN_PURCHASE / purchase.price) || 
           me.average_buy_price > purchase.price
         )
       )
@@ -310,18 +310,22 @@ module.exports = function(STAMPEDE) {
       var amount_possible = (
             wallet.current.available_to_traders / purchase.price
           )
+      var valid_buy_amount
+      var equalizer
+      var equalizer_currency
 
       // Calculate equalizing amount to reach a desirable average price
       if (me.amount > (2 * MIN_PURCHASE / purchase.price)) {
         var avg_price = me.average_buy_price
         var cur_amount = me.amount
         var cur_price = purchase.price
-        var target_avg_price = (cur_price * (1 + INITIAL_GREED))
-        var equalizer = (
-              (cur_amount * (avg_price - target_avg_price)) /
-              (target_avg_price - cur_price)
-            )
-        var equalizer_currency = (equalizer * purchase.price)
+        var target_avg_price = (cur_price * (1 + (market.current.spread / 2)))
+
+        equalizer = (
+          (cur_amount * (avg_price - target_avg_price)) /
+          (target_avg_price - cur_price)
+        )
+        equalizer_currency = (equalizer * purchase.price)
 
         target_amount = equalizer
       }
@@ -334,8 +338,14 @@ module.exports = function(STAMPEDE) {
       purchase.amount = (
         target_amount > amount_possible ? amount_possible : target_amount
       )
+      valid_buy_amount = (purchase.amount > (MIN_PURCHASE / purchase.price))
+
+      // LOG(
+      //   "valid_buy_amount, cur_amount, target_amount, amount_possible, equalizer, target_avg_price, purchase.price:", 
+      //   valid_buy_amount, cur_amount, target_amount, amount_possible, equalizer, target_avg_price, purchase.price
+      // )
       // Check if amount is over minimum purchase
-      return (purchase.amount > (MIN_PURCHASE / purchase.price))
+      return valid_buy_amount
     },
 
     // Check if the amount is available
@@ -522,7 +532,7 @@ module.exports = function(STAMPEDE) {
         if (me.isBuying(purchase)) {
           me.buy(purchase, done)
         }
-        else if (me.amount && me.isSelling(sale)) {
+        else if (me.amount > (MIN_PURCHASE / cur_price) && me.isSelling(sale)) {
           me.sell(sale, done)
         }
         else return done()
@@ -792,8 +802,8 @@ module.exports = function(STAMPEDE) {
       else {
         cycles_until_full--
       }
-      perf_timers.cycle += (Date.now() - cycle_start_timer)
       finalizeCycle(cycle_start_timer)
+      perf_timers.cycle += (Date.now() - cycle_start_timer)
       if (done) {
         return done()
       }
@@ -803,9 +813,9 @@ module.exports = function(STAMPEDE) {
   function finalizeCycle(cycle_start_timer) {
     var finalize_cycle_start = Date.now()
     // Export current market and wallet data
-    STAMPEDE.current_market = market.current
-    STAMPEDE.current_wallet = wallet.current
-    STAMPEDE.current_traders = live_traders
+    STAMPEDE.current_market   = market.current
+    STAMPEDE.current_wallet   = wallet.current
+    STAMPEDE.current_traders  = live_traders
     
     if (broadcast_time) {
       STAMPEDE.controller.refreshOverview()
@@ -877,9 +887,6 @@ module.exports = function(STAMPEDE) {
       market.current.threshold = (
         IMPATIENCE * (market.current.high - market.current.middle) + 
         market.current.middle
-      )
-      market.current.trader_bid = (
-        market.current.last / (1 - (BID_ALIGN / 100))
       )
       wallet.current.currency_value = 
         (wallet.current.btc_balance || 0) * (market.current.last || 0) + 

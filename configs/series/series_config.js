@@ -1,31 +1,13 @@
 var series = {
 
   trading: {
-
-    min_purchase: [6, 10, 20],
-
-    greed: [1, 2, 5],
-
-    impatience: [0, 50, 100]
-
+    min_purchase: [6],
+    greed: [6.5, 7, 7.5, 8, 8.5],
+    impatience: [50, 99]
   },
 
   strategies: {
-
-    // momentum_trading: [false],
-
-    trailing_stop: [true, false],
-
-    // shedding: [true, false],
-
-    // combined_selling: [true],
-
-    // dynamic_multiplier: [true, false],
-
-    // dynamic_drop: [true],
-
-    // sell_out: [true, false]
-
+    trailing_stop: [true],
   }
 
 };

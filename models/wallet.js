@@ -82,6 +82,7 @@ module.exports = function(STAMPEDE) {
     assignAvailableResources: function(MAX_SUM_INVESTMENT) {
       var me = this
       var available_currency = me.current[config.exchange.currency+"_available"]
+
       me.current.available_currency = available_currency
       me.current.available_to_traders = 
         (
@@ -133,8 +134,8 @@ module.exports = function(STAMPEDE) {
           // Assign initial investment as maximum 
           // (this flies in case of simulator)
           var current_initial_investment = config.trading.maximum_investment
-          me.current.initial_investment = current_initial_investment
 
+          me.current.initial_investment = current_initial_investment
           me.shares = [{
             holder: "Primary",
             invested_currency_amount: current_initial_investment,

@@ -25,10 +25,10 @@ module.exports = function(STAMPEDE) {
         type: "boolean",
         desc: "Sell after price drops below half of greed percentage off the max price."
       },
-      sell_out: {
+      market_based_buy: {
         label: "On / Off",
         type: "boolean",
-        desc: "Sell all deals at once when sell price for them reaches 'would sell' price."
+        desc: "Buy on market spread based increments."
       }
     },
     trading: {

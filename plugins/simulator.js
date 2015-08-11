@@ -242,15 +242,15 @@ module.exports = function(STAMPEDE) {
         })
 
         result.push({
-          value: sales + " (" + xc.toUpperCase() + " " + parseInt(sales_vol) + ")",
-          field: "sales",
-          type: "sales"
-        })
-
-        result.push({
           value: purchases + " (" + xc.toUpperCase() + " " + parseInt(purchases_vol) + ")",
           field: "purchases",
           type: "purchases"
+        })
+
+        result.push({
+          value: sales + " (" + xc.toUpperCase() + " " + parseInt(sales_vol) + ")",
+          field: "sales",
+          type: "sales"
         })
 
         result.push({
