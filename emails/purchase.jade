@@ -1,11 +1,8 @@
-h2 Deal purchase
+h2 Purchase
 p
-  - if (deal)
-    h3= deal.name
-    p Amount: #{deal.amount} BTC
-    p Bought for: $#{deal.buy_price}
-    p Designated sale price: $#{deal.sell_price}
-    p Original order ID: #{deal.order_id || "Unavailable"}
+  - if (purchase)
+    p Amount: #{purchase.amount} BTC
+    p Bought for: $#{purchase.price.toFixed(2)}
 p
   - if (market.current)
     h3 Current market details

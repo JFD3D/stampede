@@ -29,6 +29,7 @@ var START = (function() {
     models: [
       "market",
       "wallet",
+      "book",
       "trader",
       "cycle"
     ],
@@ -124,6 +125,10 @@ var START = (function() {
     app.set('port', config.port)
 
     STAMPEDE.app = app
+    STAMPEDE.exchange_simulated = (
+      config.exchange.selected === "simulated_exchange"
+    )
+
   }
 
   function initializeExchange() {
@@ -186,7 +191,7 @@ var START = (function() {
     app.get("/simulator/run_series", enAuth, Con.simulatorRunSeries)
     app.get("/simulator/load_data_set/:data_set", enAuth, Con.simulatorLoad)
     app.get("/simulator/remove_data_set/:data_set", enAuth, Con.simulatorRemove)
-    app.get("/remove_all_simulator_deals", enAuth, Con.simulatorRemoveDeals)      
+    app.get("/remove_all_simulator_deals", enAuth, Con.simulatorCleanUp)      
   }
 
   

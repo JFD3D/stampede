@@ -33,7 +33,7 @@ module.exports = function(STAMPEDE) {
   }
 
   Set.prototype = {
-    save: function(data, callback) {
+    save: function(data, done) {
       var set = this
       var start_time = Date.now()
       var data_length = data.length
@@ -48,14 +48,14 @@ module.exports = function(STAMPEDE) {
         }
         common.fileTo(set.csv_file_path, csv_content, function(error_writing) {
           common.timer(start_time, "saveSet(" + data_length + ")")
-          if (callback) {
-            return callback()
+          if (done) {
+            return done()
           }
         })
       })      
     },
 
-    load: function(callback) {
+    load: function(done) {
       var set = this
       LOG("set.load | set.name:", set.name)
       common.loadCSV(set.csv_file_path, function(row) {
@@ -66,49 +66,49 @@ module.exports = function(STAMPEDE) {
           low: parseFloat(row[2]),
           last: parseFloat(row[3])
         } : null)
-      }, callback)
+      }, done)
     },
 
-    getUIName: function(callback) {
+    getUIName: function(done) {
       var set = this
       db.get(set.optional_name_key, function(error, optional_ui_name) {
         if (optional_ui_name) set.optional_ui_name = optional_ui_name
-        if (callback) callback(error)
+        if (done) done(error)
       })
     },
-    remove: function(callback) {
+    remove: function(done) {
       var set = this
       var fs = require("fs")
       db.srem(data_sets_repo, set.name)
-      fs.unlink(set.csv_file_path, callback)
+      fs.unlink(set.csv_file_path, done)
     }
 
   }
 
   Simulator.prototype = {
     
-    run: function(callback) {
+    run: function(done) {
       var sim = this
       STAMPEDE.trader.prepareForSimulation(sim.series_simulation)
       LOG("run | Loading traders for deal removal.")
       STAMPEDE.trader.loadTraders(function() {
-        STAMPEDE.trader.removeAllDeals()
-        LOG("removed AllDeals | reloading traders")
+        STAMPEDE.trader.cleanBooks()
+        LOG("removed cleanBooks | reloading traders")
         STAMPEDE.trader.wakeAll(function() {
           LOG("starting simulation wakeAll")
-          if (callback) callback({
+          if (done) done({
             message: "Started Market simulation."
           })
         })
       })
     },
 
-    saveSet: function(optional_ui_name, data, callback) {
+    saveSet: function(optional_ui_name, data, done) {
       var set = new Set(null, optional_ui_name)
-      set.save(data, callback)
+      set.save(data, done)
     },
     
-    loadAllSets: function(callback) {
+    loadAllSets: function(done) {
       var sim = this
       db.smembers(data_sets_repo, function(error, data_sets) {
         
@@ -116,37 +116,37 @@ module.exports = function(STAMPEDE) {
           sim.loaded_data_sets = data_sets
           var data_sets_results = []
           
-          async.eachSeries(data_sets, function(data_set_name, internal_callback) {
+          async.eachSeries(data_sets, function(data_set_name, next) {
             var set = new Set(data_set_name)
             set.getUIName(function() {
               data_sets_results.push({
                 name: data_set_name,
                 optional_ui_name: set.optional_ui_name
               })
-              internal_callback()
+              return next()
             })
           }, function() {
             STAMPEDE.controller.refreshSimulationSets(data_sets_results)
-            if (callback) callback(error, data_sets_results)  
+            if (done) done(error, data_sets_results)  
           })
         }
         else {
           STAMPEDE.controller.refreshSimulationSets([])
-          if (callback) callback(error, [])
+          if (done) done(error, [])
         }
           
       })
     },
 
-    removeSet: function(data_set_name, callback) {
+    removeSet: function(data_set_name, done) {
       var sim = this
       var set = new Set(data_set_name)
       set.remove(function() {
-        sim.loadAllSets(callback)
+        sim.loadAllSets(done)
       })
     },
 
-    loadSet: function(data_set_name, callback) {
+    loadSet: function(data_set_name, done) {
       var sim = this
       var i = 0
       var set = new Set(data_set_name)
@@ -158,7 +158,7 @@ module.exports = function(STAMPEDE) {
         sim.current.data_set = data
         sim.analyseCurrentSet()
         common.timer(time_start, "loadSet | " + data.length)
-        callback(error, data)
+        done(error, data)
       })
     },
 
@@ -166,6 +166,7 @@ module.exports = function(STAMPEDE) {
     // Trigger check if series is running that dataset has been finished
     // If we have worked with a stored data set
     finish: function() {
+
       var current_wallet = STAMPEDE.current_wallet
       var current_market = STAMPEDE.current_market
       var current_traders = STAMPEDE.current_traders
@@ -184,7 +185,7 @@ module.exports = function(STAMPEDE) {
             sim.current.series_array ? 
             (
               sim.current.series_array[sim.current.serie_index] + " / (" + 
-              sim.current.serie_index + " of " + 
+              (sim.current.serie_index + 1) + " of " + 
               sim.current.series_array.length + ")"
             ) : 
             "Interactive"
@@ -230,22 +231,26 @@ module.exports = function(STAMPEDE) {
 
         var sales = 0
         var purchases = 0
+        var sales_vol = 0
+        var purchases_vol = 0
 
         _.each(current_traders, function(live_trader) {
           sales += (live_trader.sales || 0)
+          sales_vol += (live_trader.book.sales_amount_currency || 0)
           purchases += (live_trader.purchases || 0)
+          purchases_vol += (live_trader.book.purchases_amount_currency || 0)
         })
 
         result.push({
-          value: sales,
-          field: "sales",
-          type: "sales"
-        })
-
-        result.push({
-          value: purchases,
+          value: purchases + " (" + xc.toUpperCase() + " " + parseInt(purchases_vol) + ")",
           field: "purchases",
           type: "purchases"
+        })
+
+        result.push({
+          value: sales + " (" + xc.toUpperCase() + " " + parseInt(sales_vol) + ")",
+          field: "sales",
+          type: "sales"
         })
 
         result.push({
@@ -270,12 +275,14 @@ module.exports = function(STAMPEDE) {
         else {
           // End simulation series
           sim.series_simulation = false
+          STAMPEDE.trader.stopAll()
           console.log("!!!!!!! Series simulations ended.")
         }
       }
       else {
         console.log("Finishing interactive simulation, refreshing all.")
         STAMPEDE.trader.refreshAll()
+        STAMPEDE.trader.stopAll()
       }
     },
 
@@ -427,14 +434,14 @@ module.exports = function(STAMPEDE) {
       )
     },
 
-    loadSerieSet: function(serie_data_set_name, callback) {
+    loadSerieSet: function(serie_data_set_name, done) {
       var sim = this
       if (serie_data_set_name === sim.current.data_set_name) {
-        callback(null, STAMPEDE.controller.generated_data)
+        done(null, STAMPEDE.controller.generated_data)
       }
       else {
         console.log("Loading series set:", serie_data_set_name)
-        sim.loadSet(serie_data_set_name, callback)
+        sim.loadSet(serie_data_set_name, done)
       }
     }
   }

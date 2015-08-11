@@ -1,6 +1,6 @@
 .row.block#live-shares(style="display: none;")
-  h2 Live shares
   .col-md-2
+    h2 Live shares
     - if (current_user.owner)
       form.block-form(action="shares/add", method="post")
         label(for="holder_name_input") Shareholder email

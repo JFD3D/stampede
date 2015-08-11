@@ -43,13 +43,8 @@ exports.trading = {
 }
 
 exports.strategy = {
-  momentum_trading: true,   // Purchases will be happening on momentum up trend
-  trailing_stop: true,      // Sales will happen only after trailing stop is reached
-  bell_bottom: true,        // Purchases will be sized up going down the price per trader
-  combined_selling: true,   // Sell the highest and lowest priced BTC combined
-  dynamic_multiplier: true, // Calculate deal multiplication per altitude drop and current high
-  dynamic_drop: true,       // Dynamically increase altitude drop per fibonacci series
-  sell_out: true
+  trailing_stop: true,                  // Sales will happen only after trailing stop is reached
+  market_based_buy: true                // Buy based on market spread increments
 }
 
 // Google authentication keys

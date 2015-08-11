@@ -2,19 +2,21 @@
 
 module.exports = function(STAMPEDE) {
 
-  var async = STAMPEDE.async
-  var config = STAMPEDE.config
-  var db = STAMPEDE.db
-  var email = STAMPEDE.email
+  var async             = STAMPEDE.async
+  var config            = STAMPEDE.config
+  var db                = STAMPEDE.db
+  var email             = STAMPEDE.email
+  var LOG               = STAMPEDE.LOG("wallet")
+  var currency          = (config.exchange.currency || "usd")
   var live_traders
   var error_email_sent
-  var LOG = STAMPEDE.LOG("wallet")
-  var currency = (config.exchange.currency || "usd")
 
   function Wallet() {
     this.current = {
       currency: currency,
-      initial_investment: config.trading.maximum_investment
+      initial_investment: config.trading.maximum_investment,
+      investment: 0,
+      btc_amount_managed: 0
     }
     this.shares = []
     // Assign lower cool, in order not to start trading right away
@@ -74,13 +76,13 @@ module.exports = function(STAMPEDE) {
         me.current.greed += (me.current.anxiety * me.current.greed)
       }
       me.current.time = data.time || Date.now()
-      me.summarizeDeals()
       return me
     },
 
     assignAvailableResources: function(MAX_SUM_INVESTMENT) {
       var me = this
       var available_currency = me.current[config.exchange.currency+"_available"]
+
       me.current.available_currency = available_currency
       me.current.available_to_traders = 
         (
@@ -88,35 +90,6 @@ module.exports = function(STAMPEDE) {
         ) < available_currency ? 
           MAX_SUM_INVESTMENT - me.current.investment : 
           available_currency
-    },
-
-    summarizeDeals: function() {
-      var me = this
-      me.current.investment = 0
-      me.current.btc_amount_managed = 0
-      for (var trader_name in live_traders) {
-        var current_trader_deals = (live_traders[trader_name].deals || [])
-        var trader_record = live_traders[trader_name].record || {}
-        trader_record.current_investment = 0
-        trader_record.current_deals = 
-          current_trader_deals.length
-
-        current_trader_deals.forEach(function(current_trader_deal) {
-          var deal_buy_price = current_trader_deal.buy_price,
-              deal_amount = current_trader_deal.amount
-          me.current.btc_amount_managed += parseFloat(deal_amount)
-          if (
-            !isNaN(deal_amount * deal_buy_price)
-          ) me.current.investment += (deal_amount * deal_buy_price)
-          trader_record.current_investment += 
-            isNaN(deal_amount * deal_buy_price) ? 
-              0 : (deal_amount * deal_buy_price)
-        })
-
-        me.current.average_buy_price = 
-          (me.current.investment / me.current.btc_amount_managed) || 0
-      }
-      
     },
 
     summarizeShares: function(callback) {
@@ -161,8 +134,8 @@ module.exports = function(STAMPEDE) {
           // Assign initial investment as maximum 
           // (this flies in case of simulator)
           var current_initial_investment = config.trading.maximum_investment
-          me.current.initial_investment = current_initial_investment
 
+          me.current.initial_investment = current_initial_investment
           me.shares = [{
             holder: "Primary",
             invested_currency_amount: current_initial_investment,

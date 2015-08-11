@@ -44,6 +44,11 @@ body {
   color: red;
 }
 
+.scrollable {
+  max-height: 300px;
+  overflow: auto;
+}
+
 .small {
   font-size: 80%;
 }
@@ -120,28 +125,20 @@ a.removal {
   border: 1px solid #ccc;
 }
 
-.axis {
-  font-size: 80%;
-  color: #ccc;
-}
-
-path {
-  fill: #0082FF;
+path { 
+    stroke: steelblue;
+    stroke-width: 1;
+    fill: none;
 }
 
 .axis path,
 .axis line {
-  fill: none;
-  stroke: #000;
-  shape-rendering: crispEdges;
+    fill: none;
+    stroke: grey;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
 }
 
-.brush .extent {
-  stroke: #ccc;
-  fill: #73BAFF;
-  fill-opacity: .125;
-  shape-rendering: crispEdges;
-}
 
 
 
