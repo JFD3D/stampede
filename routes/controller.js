@@ -13,6 +13,7 @@ module.exports = function(STAMPEDE) {
   var common = STAMPEDE.common
   var exchange = STAMPEDE.exchange
   var Trader = STAMPEDE.trader
+  var Loader = STAMPEDE.data_loader
   var live = STAMPEDE.live
   var simulator = new STAMPEDE.simulator()
   var simulated_exchange = (config.exchange.selected === "simulated_exchange")
@@ -59,6 +60,39 @@ module.exports = function(STAMPEDE) {
       setTimeout(Trader.refreshAll, 2000)
     }
 
+  }
+
+  controller.dataLoader = function(req, res) {
+    res.render("data_loader", {
+      title: 'Stampede: Data loader',
+      current_user: req.current_user
+    })
+  }
+
+  controller.loadTradeHistory = function(req, res) {
+    var day_span = parseInt(req.body.day_span)
+    var set_name = req.body.set_name
+
+    if (day_span > 0 && day_span < 1000) {
+      Loader.load({
+        day_span: day_span,
+        set_name: set_name
+      }, function(errors, result) {
+        simulator.saveSet(set_name, result.data, function(errors, set) {
+          res.send({
+            data_length: result.data.length,
+            set_name: result.set_name,
+            day_span: result.day_span,
+            start_point_time: result.start_point_time,
+            set: set
+          })        
+        })
+      })  
+    }
+    else {
+      res.redirect("/data_loader")
+    }
+    
   }
 
   controller.shares = function(req, res) {

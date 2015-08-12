@@ -83,6 +83,8 @@ module.exports = function(STAMPEDE) {
 
   // Sales will happen only after trailing stop is reached
   var TRAILING_STOP_ENABLED  
+  // Market spread based increments for buying
+  var MARKET_BASED_BUY
 
       /*
        *
@@ -107,6 +109,8 @@ module.exports = function(STAMPEDE) {
     IMPATIENCE            = (config.trading.impatience / 100)
     // Strategies now
     TRAILING_STOP_ENABLED = config.strategy.trailing_stop
+    MARKET_BASED_BUY      = config.strategy.market_based_buy
+
     // Logging options load
     DECISION_LOGGING      = (config.logging || {}).decisions || false
     // USD value sheet size limit
@@ -303,23 +307,30 @@ module.exports = function(STAMPEDE) {
 
     validBuyAmount: function(purchase) {
       var me = this
-      var target_amount
       // Current allowed investment (on top of existing)
       // Amount I can invest according to available and allowed
       // What amount is possible to buy at current price and available funds
       var amount_possible = (
             wallet.current.available_to_traders / purchase.price
           )
+      var target_amount
       var valid_buy_amount
       var equalizer
       var equalizer_currency
 
       // Calculate equalizing amount to reach a desirable average price
       if (me.amount > (2 * MIN_PURCHASE / purchase.price)) {
-        var avg_price = me.average_buy_price
-        var cur_amount = me.amount
-        var cur_price = purchase.price
-        var target_avg_price = (cur_price * (1 + (market.current.spread / 2)))
+        var avg_price         = me.average_buy_price
+        var cur_amount        = me.amount
+        var cur_price         = purchase.price
+        var target_avg_price  = (cur_price * (1 + (
+          MARKET_BASED_BUY ? ((
+            market.current.spread > 0.02 ? market.current.spread : 0.02
+          ) / 2) : INITIAL_GREED
+          // MARKET_BASED_BUY ? ((
+          //   market.current.spread
+          // ) / 2) : INITIAL_GREED
+        )))
 
         equalizer = (
           (cur_amount * (avg_price - target_avg_price)) /
@@ -340,19 +351,9 @@ module.exports = function(STAMPEDE) {
       )
       valid_buy_amount = (purchase.amount > (MIN_PURCHASE / purchase.price))
 
-      // LOG(
-      //   "valid_buy_amount, cur_amount, target_amount, amount_possible, equalizer, target_avg_price, purchase.price:", 
-      //   valid_buy_amount, cur_amount, target_amount, amount_possible, equalizer, target_avg_price, purchase.price
-      // )
       // Check if amount is over minimum purchase
       return valid_buy_amount
     },
-
-    // Check if the amount is available
-    validBuyManaged: function(purchase) {
-
-    },
-
     // SELL checks
     validSellPrice: function(sale) {
       var me = this
@@ -519,7 +520,12 @@ module.exports = function(STAMPEDE) {
       //Sanity check
       if (cur_price > 5) {
         me.max_price = (me.max_price > cur_price) ? me.max_price : cur_price
-        me.target_price = me.average_buy_price * (1 + INITIAL_GREED)
+        me.target_price = me.average_buy_price * (1 + (
+          MARKET_BASED_BUY ? ((
+            market.current.spread > 0.02 ? market.current.spread : 0.02
+          ) / 2) : INITIAL_GREED)
+          // INITIAL_GREED
+        )
 
         var purchase = {
               time: market.current.time,

@@ -22,7 +22,8 @@ var START = (function() {
       "generator",
       "helpers",
       "live",
-      "simulator"
+      "simulator",
+      "data_loader"
     ],
 
     // Array of routers
@@ -185,13 +186,15 @@ var START = (function() {
     app.get("/shares", enAuth, Con.shares)
     app.post("/shares/add", enAuth, Con.addShare)
     app.get("/simulator", enAuth, Con.simulatorHome)
+    app.get("/data_loader", enAuth, Con.dataLoader)
     app.post("/simulator/save_data_set", enAuth, Con.simulatorSave)
     app.get("/simulator/generate", enAuth, Con.simulatorGenerate)
     app.get("/simulator/run", enAuth, Con.simulatorRun)
     app.get("/simulator/run_series", enAuth, Con.simulatorRunSeries)
     app.get("/simulator/load_data_set/:data_set", enAuth, Con.simulatorLoad)
     app.get("/simulator/remove_data_set/:data_set", enAuth, Con.simulatorRemove)
-    app.get("/remove_all_simulator_deals", enAuth, Con.simulatorCleanUp)      
+    app.get("/remove_all_simulator_deals", enAuth, Con.simulatorCleanUp)
+    app.post("/load_trade_history", enAuth, Con.loadTradeHistory)    
   }
 
   

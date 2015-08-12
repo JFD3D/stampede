@@ -49,7 +49,7 @@ module.exports = function(STAMPEDE) {
         common.fileTo(set.csv_file_path, csv_content, function(error_writing) {
           common.timer(start_time, "saveSet(" + data_length + ")")
           if (done) {
-            return done()
+            return done(null, set)
           }
         })
       })      
@@ -60,6 +60,7 @@ module.exports = function(STAMPEDE) {
       LOG("set.load | set.name:", set.name)
       common.loadCSV(set.csv_file_path, function(row) {
         var time = parseInt(row[0])
+
         return (time > 0 ? {
           time: parseInt(row[0]),
           high: parseFloat(row[1]),

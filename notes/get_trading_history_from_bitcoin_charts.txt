@@ -1,0 +1,14 @@
+> Date.now() - 1000*60*60*24*150
+JS timestamp (150 days ago, 12 August)
+1426407713088
+
+UNIX timestamp
+1426407713
+
+
+-- gets the trade history for last 150 days
+http://api.bitcoincharts.com/v1/trades.csv?symbol=bitstampUSD&start=1426407713
+
+
+-- the whole files
+http://api.bitcoincharts.com/v1/csv/
