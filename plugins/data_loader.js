@@ -11,6 +11,7 @@ module.exports = function(STAMPEDE) {
 
   // Node modules
   var http      = require("http")
+  var fs        = require("fs")
   var Reader    = require("fast-csv")
 
   // Constants
@@ -25,10 +26,12 @@ module.exports = function(STAMPEDE) {
     var start_point_time
     var current_extremes
     var data = []
+    var point_count = 0
+
+
     var csvStream = 
       Reader()
         .on("data", function(data_point) {
-          // LOG("data_point:", data_point)
 
           var time = (parseInt(data_point[0]) * 1000)
           var last = parseFloat(data_point[1])
@@ -37,18 +40,24 @@ module.exports = function(STAMPEDE) {
             last: last
           }
           
-          if (!start_point_time) {
-            start_point_time = time
-            current_extremes = {
-              high: last,
-              low: last,
-              time_low: time,
-              time_high: time
+          if (time > span_start) {
+            point_count ++
+            if (point_count % 10000 === 0) 
+              LOG("--- loading point (" + point_count + ")")
+            if (!start_point_time) {
+              start_point_time = time
+              current_extremes = {
+                high: last,
+                low: last,
+                time_low: time,
+                time_high: time
+              }
             }
+            
+
+            data.push(point)
+            generator.assignExtremes(current_extremes, data, point, time)          
           }
-          
-          data.push(point)
-          generator.assignExtremes(current_extremes, data, point, time)
         })
         .on("end", function() {
           return done(null, {
@@ -57,12 +66,24 @@ module.exports = function(STAMPEDE) {
             start_point_time: start_point_time
           })
         })
-
-    LOG("load | url, span start, span_start_unix:", url, new Date(span_start), span_start_unix)
     
-    http.get(url, function(res) {
-      res.pipe(csvStream)
-    })
+    if (
+      options.req.files && 
+      options.req.files.data_file &&
+      options.req.files.data_file.path
+    ) {
+      LOG("getting file, req.files:", options.req.files)
+      var read_stream = fs.createReadStream(options.req.files.data_file.path)
+
+      read_stream.pipe(csvStream)
+    }
+    else {
+      LOG("load | url, span start, span_start_unix:", url, new Date(span_start), span_start_unix)
+      http.get(url, function(res) {
+        res.pipe(csvStream)
+      })
+    }
+
   }
 
   return {

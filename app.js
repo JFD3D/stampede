@@ -99,6 +99,7 @@ var START = (function() {
     var favicon = require('serve-favicon')
     var methodOverride = require('method-override')
     var RedisStore = require('connect-redis')(session)
+    var multer  = require('multer')
     var app = express()
     
     app.use(morgan("dev", {
@@ -109,10 +110,11 @@ var START = (function() {
     app.use(express.static(path.join(__dirname, 'public')))
     app.use(methodOverride())
     app.use(cookieParser())
-    app.use(bodyParser.json());
+    app.use(bodyParser.json())
     app.use(bodyParser.urlencoded({
       extended: true
-    }));
+    }))
+    app.use(multer({ dest: "/tmp" }))
     app.use(session({ 
       key: STAMPEDE.name + '-' + environment + '.sid',
       store: new RedisStore(), 

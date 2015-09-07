@@ -21,6 +21,7 @@
     "moment": "2.4.0",
     "morgan": "^1.4.1",
     "moving-average": "0.0.4",
+    "multer": "^0.1.8",
     "nodemailer": "0.5.3",
     "passport": "0.1.17",
     "passport-google-oauth": "0.1.5",

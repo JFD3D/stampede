@@ -4,7 +4,7 @@ block content
   h1 Data loader
   p.small Load data from bitcoincharts.com and save them as a reusable dataset for simulation
 
-  form(action="/load_trade_history", method="post")
+  form(action="/load_trade_history", method="post", enctype="multipart/form-data")
     label Time span in days
       .clearer
       input.form-control(type="text", name="day_span", value="90")
@@ -12,5 +12,12 @@ block content
     label Custom data set name
       .clearer
       input.form-control(type="text", name="set_name", placeholder="Name your data set...")
+    .clearer
+    label Load your own file
+      .clearer
+      input.form-control(type="file", name="data_file")
+      .clearer
+      p.small Format (CSV):
+        | time[unix_time_stamp],price[float]
     .clearer
     button.btn.btn-default(type="submit") Submit

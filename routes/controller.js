@@ -70,13 +70,17 @@ module.exports = function(STAMPEDE) {
   }
 
   controller.loadTradeHistory = function(req, res) {
-    var day_span = parseInt(req.body.day_span)
-    var set_name = req.body.set_name
+    var day_span  = parseInt(req.body.day_span)
+    var set_name  = req.body.set_name
+
+    LOG("req.body, req.files:", req.body, req.files)
 
     if (day_span > 0 && day_span < 1000) {
       Loader.load({
         day_span: day_span,
-        set_name: set_name
+        set_name: set_name,
+        data_file: req.body.data_file,
+        req: req
       }, function(errors, result) {
         simulator.saveSet(set_name, result.data, function(errors, set) {
           res.send({
@@ -87,7 +91,8 @@ module.exports = function(STAMPEDE) {
             set: set
           })        
         })
-      })  
+      })
+        
     }
     else {
       res.redirect("/data_loader")
