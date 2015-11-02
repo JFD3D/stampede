@@ -1,10 +1,13 @@
 table.table.table-striped.deals
   tr
     th Data set name
+    th Include in series
     th Removal
   each data_set in data_sets
     tr
       td
-        a.active-link.simulator-data-loader(href="/simulator/load_data_set/#{data_set.name}")= (data_set.optional_ui_name || data_set.name)
+        a.active-link.simulator-data-loader(href="/simulator/load_data_set/#{data_set.record_name}")= (data_set.optional_ui_name || data_set.record_name)
       td
-        a.active-link.simulator-data-remover(href="/simulator/remove_data_set/#{data_set.name}") Remove
+        input.form-control.switch-data-set-inclusion(type="checkbox", checked=(data_set.include_in_series ? "checked" : undefined), data-set-name="#{data_set.record_name}")
+      td
+        a.active-link.simulator-data-remover(href="/simulator/remove_data_set/#{data_set.record_name}") Remove

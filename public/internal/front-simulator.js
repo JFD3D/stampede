@@ -6,6 +6,23 @@ var Simulator = (function() {
     $("#simulator-save-data").click(saveDataSet);
     $("body").on("click", ".simulator-data-loader", loadSavedData);
     $("body").on("click", ".simulator-data-remover", removeSavedData);
+    $("body").on("change", ".switch-data-set-inclusion", switchSetInclusion)
+  }
+
+  function switchSetInclusion(event) {
+    var $checkbox         = $(event.currentTarget)
+    var include_in_series = $checkbox.prop("checked")
+    var set_name          = $checkbox.attr("data-set-name")
+
+    $.post("/simulator/switch_set_inclusion", {
+      set_name: set_name,
+      include_in_series: include_in_series
+    }, function(response) {
+      if (response.error) {
+        console.log(error)
+        notify(response.message || response.error)
+      }
+    })
   }
   
   function renderData(data) {

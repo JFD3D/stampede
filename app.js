@@ -193,6 +193,7 @@ var START = (function() {
     app.get("/simulator/generate", enAuth, Con.simulatorGenerate)
     app.get("/simulator/run", enAuth, Con.simulatorRun)
     app.get("/simulator/run_series", enAuth, Con.simulatorRunSeries)
+    app.post("/simulator/switch_set_inclusion", enAuth, Con.switchSetInclusion)
     app.get("/simulator/load_data_set/:data_set", enAuth, Con.simulatorLoad)
     app.get("/simulator/remove_data_set/:data_set", enAuth, Con.simulatorRemove)
     app.get("/remove_all_simulator_deals", enAuth, Con.simulatorCleanUp)

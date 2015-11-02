@@ -8,23 +8,26 @@
 */
 
 module.exports = function(STAMPEDE) {
-  var LOG = STAMPEDE.LOG("controller")
-  var config = STAMPEDE.config
-  var common = STAMPEDE.common
-  var exchange = STAMPEDE.exchange
-  var Trader = STAMPEDE.trader
-  var Loader = STAMPEDE.data_loader
-  var live = STAMPEDE.live
-  var simulator = new STAMPEDE.simulator()
-  var simulated_exchange = (config.exchange.selected === "simulated_exchange")
-  var jade = STAMPEDE.jade
-  var async = STAMPEDE.async
-  var generated_data = []
-  var traders_awake = false
-  var controller = {}
+  var LOG             = STAMPEDE.LOG("controller")
+  var CONFIG          = STAMPEDE.config
+  var common          = STAMPEDE.common
+  var Trader          = STAMPEDE.trader
+  var Loader          = STAMPEDE.data_loader
+  var live            = STAMPEDE.live
+  var SIMULATOR       = new STAMPEDE.simulator()
+  var EXCHANGE        = STAMPEDE.exchange
+  
+  var jade            = STAMPEDE.jade
+  var async           = STAMPEDE.async
+  var generated_data  = []
+  var controller      = {}
+  var traders_awake   = false
+
+  const SIMULATION = (CONFIG.exchange.selected === "simulated_exchange")
 
   controller.index = function(req, res) {
-    if (simulated_exchange) {
+
+    if (SIMULATION) {
 
       var cleanBooks = Trader.cleanBooks
       var wakeTraders = controller.wakeTraders
@@ -49,9 +52,9 @@ module.exports = function(STAMPEDE) {
         current_user: req.current_user,
         traders_awake: traders_awake,
         simulator_enabled: false,
-        trading_config: config.trading,
-        config: config,
-        trading_strategies: config.strategy,
+        trading_config: CONFIG.trading,
+        config: CONFIG,
+        trading_strategies: CONFIG.strategy,
         helpers: STAMPEDE.helpers
       }
       res.render('index', response)
@@ -82,7 +85,10 @@ module.exports = function(STAMPEDE) {
         data_file: req.body.data_file,
         req: req
       }, function(errors, result) {
-        simulator.saveSet(set_name, result.data, function(errors, set) {
+        SIMULATOR.saveSet({
+          name: set_name, 
+          data: result.data
+        }, function(errors, set) {
           res.send({
             data_length: result.data.length,
             set_name: result.set_name,
@@ -249,7 +255,7 @@ module.exports = function(STAMPEDE) {
   controller.drawSheets = function(data, update_type) {
     var outgoing = {
       data: data,
-      display_limit: config.sheet_size_limit,
+      display_limit: CONFIG.sheet_size_limit,
       update_type: update_type,
       container: "live-sheets"
     }
@@ -343,7 +349,7 @@ module.exports = function(STAMPEDE) {
   controller.updateTradingStrategy = function(req, res) {
     var update_body = req.body
     var new_config = {}
-    for (var attribute in config.strategy) {
+    for (var attribute in CONFIG.strategy) {
       new_config[attribute] = (update_body[attribute] === "on" ? true : false)
     }
     Trader.updateStrategy(new_config)
@@ -354,9 +360,9 @@ module.exports = function(STAMPEDE) {
   controller.updateTradingConfig = function(req, res) {
     var update_body = req.body
     var new_config = {}
-    for (var attribute in config.trading) {
+    for (var attribute in CONFIG.trading) {
       new_config[attribute] = (
-        parseFloat(update_body[attribute]) || config.trading[attribute]
+        parseFloat(update_body[attribute]) || CONFIG.trading[attribute]
       )
     }
     Trader.updateConfig(new_config)
@@ -379,42 +385,42 @@ module.exports = function(STAMPEDE) {
   // EXCHANGE interaction routes
 
   controller.transactions = function(callback) {
-    exchange.transactions(callback)
+    EXCHANGE.transactions(callback)
   }
 
   controller.user_transactions = function(callback) {
-    exchange.user_transactions(callback)
+    EXCHANGE.user_transactions(callback)
   }
 
   controller.ticker = function(callback) {
-    exchange.ticker(callback)
+    EXCHANGE.ticker(callback)
   }
 
   controller.buy = function(amount, price, callback) {
-    exchange.buy(amount, price, callback)
+    EXCHANGE.buy(amount, price, callback)
   }
 
   controller.sell = function(amount, price, callback) {
-    exchange.sell(amount, price, callback)
+    EXCHANGE.sell(amount, price, callback)
   }
 
   controller.balance = function(callback) {
-    exchange.balance(callback)
+    EXCHANGE.balance(callback)
   }
 
   // GENERATOR SPECific
 
   controller.simulatorHome = function(req, res) {
-    if (simulated_exchange) {
+    if (SIMULATION) {
       res.render('index', {
         title: 'Stampede: Simulator',
         current_user: req.current_user,
         data_sets: [],
         simulator_enabled: true,
-        trading_config: config.trading,
-        config: config,
+        trading_config: CONFIG.trading,
+        config: CONFIG,
         traders_awake: true,
-        trading_strategies: config.strategy,
+        trading_strategies: CONFIG.strategy,
         helpers: STAMPEDE.helpers
       })
 
@@ -425,7 +431,7 @@ module.exports = function(STAMPEDE) {
 
     setTimeout(function() {
       Trader.loadTraders(function() {
-        simulator.loadAllSets()
+        SIMULATOR.loadAllSets()
         Trader.refreshAll() 
       })
     }, 2000)
@@ -435,7 +441,7 @@ module.exports = function(STAMPEDE) {
 
     generated_data = STAMPEDE.generator.launch()
     controller.generated_data = generated_data
-    simulator.resetDataSet()
+    SIMULATOR.resetDataSet()
     var binned_data = STAMPEDE.generator.bin(generated_data, 300)
 
     res.send({
@@ -456,11 +462,11 @@ module.exports = function(STAMPEDE) {
     )
     
     // MAKE SURE we run simulation on virtual exchange !!!
-    if (generated_data && generated_data.length && simulated_exchange) {
+    if (generated_data && generated_data.length && SIMULATION) {
       LOG("simulatorRun | generated_data.length:", generated_data.length)
       simulatorWarmUp(generated_data)
-      // simulator.startSeries()
-      simulator.run(function(response) {
+      // SIMULATOR.startSeries()
+      SIMULATOR.run(function(response) {
         res.send({message: response.message || "Submitted simulator launch."})
       })
     }
@@ -475,16 +481,25 @@ module.exports = function(STAMPEDE) {
 
   controller.simulatorRunSeries = function(req, res) {
     // MAKE SURE we run simulation on virtual exchange !!!
-    if (simulated_exchange) {
-
-      simulator.startSeries()
-      res.render("series", {
-        simulator_enabled: true,
-        trading_config: config.trading,
-        traders_awake: true,
-        trading_strategies: config.strategy,
-        helpers: STAMPEDE.helpers,
-        title: "Stampede: Series simulation"
+    if (SIMULATION) {
+      SIMULATOR.startSeries(function(errors, started) {
+        if (errors) {
+          res.render("general_error", {
+            error: errors,
+            link_back: "/simulator"
+          })
+        }
+        else {
+          res.render("series", {
+            simulator_enabled: true,
+            trading_config: CONFIG.trading,
+            traders_awake: true,
+            trading_strategies: CONFIG.strategy,
+            helpers: STAMPEDE.helpers,
+            title: "Stampede: Series simulation"
+          })
+        }
+              
       })
     }
     else {
@@ -496,9 +511,12 @@ module.exports = function(STAMPEDE) {
     console.log("Storage of generated data requested.")
     var optional_set_name = (req.body.set_name_ui || null)
     if (generated_data) {
-      simulator.saveSet(optional_set_name, generated_data, function(errors) {
+      SIMULATOR.saveSet({
+        name: optional_set_name,
+        data: generated_data
+      }, function(errors) {
         res.send({message: "Submitted the simulator dataset for save."})
-        simulator.loadAllSets()
+        SIMULATOR.loadAllSets()
       })
     }
     else {
@@ -506,9 +524,19 @@ module.exports = function(STAMPEDE) {
     }
   }
 
+  controller.switchSetInclusion = function(req, res) {
+    var set_name          = req.body.set_name
+    var include_in_series = req.body.include_in_series
+
+    SIMULATOR.updateSet({ 
+      set_name: set_name,
+      include_in_series: include_in_series
+    }, function(error) { res.send({ error: error }) })
+  }
+
   controller.simulatorLoad = function(req, res) {
     var set_name = req.params.data_set
-    simulator.loadSet(set_name, function(error, data) {
+    SIMULATOR.loadSet(set_name, function(error, data) {
       generated_data = data
       controller.generated_data = generated_data
       var binned_data = STAMPEDE.generator.bin(data, 300)
@@ -521,12 +549,12 @@ module.exports = function(STAMPEDE) {
 
   controller.simulatorRemove = function(req, res) {
     var set_name = req.params.data_set
-    simulator.removeSet(set_name)
+    SIMULATOR.removeSet(set_name)
   }
 
   // Called from within simulated exchange once the end of data has been reached
   controller.simulatorFinish = function(exchange_data) {
-    simulator.finish()
+    SIMULATOR.finish()
   }
 
   controller.simulatorWarmUp = simulatorWarmUp

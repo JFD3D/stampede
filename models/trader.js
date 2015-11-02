@@ -319,7 +319,7 @@ module.exports = function(STAMPEDE) {
       var equalizer_currency
 
       // Calculate equalizing amount to reach a desirable average price
-      if (me.amount > (3 * MIN_PURCHASE / purchase.price)) {
+      if (me.amount > (2 * MIN_PURCHASE / purchase.price)) {
         var avg_price         = me.average_buy_price
         var cur_amount        = me.amount
         var cur_price         = purchase.price
