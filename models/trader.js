@@ -299,7 +299,7 @@ module.exports = function(STAMPEDE) {
       // Check if purchase price lower my average buy price - greed
       return (
         price_below_threshold && (
-          me.amount < (3 * MIN_PURCHASE / purchase.price) || 
+          me.amount < (2 * MIN_PURCHASE / purchase.price) || 
           me.average_buy_price > purchase.price
         )
       )
@@ -365,7 +365,7 @@ module.exports = function(STAMPEDE) {
       var me = this
       var available_amount = me.amount
       var available_currency_amount = (me.amount * sale.price)
-      var target_amount = (available_amount / 3)
+      var target_amount = (available_amount / 2)
       var target_currency_amount = (target_amount * sale.price)
 
       sale.amount = target_amount
