@@ -43,7 +43,7 @@ module.exports = function(STAMPEDE) {
           if (time > span_start) {
             point_count ++
             if (point_count % 10000 === 0) 
-              LOG("--- loading point (" + point_count + ")")
+              LOG("--- loading point (" + point_count + ")", new Date(time))
             if (!start_point_time) {
               start_point_time = time
               current_extremes = {
