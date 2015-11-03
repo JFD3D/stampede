@@ -317,9 +317,11 @@ module.exports = function(STAMPEDE) {
       // Current allowed investment (on top of existing)
       // Amount I can invest according to available and allowed
       // What amount is possible to buy at current price and available funds
+      var amount_available= wallet.current.available_to_traders / purchase.price
+      var max_buy_amount  = (MIN_PURCHASE * 3 / purchase.price)
       var amount_possible = (
-            wallet.current.available_to_traders / purchase.price
-          )
+        amount_available > max_buy_amount ? max_buy_amount : amount_available
+      )
       var target_amount
       var valid_buy_amount
       var equalizer
@@ -334,9 +336,6 @@ module.exports = function(STAMPEDE) {
           MARKET_BASED_BUY ? ((
             market.current.spread > 0.02 ? market.current.spread : 0.02
           ) / 2) : INITIAL_GREED
-          // MARKET_BASED_BUY ? ((
-          //   market.current.spread
-          // ) / 2) : INITIAL_GREED
         )))
 
         equalizer = (
