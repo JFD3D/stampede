@@ -365,7 +365,7 @@ module.exports = function(STAMPEDE) {
       var me = this
       var available_amount = me.amount
       var available_currency_amount = (me.amount * sale.price)
-      var target_amount = (available_amount / 3)
+      var target_amount = (available_amount / 2)
       var target_currency_amount = (target_amount * sale.price)
 
       sale.amount = target_amount
