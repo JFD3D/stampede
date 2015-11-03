@@ -53,7 +53,9 @@ module.exports = function(STAMPEDE) {
         if (set.optional_ui_name && set.optional_ui_name.length) {
           db.hmset(set.attribute_key, {
             name: set.optional_ui_name,
-            include_in_series: set.include_in_series
+            include_in_series: (set.include_in_series || false)
+          }, function() {
+
           })
         }
         common.fileTo(set.csv_file_path, csv_content, function(error_writing) {
@@ -387,8 +389,11 @@ module.exports = function(STAMPEDE) {
       )
       
 
-      set.getAttributes()
-      sim.current.data_set_properties = data_set_properties
+      set.getAttributes(function() {
+        sim.current.data_set_properties = data_set_properties
+        sim.current.data_set_properties.name = set.optional_ui_name
+      })
+      
       return data_set_properties
     },
 

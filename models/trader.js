@@ -365,7 +365,7 @@ module.exports = function(STAMPEDE) {
       var me = this
       var available_amount = me.amount
       var available_currency_amount = (me.amount * sale.price)
-      var target_amount = (available_amount / 2)
+      var target_amount = (available_amount / 3)
       var target_currency_amount = (target_amount * sale.price)
 
       sale.amount = target_amount
@@ -520,12 +520,7 @@ module.exports = function(STAMPEDE) {
       //Sanity check
       if (cur_price > 5) {
         me.max_price = (me.max_price > cur_price) ? me.max_price : cur_price
-        me.target_price = me.average_buy_price * (1 + (
-          MARKET_BASED_BUY ? ((
-            market.current.spread > 0.02 ? market.current.spread : 0.02
-          )) : INITIAL_GREED)
-          // INITIAL_GREED
-        )
+        me.target_price = me.average_buy_price * (1 + INITIAL_GREED)
 
         var purchase = {
               time: market.current.time,
@@ -850,7 +845,7 @@ module.exports = function(STAMPEDE) {
         var trader = live_traders[trader_name]
 
         currency_amount += (
-          trader.book.purchases_amount_currency - trader.book.sales_amount_currency
+          trader.average_buy_price * trader.amount
         )
         btc_amount += trader.amount
         trader.decide(next)

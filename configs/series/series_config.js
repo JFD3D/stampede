@@ -1,9 +1,9 @@
 var series = {
 
   trading: {
-    min_purchase: [6],
-    greed: [6, 7, 9],
-    impatience: [10, 50, 90]
+    min_purchase: [6, 15],
+    greed: [7, 9],
+    impatience: [50]
   },
 
   strategies: {
