@@ -295,13 +295,20 @@ module.exports = function(STAMPEDE) {
       // Check if price is below threshold
       // (which combines the impatience variable)
       var price_below_threshold = (purchase.price < market.current.threshold)
+      var amount_under_min      = me.amount < (2 * MIN_PURCHASE / purchase.price)
+      var price_under_average   = me.average_buy_price > purchase.price
 
+      if (DECISION_LOGGING) {
+        LOG(
+          "validBuyPrice |", 
+          "\nprice_below_threshold:", price_below_threshold,
+          "\namount_under_min:", amount_under_min,
+          "\nprice_under_average:", price_under_average
+        )
+      }
       // Check if purchase price lower my average buy price - greed
       return (
-        price_below_threshold && (
-          me.amount < (2 * MIN_PURCHASE / purchase.price) || 
-          me.average_buy_price > purchase.price
-        )
+        price_below_threshold && (amount_under_min || price_under_average)
       )
     },
 
@@ -499,10 +506,7 @@ module.exports = function(STAMPEDE) {
       cycle_sell_decisions.push(structured_decision)
 
       // Log the success!
-      if (
-        structured_decision.decision && 
-        DECISION_LOGGING
-      ) console.log(
+      if (DECISION_LOGGING) LOG(
         "||| trader | sellingCheck | " + 
         "isSelling? | structured_decision:", 
         structured_decision
