@@ -428,9 +428,11 @@ module.exports = function(STAMPEDE) {
       purchase.price = current_buy_price
       
       var structured_decision = me.checkOut(buy_checklist, {
-            trader: 
+            trader: (
               "T" + me.name.split("_")[1] + 
-              ": " + (current_buy_price).toFixed(2) + "",
+              ": " + (current_buy_price).toFixed(2) + 
+              " (" + me.average_buy_price.toFixed(2) + ")"
+            ),
             criteria: {}
           }, purchase)
 
