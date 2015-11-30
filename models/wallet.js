@@ -36,7 +36,7 @@ module.exports = function(STAMPEDE) {
           if (me.current.error) delete me.current.error
         }
         else {
-          console.log(
+          LOG(
             "!!!!!!!!!!!!!!!!ERROR Getting WALLET from API !!!!!!!!!!!!!!", 
             error, data
           )

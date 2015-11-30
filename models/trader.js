@@ -282,6 +282,7 @@ module.exports = function(STAMPEDE) {
     
     wake: function(done) {
       var me = this
+
       live_traders[me.name] = me
       if (!config.simulation) {
         me.checkRecord(done)
@@ -353,7 +354,7 @@ module.exports = function(STAMPEDE) {
 
       // Assign purchase amount (if over available, then use available amout)
       purchase.amount = (
-        target_amount > amount_possible ? amount_possible : target_amount
+        target_amount > amount_possible ? (amount_possible * 0.9) : target_amount
       )
       valid_buy_amount = (purchase.amount > (MIN_PURCHASE / purchase.price))
 
