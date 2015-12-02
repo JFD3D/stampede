@@ -217,11 +217,11 @@ module.exports = function(STAMPEDE) {
       var me = this
 
       db.hmset(me.name, {
-        amount: me.amount,
-        max_price: me.max_price,
-        average_buy_price: me.average_buy_price,
-        purchases: me.purchases,
-        sales: me.sales
+        amount              : me.amount,
+        max_price           : me.max_price,
+        average_buy_price   : me.average_buy_price,
+        purchases           : me.purchases,
+        sales               : me.sales
       }, done)
     },
     
@@ -237,18 +237,10 @@ module.exports = function(STAMPEDE) {
       var my_book = me.book_name
 
       async.series([
-        function(next) {
-          me.checkRecord(next)
-        },
-        function(next) {
-          db.srem(TRADER_LIST_KEY, me.name, next)
-        },
-        function(next) {
-          db.del(my_book, next)
-        },
-        function(next) {
-          db.del(me.name, next)
-        }
+        next => me.checkRecord(next),
+        next => db.srem(TRADER_LIST_KEY, me.name, next),
+        next => db.del(my_book, next),
+        next => db.del(me.name, next)
       ], function() {
         loadTraders(done)
       })
@@ -258,15 +250,16 @@ module.exports = function(STAMPEDE) {
     checkRecord: function(done) {
       var me = this
       db.hgetall(me.name, function(error, my_record) {
-        me.average_buy_price = parseFloat(my_record.average_buy_price || 0),
-        me.max_price = parseFloat(my_record.max_price || 0),
-        me.amount = parseFloat(my_record.amount || 0)
-        me.purchases = parseInt(my_record.purchases || 0)
-        me.sales = parseInt(my_record.sales || 0)
-        me.book.load(done)
+        me.average_buy_price  = parseFloat(my_record.average_buy_price || 0)
+        me.max_price          = parseFloat(my_record.max_price || 0)
+        me.amount             = parseFloat(my_record.amount || 0)
+        me.purchases          = parseInt(my_record.purchases || 0)
+        me.sales              = parseInt(my_record.sales || 0)
         // Assign shared values to wallet
-        wallet.current.investment += (me.amount * me.average_buy_price)
+        wallet.current.investment         += (me.amount * me.average_buy_price)
         wallet.current.btc_amount_managed += me.amount
+
+        me.book.load(done)
       })
     },
 
@@ -520,26 +513,24 @@ module.exports = function(STAMPEDE) {
     },
     
     decide: function(done) {
-      var me = this
-      var cur_price = market.current.last
+      var me            = this
+      var cur_price     = market.current.last
+      var wallet_cool   = (wallet.current.cool >= 1)
       
       //Sanity check
       if (cur_price > 5) {
         me.max_price = (me.max_price > cur_price) ? me.max_price : cur_price
         me.target_price = me.average_buy_price * (1 + INITIAL_GREED)
 
-        var purchase = {
-              time: market.current.time,
-              type: "purchase"
-            }
-        var sale = {
-              time: market.current.time,
-              type: "sale"
-            } 
-        if (me.isBuying(purchase)) {
+        var purchase  = { time: market.current.time, type: "purchase" }
+        var sale      = { time: market.current.time, type: "sale" }
+        if (wallet_cool && me.isBuying(purchase)) {
           me.buy(purchase, done)
         }
-        else if (me.amount > (MIN_PURCHASE / cur_price) && me.isSelling(sale)) {
+        else if (
+          wallet_cool && me.amount > (MIN_PURCHASE / cur_price) && 
+          me.isSelling(sale)
+        ) {
           me.sell(sale, done)
         }
         else return done()
@@ -590,11 +581,7 @@ module.exports = function(STAMPEDE) {
             to: config.owner.email,
             subject: "Stampede - Buying: " + purchase.amount.toFixed(7) + "BTC",
             template: "purchase.jade",
-            data: {
-              purchase: purchase,
-              market: market,
-              wallet: wallet
-            }
+            data: { purchase: purchase, market: market, wallet: wallet }
           }, function(success) {
             console.log("Email sending success?:", success)
             if (error_email_sent) error_email_sent = false
@@ -869,11 +856,9 @@ module.exports = function(STAMPEDE) {
       })
     }
     else {
-      console.log("No traders present or market simulation stopped.")
+      LOG("No traders present or market simulation stopped.")
       STAMPEDE.stop_simulation = true
-      if (done) { 
-        return done()
-      }
+      if (done) return done()
     }
   }
 
@@ -881,13 +866,9 @@ module.exports = function(STAMPEDE) {
     var market_start_timer = Date.now()
 
     if (cycles_until_full === 0) {
-      market.check(function(error, market_current) {
-        return finalize()
-      })
+      market.check((error, market_current) => finalize())
     }
-    else {
-      return finalize()
-    }
+    else return finalize()
 
     function finalize() {
       var market_post_assignments_start = Date.now()
@@ -919,7 +900,7 @@ module.exports = function(STAMPEDE) {
   }
 
   function checkSheets(done) {
-    console.log("* Checking history sheets.")
+    LOG("* Checking history sheets.")
     
     var timestamp = Date.now()
 

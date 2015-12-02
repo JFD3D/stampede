@@ -28,10 +28,7 @@ module.exports = function(STAMPEDE) {
       var me = this
       live_traders = current_traders
       STAMPEDE.controller.balance(function(error, data) {
-        if (
-          data && 
-          !isNaN(parseFloat(data.fee))
-        ) {
+        if (data && !isNaN(parseFloat(data.fee))) {
           me.assign(data)
           if (me.current.error) delete me.current.error
         }
@@ -54,36 +51,38 @@ module.exports = function(STAMPEDE) {
       })
     },
     assign: function(data) {
-      var me = this
+      var me                = this
       var wallet_properties = [
         "btc_reserved", 
         "fee", 
         "btc_available", 
-        config.exchange.currency+"_reserved", 
+        (config.exchange.currency + "_reserved"), 
         "btc_balance", 
-        config.exchange.currency+"_balance", 
-        config.exchange.currency+"_available"
+        (config.exchange.currency + "_balance"), 
+        (config.exchange.currency + "_available")
       ]
 
       wallet_properties.forEach(function(property) {
         me.current[property] = parseFloat(data[property] || 0)
       })
-      me.current.cool = (me.current.cool || me.cool)
-      me.current.greed = (
+      me.current.cool     = (me.current.cool || me.cool)
+      me.current.time     = data.time || Date.now()
+      me.current.greed    = (
         (config.trading.greed / 100) + ((me.current.fee || 0.5) / (2*100))
       )
+      
       if (config.strategy.shedding && me.current.anxiety) {
         me.current.greed += (me.current.anxiety * me.current.greed)
       }
-      me.current.time = data.time || Date.now()
+      
       return me
     },
 
     assignAvailableResources: function(MAX_SUM_INVESTMENT) {
-      var me = this
-      var available_currency = me.current[config.exchange.currency+"_available"]
+      var me                  = this
+      var available_currency  = me.current[config.exchange.currency+"_available"]
 
-      me.current.available_currency = available_currency
+      me.current.available_currency   = available_currency
       me.current.available_to_traders = 
         (
           MAX_SUM_INVESTMENT - me.current.investment
@@ -105,8 +104,8 @@ module.exports = function(STAMPEDE) {
           
           // Parse each recorded share
           share_list.forEach(function(share_string) {
-            var share_arrayed = share_string.split("|"),
-                share = {
+            var share_arrayed = share_string.split("|")
+            var share = {
                   holder: share_arrayed[0],
                   invested_currency_amount: parseInt(share_arrayed[1])
                 }
@@ -116,19 +115,20 @@ module.exports = function(STAMPEDE) {
 
           // Now assign part value
           me.shares.forEach(function(share) {
-            var piece = 
-                  share.invested_currency_amount / 
-                  (me.current.initial_investment || 0.01),
-                current_currency_value = piece * me.current.currency_value
+            var piece                   = (
+              share.invested_currency_amount / 
+              (me.current.initial_investment || 0.01)
+            )
+            var current_currency_value  = (piece * me.current.currency_value)
             
             share.current_currency_value = current_currency_value
-            share.pie_share = (piece*100).toFixed(1)+"%"
+            share.pie_share = ((piece * 100).toFixed(1) + '%')
             share.profit_loss = (
               (current_currency_value - share.invested_currency_amount) / 
               share.invested_currency_amount*100
             ).toFixed(3)+"%"
           })
-        } 
+        }
         else {
           var current_currency_value = me.current.currency_value || 0
           // Assign initial investment as maximum 
