@@ -1,4 +1,4 @@
-
+"use strict"
 
 module.exports = function(STAMPEDE) {
   var LOG           = STAMPEDE.LOG("market")
