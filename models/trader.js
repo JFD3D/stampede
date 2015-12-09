@@ -97,6 +97,7 @@ module.exports = function(STAMPEDE) {
 
   // USD value sheet size limit
   var SHEET_SIZE_LIMIT
+  var AMOUNT_DIVIDER
 
 
   function initializeConfig() {
@@ -107,9 +108,13 @@ module.exports = function(STAMPEDE) {
     INITIAL_GREED         = (config.trading.greed / 100)
     BID_ALIGN             = config.trading.bid_alignment
     IMPATIENCE            = (config.trading.impatience / 100)
+    // WIP: divide amount total by this number, get into config?
+    AMOUNT_DIVIDER        = 2
+
     // Strategies now
     TRAILING_STOP_ENABLED = config.strategy.trailing_stop
     MARKET_BASED_BUY      = config.strategy.market_based_buy
+
 
     // Logging options load
     DECISION_LOGGING      = (config.logging || {}).decisions || false
@@ -307,13 +312,13 @@ module.exports = function(STAMPEDE) {
     },
 
     validBuyAmount: function(purchase) {
-      var me = this
+      var me                = this
       // Current allowed investment (on top of existing)
       // Amount I can invest according to available and allowed
       // What amount is possible to buy at current price and available funds
-      var amount_available= wallet.current.available_to_traders / purchase.price
-      var max_buy_amount  = (MIN_PURCHASE * 3 / purchase.price)
-      var amount_possible = (
+      var amount_available  = wallet.current.available_to_traders / purchase.price
+      var max_buy_amount    = (MIN_PURCHASE * 3 / purchase.price)
+      var amount_possible   = (
         amount_available > max_buy_amount ? max_buy_amount : amount_available
       )
       var target_amount
@@ -332,13 +337,12 @@ module.exports = function(STAMPEDE) {
           ) / 2) : INITIAL_GREED
         )))
 
-        equalizer = (
+        equalizer           = (
           (cur_amount * (avg_price - target_avg_price)) /
           (target_avg_price - cur_price)
         )
-        equalizer_currency = (equalizer * purchase.price)
-
-        target_amount = equalizer
+        equalizer_currency  = (equalizer * purchase.price)
+        target_amount       = equalizer
       }
       // Assign basic amount (up by 10% to make sure our purchase goes through)
       else {
@@ -368,7 +372,7 @@ module.exports = function(STAMPEDE) {
         me.amount < available_btc ? me.amount : available_btc
       )
       var available_currency_amount = (available_amount * sale.price)
-      var target_amount             = (available_amount / 2)
+      var target_amount             = (available_amount / AMOUNT_DIVIDER)
       var target_currency_amount    = (target_amount * sale.price)
 
       sale.amount = target_amount
@@ -634,7 +638,7 @@ module.exports = function(STAMPEDE) {
 
     recordSale: function(sale, done) {
       var me = this
-      var sale_ratio = (sale.amount / me.amount)
+      var sale_ratio = (1 / AMOUNT_DIVIDER)
 
       me.sales++
       me.amount -= sale.amount
