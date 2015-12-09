@@ -42,11 +42,11 @@ module.exports = function(STAMPEDE) {
 
   // Additional shared variables
   // Current USD value history list
-  var sheets              = []                                  
+  var sheets              = []
   // For simulation purposes so that notification is only emitted
-  var cycle_counter       = perf_timers.cycle_counter    
+  var cycle_counter       = perf_timers.cycle_counter
   // Disables broadcast later, (when series of data are simulated)
-  var series_simulation   = false                           
+  var series_simulation   = false
   var cycle_sell_decisions= []
   var cycle_buy_decisions = []
   var currency_key        = config.exchange.currency + "_available"
@@ -66,7 +66,7 @@ module.exports = function(STAMPEDE) {
        *
        *
        */
-      
+
   var MAX_SUM_INVESTMENT     // Allowed max sum of investment
   var MIN_PURCHASE          // Allowed investment per trader's deal
   var INITIAL_GREED          // Greed (.05 means trader looks for 5% upside)
@@ -79,10 +79,10 @@ module.exports = function(STAMPEDE) {
        *
        *
        *
-       */    
+       */
 
   // Sales will happen only after trailing stop is reached
-  var TRAILING_STOP_ENABLED  
+  var TRAILING_STOP_ENABLED
   // Market spread based increments for buying
   var MARKET_BASED_BUY
 
@@ -92,7 +92,7 @@ module.exports = function(STAMPEDE) {
        *
        *
        *
-       */    
+       */
   var DECISION_LOGGING
 
   // USD value sheet size limit
@@ -103,7 +103,7 @@ module.exports = function(STAMPEDE) {
 
     // Trading config
     MAX_SUM_INVESTMENT    = config.trading.maximum_investment
-    MIN_PURCHASE          = config.trading.min_purchase         
+    MIN_PURCHASE          = config.trading.min_purchase
     INITIAL_GREED         = (config.trading.greed / 100)
     BID_ALIGN             = config.trading.bid_alignment
     IMPATIENCE            = (config.trading.impatience / 100)
@@ -151,9 +151,9 @@ module.exports = function(STAMPEDE) {
      *
      *
      */
-    
+
     this.name                       = name
-    
+
     // Assign profit tracking
     this.profit                     = 0
 
@@ -224,7 +224,7 @@ module.exports = function(STAMPEDE) {
         sales               : me.sales
       }, done)
     },
-    
+
     // Used for simulation
     clean: function() {
       var me = this
@@ -245,7 +245,7 @@ module.exports = function(STAMPEDE) {
         loadTraders(done)
       })
     },
-    
+
     // Loads trader record from repository and then loads trader's history
     checkRecord: function(done) {
       var me = this
@@ -272,7 +272,7 @@ module.exports = function(STAMPEDE) {
      *
      *
      */
-    
+
     wake: function(done) {
       var me = this
 
@@ -294,7 +294,7 @@ module.exports = function(STAMPEDE) {
 
       if (DECISION_LOGGING) {
         LOG(
-          "validBuyPrice |", 
+          "validBuyPrice |",
           "\nprice_below_threshold:", price_below_threshold,
           "\namount_under_min:", amount_under_min,
           "\nprice_under_average:", price_under_average
@@ -362,14 +362,16 @@ module.exports = function(STAMPEDE) {
     },
 
     validSellAmount: function(sale) {
-      var me = this
-      var available_amount = me.amount
-      var available_currency_amount = (me.amount * sale.price)
-      var target_amount = (available_amount / 2)
-      var target_currency_amount = (target_amount * sale.price)
+      var me                        = this
+      var available_btc             = wallet.current.btc_available
+      var available_amount          = (
+        me.amount < available_btc ? me.amount : available_btc
+      )
+      var available_currency_amount = (available_amount * sale.price)
+      var target_amount             = (available_amount / 2)
+      var target_currency_amount    = (target_amount * sale.price)
 
       sale.amount = target_amount
-
       return (target_currency_amount > MIN_PURCHASE)
     },
 
@@ -380,7 +382,7 @@ module.exports = function(STAMPEDE) {
       // Set the stop deal as deal to sell if not selling combined deal
       // And if trailing stop was hit
       // Stop price is the max price reduced by half of greed
-      sale.stop_price = 
+      sale.stop_price =
         (me.max_price) * (1 - (INITIAL_GREED / 2))
       me.target_price = (
         sale.stop_price > me.target_price ? sale.stop_price : me.target_price
@@ -390,7 +392,7 @@ module.exports = function(STAMPEDE) {
         sale.stop_price >= sale.price
       )
     },
-   
+
     // Decide if buying, define purchase
 
     /* INPUT:
@@ -402,7 +404,7 @@ module.exports = function(STAMPEDE) {
         controller (amount, price)
 
     */
-    
+
 
     isBuying: function(purchase) {
 
@@ -410,7 +412,7 @@ module.exports = function(STAMPEDE) {
           - price is favorable
           - available resources
 
-         Define checklist for buying. 
+         Define checklist for buying.
          Assign checklist entries whether they are required or not.
       */
 
@@ -421,16 +423,16 @@ module.exports = function(STAMPEDE) {
             {required: true, fn: me.validBuyAmount, name: "valid_amount"}
           ]
 
-      // Calculate trader bid 
+      // Calculate trader bid
       // (aligned by bid alignment to make us competitive when bidding)
       var current_buy_price = (market.current.last / (1 - (BID_ALIGN / 100)))
 
       purchase.price = current_buy_price
-      
+
       var structured_decision = me.checkOut(buy_checklist, {
             trader: (
-              "T" + me.name.split("_")[1] + 
-              ": " + (current_buy_price).toFixed(2) + 
+              "T" + me.name.split("_")[1] +
+              ": " + (current_buy_price).toFixed(2) +
               " (" + me.average_buy_price.toFixed(2) + ")"
             ),
             criteria: {}
@@ -439,7 +441,7 @@ module.exports = function(STAMPEDE) {
       if (DECISION_LOGGING) LOG(
         "isBuying | structured_decision, purchase:", structured_decision, purchase
       )
-      
+
       cycle_buy_decisions.push(structured_decision)
       perf_timers.is_buying += (Date.now() - is_buying_start)
       return structured_decision.decision
@@ -451,10 +453,10 @@ module.exports = function(STAMPEDE) {
       // Cycle through checklist now
       for (var i = 0; i < check_list.length; i++) {
         var entry = check_list[i]
-        
+
         if (entry.required && entry.fn) {
           var entry_pass = entry.fn.apply(me, [deal])
-          
+
           structured_decision.criteria[entry.name] = entry_pass
           if (!entry_pass) {
             decision = false
@@ -471,16 +473,16 @@ module.exports = function(STAMPEDE) {
       var is_selling_start = Date.now()
 
       var me = this
-      // Calculate trader bid 
+      // Calculate trader bid
       // (aligned by bid alignment to make us competitive when bidding)
       var current_sell_price = (market.current.last / (1 + (BID_ALIGN / 100)))
       var sell_checklist = [
             { required: true, fn: me.validSellPrice, name: "sell_price" },
             { required: true, fn: me.validSellAmount, name: "sell_amount" },
-            { 
-              required: TRAILING_STOP_ENABLED, 
-              fn: me.checkTrailingStop, 
-              name: "trailing_stop" 
+            {
+              required: TRAILING_STOP_ENABLED,
+              fn: me.checkTrailingStop,
+              name: "trailing_stop"
             }
           ]
       // Initialize decision
@@ -488,9 +490,9 @@ module.exports = function(STAMPEDE) {
       sale.price = current_sell_price
 
       var structured_decision = me.checkOut(sell_checklist, {
-            trader: 
-              "T" + me.name.split("_")[1] + 
-              ": " + (current_sell_price).toFixed(2) + 
+            trader:
+              "T" + me.name.split("_")[1] +
+              ": " + (current_sell_price).toFixed(2) +
               " (" + (me.target_price).toFixed(2) + ")",
             criteria: {}
           }, sale)
@@ -500,8 +502,8 @@ module.exports = function(STAMPEDE) {
 
       // Log the success!
       if (DECISION_LOGGING) LOG(
-        "||| trader | sellingCheck | " + 
-        "isSelling? | structured_decision:", 
+        "||| trader | sellingCheck | " +
+        "isSelling? | structured_decision:",
         structured_decision
       )
 
@@ -511,12 +513,12 @@ module.exports = function(STAMPEDE) {
       perf_timers.is_selling += (Date.now() - is_selling_start)
       return structured_decision.decision
     },
-    
+
     decide: function(done) {
       var me            = this
       var cur_price     = market.current.last
       var wallet_cool   = (wallet.current.cool >= 1)
-      
+
       //Sanity check
       if (cur_price > 5) {
         me.max_price = (me.max_price > cur_price) ? me.max_price : cur_price
@@ -528,7 +530,7 @@ module.exports = function(STAMPEDE) {
           me.buy(purchase, done)
         }
         else if (
-          wallet_cool && me.amount > (MIN_PURCHASE / cur_price) && 
+          wallet_cool && me.amount > (MIN_PURCHASE / cur_price) &&
           me.isSelling(sale)
         ) {
           me.sell(sale, done)
@@ -537,14 +539,14 @@ module.exports = function(STAMPEDE) {
       }
       else {
         LOG(
-          "decide | (" + me.name + 
+          "decide | (" + me.name +
           "): Market not ready for decisions (current_market)",
           market.current
         )
         return done()
       }
     },
-    
+
     buy: function(purchase, done) {
       var me = this
       var currency_buy_amount = (purchase.amount * purchase.price)
@@ -556,17 +558,17 @@ module.exports = function(STAMPEDE) {
       wallet.current.btc_amount_managed += purchase.amount
 
       if (!series_simulation) STAMPEDE.controller.notifyClient({
-        message: 
-          "+B " + purchase.amount.toFixed(5) + 
-          "BTC for " + currency_buy_amount.toFixed(2) + 
-          " " + CURRENCY_LABEL + 
-          " at " + purchase.price.toFixed(2) + 
-          " " + CURRENCY_LABEL+" per BTC.", 
+        message:
+          "+B " + purchase.amount.toFixed(5) +
+          "BTC for " + currency_buy_amount.toFixed(2) +
+          " " + CURRENCY_LABEL +
+          " at " + purchase.price.toFixed(2) +
+          " " + CURRENCY_LABEL+" per BTC.",
         permanent: true
       })
-      
+
       STAMPEDE.controller.buy(
-        purchase.amount.toFixed(6), 
+        purchase.amount.toFixed(6),
         purchase.price.toFixed(2),
       function(error, order) {
         if (DECISION_LOGGING) console.log(
@@ -633,10 +635,10 @@ module.exports = function(STAMPEDE) {
     recordSale: function(sale, done) {
       var me = this
       var sale_ratio = (sale.amount / me.amount)
-      
+
       me.sales++
       me.amount -= sale.amount
-      
+
       // Recalculate average buy price (raise it with greed)
       me.average_buy_price = (me.amount * (
         me.average_buy_price * (1 + (INITIAL_GREED * sale_ratio)))) / me.amount
@@ -664,29 +666,29 @@ module.exports = function(STAMPEDE) {
       wallet.current.cool -= (market.current.spread * 10)
       // Reset cycles to load all (market, wallet) details
       cycles_until_full = 1
-      
+
       if (!series_simulation) STAMPEDE.controller.notifyClient({
         message: (
           "-S" + ((sale.stop && !sale.shed) ? "(STOP)" : (sale.shed ? "(SHED)" : "(REG)")) +
-          " " + sale.amount.toFixed(5) + 
-          " BTC for " + ((market.current.last * (1 - (BID_ALIGN / 100)))*sale.amount).toFixed(2) + 
-          " " + CURRENCY_LABEL + 
-          " at " + sale.price.toFixed(2) + 
+          " " + sale.amount.toFixed(5) +
+          " BTC for " + ((market.current.last * (1 - (BID_ALIGN / 100)))*sale.amount).toFixed(2) +
+          " " + CURRENCY_LABEL +
+          " at " + sale.price.toFixed(2) +
           " " + CURRENCY_LABEL
         ),
         permanent: true
       })
 
       STAMPEDE.controller.sell(
-        sale.amount.toFixed(6), 
-        sale.price.toFixed(2), 
+        sale.amount.toFixed(6),
+        sale.price.toFixed(2),
       function(error, order) {
         if (DECISION_LOGGING) console.log(
-          "EXCHANGE: Response after attempt to sell | error, order:", 
+          "EXCHANGE: Response after attempt to sell | error, order:",
           error, order
         )
         if (
-          order && 
+          order &&
           order.id
         ) {
           if (!exchange_simulated) email.send({
@@ -715,11 +717,11 @@ module.exports = function(STAMPEDE) {
           }, function(success) {
             console.log("ERROR Email sending success?:", success, error)
             error_email_sent = true
-          })   
+          })
           return done()
         }
       })
-      
+
     }
   }
 
@@ -778,7 +780,7 @@ module.exports = function(STAMPEDE) {
         buy_decisions: cycle_buy_decisions,
         sell_decisions: cycle_sell_decisions
       })
-    }  
+    }
 
     cycle_buy_decisions = []
     cycle_sell_decisions = []
@@ -810,12 +812,12 @@ module.exports = function(STAMPEDE) {
     STAMPEDE.current_market   = market.current
     STAMPEDE.current_wallet   = wallet.current
     STAMPEDE.current_traders  = live_traders
-    
+
     if (broadcast_time) {
       STAMPEDE.controller.refreshOverview()
     }
-    
-    var stop_cycles = 
+
+    var stop_cycles =
           (config.simulation && market.current.error) || STAMPEDE.stop
 
     if (perf_timers.cycle_counter % 100000 === 0) logPerformance(perf_timers)
@@ -829,7 +831,7 @@ module.exports = function(STAMPEDE) {
     var decisions_start_timer = Date.now()
     // Check if traders are initialized
     var trader_names = _.keys(live_traders)
-    
+
     if (trader_names.length) {
       var currency_amount = 0
       var btc_amount = 0
@@ -846,7 +848,7 @@ module.exports = function(STAMPEDE) {
         perf_timers.decisions += (Date.now() - decisions_start_timer)
         var cool_up = INITIAL_GREED
         wallet.current.cool = (
-          wallet.current.cool < 1 && 
+          wallet.current.cool < 1 &&
           cool_up < (1 - wallet.current.cool)
         ) ? (wallet.current.cool + cool_up) : 1
         wallet.current.average_buy_price = (currency_amount / btc_amount)
@@ -873,13 +875,13 @@ module.exports = function(STAMPEDE) {
     function finalize() {
       var market_post_assignments_start = Date.now()
       market.current.threshold = (
-        IMPATIENCE * (market.current.high - market.current.middle) + 
+        IMPATIENCE * (market.current.high - market.current.middle) +
         market.current.middle
       )
-      wallet.current.currency_value = 
-        (wallet.current.btc_balance || 0) * (market.current.last || 0) + 
+      wallet.current.currency_value =
+        (wallet.current.btc_balance || 0) * (market.current.last || 0) +
         (wallet.current[config.exchange.currency + "_balance"] || 0)
-      // refresh client side on current market and wallet data 
+      // refresh client side on current market and wallet data
       perf_timers.market_post_assignments += (
         Date.now() - market_post_assignments_start
       )
@@ -901,11 +903,11 @@ module.exports = function(STAMPEDE) {
 
   function checkSheets(done) {
     LOG("* Checking history sheets.")
-    
+
     var timestamp = Date.now()
 
     db.zrange(
-      [VALUE_SHEET_KEY, 0, -1, "WITHSCORES"], 
+      [VALUE_SHEET_KEY, 0, -1, "WITHSCORES"],
     function(error, sheet_records) {
       var step = Math.round(sheet_records.length / 100)
       sheet_records.forEach(function(record, index) {
@@ -937,14 +939,14 @@ module.exports = function(STAMPEDE) {
 
     if (current_currency_value > 10 && !config.simulation) {
       db.zadd(
-        VALUE_SHEET_KEY, time_stamp, current_currency_value, 
+        VALUE_SHEET_KEY, time_stamp, current_currency_value,
       function(error, response) {
 
         var new_value = {
-          time: time_stamp, 
+          time: time_stamp,
           value: current_currency_value
         }
-        
+
         sheets.push(new_value)
         if (broadcast_time) {
           STAMPEDE.controller.drawSheets(new_value, "incremental")
@@ -955,18 +957,18 @@ module.exports = function(STAMPEDE) {
           if (parseInt(sheets_size) > SHEET_SIZE_LIMIT) {
             var cutoff_size = parseInt(sheets_size) - SHEET_SIZE_LIMIT
             db.zremrangebyrank(
-              VALUE_SHEET_KEY, 0, cutoff_size, 
+              VALUE_SHEET_KEY, 0, cutoff_size,
             function(error, response) {
               console.log(
-                "(Former size: " + sheets_size + " / Limit: " + SHEET_SIZE_LIMIT + 
-                ") Removed", (cutoff_size), "points from sheets", 
+                "(Former size: " + sheets_size + " / Limit: " + SHEET_SIZE_LIMIT +
+                ") Removed", (cutoff_size), "points from sheets",
                 "(Response: " + response + "). Current length:" + sheets.length
               )
             })
           }
         })
       })
-      
+
     }
   }
 
@@ -974,7 +976,7 @@ module.exports = function(STAMPEDE) {
   function checkWallet(done) {
     // Initialize into global var, exposed on top
     var wallet_start_timer = Date.now()
-    
+
     if (cycles_until_full === 0) {
       wallet.check(live_traders, function() {
         return finalize()
@@ -992,22 +994,22 @@ module.exports = function(STAMPEDE) {
       perf_timers.wallet += (Date.now() - wallet_start_timer)
       if (done) {
         return done()
-      }      
+      }
     }
   }
 
   function updateConfig(new_config) {
     if (configValid(new_config)) {
       for (var attribute in new_config) {
-        config.trading[attribute] = 
+        config.trading[attribute] =
           new_config[attribute] || config.trading[attribute]
       }
       initializeConfig()
       LOG(
         "trader | updateConfig | comparison:",
-        "\n: MAX_SUM_INVESTMENT / config.trading.maximum_investment:", 
+        "\n: MAX_SUM_INVESTMENT / config.trading.maximum_investment:",
           MAX_SUM_INVESTMENT, config.trading.maximum_investment,
-        "\n: INITIAL_GREED / config.trading.greed:", 
+        "\n: INITIAL_GREED / config.trading.greed:",
           INITIAL_GREED, config.trading.greed
       )
     }
@@ -1027,7 +1029,7 @@ module.exports = function(STAMPEDE) {
     initializeConfig()
 
     LOG(
-      "updateStrategy | Configuration initialized | config.strategy:", 
+      "updateStrategy | Configuration initialized | config.strategy:",
       config.strategy
     )
   }
@@ -1110,7 +1112,7 @@ module.exports = function(STAMPEDE) {
     if (wallet && holder.length > 1 && investment > 0) {
       wallet.addShare(holder, investment, function(error, response) {
         console.log(
-          "Added share (" + config.exchange.currency + investment + 
+          "Added share (" + config.exchange.currency + investment +
           ") for " + holder + ". (..., error, response)", error, response
         )
       })
@@ -1131,7 +1133,7 @@ module.exports = function(STAMPEDE) {
   function refreshAll() {
     if (market && wallet) {
       STAMPEDE.controller.refreshMarket(market.current)
-      STAMPEDE.controller.refreshWallet(wallet.current)  
+      STAMPEDE.controller.refreshWallet(wallet.current)
       STAMPEDE.controller.refreshTraders(live_traders)
       STAMPEDE.controller.refreshOverview()
       STAMPEDE.controller.refreshShares(wallet.shares)

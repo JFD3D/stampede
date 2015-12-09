@@ -10,6 +10,15 @@ Bitstamp and Btcchina exchanges are supported.
 3. Install and setup nginx if you are going to put it in front of nodejs
 4. Create config file. The app can be configured by making a copy of the /plugins/config_template.js file to /plugins/config.js using your information and api keys.
 
+###Simulator
+Stampede allows backtesting and testing on generated data sets. 
+
+##Backtesting
+
+
+
+
+
 ##Maintainers
 Peter Berezny - [Github](https://github.com/pejrak)
 Matthew Perkins - [Github](https://github.com/mattarse)
