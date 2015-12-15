@@ -3,7 +3,8 @@
   "version": "0.0.3",
   "private": true,
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "node --max_old_space_size=15000 app.js"
   },
   "dependencies": {
     "async": "0.2.9",

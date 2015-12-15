@@ -1,24 +1,16 @@
-module.exports = function(STAMPEDE) {
+'use strict'
+
+module.exports = _S => {
   
   var fs = require("fs")
   var fibonacci_cache = [0, 1]
-  var LOG = STAMPEDE.LOG("common")
+  var LOG = _S.LOG("common")
 
   Array.prototype.lookup = function(key, value) {
     var i=0, result
     while (i < this.length && !result) {
       var current_object = this[i]
       if (current_object[key] === value) result = current_object
-      i++
-    }
-    return result
-  }
-
-  Array.prototype.lookupIndex = function(key, value) {
-    var i=0, result
-    while (i < this.length && !result) {
-      var current_object = this[i]
-      if (current_object[key] === value) result = i
       i++
     }
     return result
@@ -36,41 +28,6 @@ module.exports = function(STAMPEDE) {
     return res
   }
 
-  String.prototype.upperCaseFirst = function() {
-    var string = this
-    return string.charAt(0).toUpperCase() + string.slice(1)
-  }
-
-  Array.prototype.averageByKey = function(key) {
-    var array = this,
-        sum = 0,
-        length = (array || []).length
-    if (length > 0) {
-      for (var i = 0; i < length; i++) {
-        var member = array[i]
-        if (
-          member[key] && 
-          !isNaN(member[key])
-        ) sum += member[key]
-      }
-      return (sum / length)
-    }
-    else {
-      return null
-    }  
-  }
-
-  Array.prototype.extremesByKey = function(key) {
-    var copy = this.slice(0)
-    copy.sort(function(a, b) {
-      return (a[key] - b[key])
-    })
-    return {
-      min: copy[0] || {},
-      max: copy[copy.length - 1] || {}
-    }
-  }
-
   // Standard email validation
   function validateEmail(email) { 
     var re = /^(([^<>()[\]\\.,:\s@\"]+(\.[^<>()[\]\\.,:\s@\"]+)*)|(".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
@@ -79,24 +36,32 @@ module.exports = function(STAMPEDE) {
 
   // for consistent time labeling down to second grain
   function timeLabel() {
-    var t = new Date(),
-        h = ("0" + t.getHours()).slice(-2),
-        m = ("0" + t.getMinutes()).slice(-2),
-        s = ("0" + t.getSeconds()).slice(-2),
-        y = t.getFullYear(),
-        mn = ("0" + (t.getMonth() + 1)).slice(-2),
-        d = ("0" + t.getDate()).slice(-2),
-        l = y+"-"+mn+"-"+d+"-"+h+":"+m+":"+s
+    let t = new Date()
+    let h = ("0" + t.getHours()).slice(-2)
+    let m = ("0" + t.getMinutes()).slice(-2)
+    let s = ("0" + t.getSeconds()).slice(-2)
+    let y = t.getFullYear()
+    let mn = ("0" + (t.getMonth() + 1)).slice(-2)
+    let d = ("0" + t.getDate()).slice(-2)
+    let l = y+"-"+mn+"-"+d+"-"+h+":"+m+":"+s
     return l
   }
 
-  function reassignProperties(source_hash, target_hash) {
-    for (var property in source_hash) {
-      if (source_hash.hasOwnProperty(property)) {
-        target_hash[property] = 
-          source_hash[property]
+  function cartesian(arg) {
+    var r = [], max = arg.length-1
+
+    function helper(arr, i) {
+      for (var j=0, l=arg[i].length; j<l; j++) {
+        var a = arr.slice(0) // clone arr
+        a.push(arg[i][j])
+        if (i==max) {
+          r.push(a)
+        } else
+          helper(a, i+1)
       }
     }
+    helper([], 0)
+    return r
   }
 
   function cumulate(base, length, ratio) {
@@ -171,7 +136,7 @@ module.exports = function(STAMPEDE) {
   }
 
   function capitalizeFirst(str) {
-    return str.upperCaseFirst()
+    return (str.charAt(0).toUpperCase() + str.slice(1))
   }
 
   function standardizeString(str) {
@@ -199,7 +164,7 @@ module.exports = function(STAMPEDE) {
     var cycle_counter = perf_timers.cycle_counter
     console.log(
       "--- PERF LOG (" + cycle_counter + 
-        ". cycle at " + formatter.tFormat(STAMPEDE.current_market.time) + 
+        ". cycle at " + formatter.tFormat(_S.current_market.time) + 
       ") " + parseInt(cycle_counter / (perf_timers.cycle / 1000)) + " c/s ---\n")
     for (var perf_timer_field in perf_timers) {
       if (
@@ -281,35 +246,35 @@ module.exports = function(STAMPEDE) {
 
   // Quick custom time formatter with moment module
   function timeFormat(time_incoming) {
-    return STAMPEDE.moment(time_incoming).format(time.format)
+    return _S.moment(time_incoming).format(time.format)
   }
 
 
   var formatter = {
-        capitalizeFirst: capitalizeFirst,
-        standardize: standardizeString,
-        shortenIfLong: shortenIfLong,
-        tFormat: timeFormat
+        capitalizeFirst   : capitalizeFirst,
+        standardize       : standardizeString,
+        shortenIfLong     : shortenIfLong,
+        tFormat           : timeFormat
       }
 
   return {
-    validateEmail: validateEmail,
-    timeLabel: timeLabel,
-    formatter: formatter,
-    reassignProperties: reassignProperties,
-    cumulate: cumulate,
-    fibonacci: fibonacci,
-    sum: sum,
-    average: average,
-    timer: timer,
-    time: time,
-    extract: extract,
-    generateCSV: generateCSV,
-    fileTo: fileTo,
-    loadCSV: loadCSV,
-    getCurrentRatio: getCurrentRatio,
-    logPerformance: logPerformance,
-    median: median
+    validateEmail   : validateEmail,
+    cartesian       : cartesian,
+    timeLabel       : timeLabel,
+    formatter       : formatter,
+    cumulate        : cumulate,
+    fibonacci       : fibonacci,
+    sum             : sum,
+    average         : average,
+    timer           : timer,
+    time            : time,
+    extract         : extract,
+    generateCSV     : generateCSV,
+    fileTo          : fileTo,
+    loadCSV         : loadCSV,
+    getCurrentRatio : getCurrentRatio,
+    logPerformance  : logPerformance,
+    median          : median
   }
 
 }

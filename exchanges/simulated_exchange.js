@@ -134,7 +134,7 @@ var initialization = (function() {
 
     emitTick: function(recycle) {
       var me = this
-      me.ticker(function(error, market_current) {
+      me.ticker((error, market_current) => {
         if (market_current) {
           me.tickEmitter.emit("tick", {
             price: market_current.last
@@ -146,14 +146,11 @@ var initialization = (function() {
       }, true) // <- true for no shift to current tick
       
       if (recycle && !stop_ticking_now) {
-        setImmediate(function() {
-          me.emitTick(recycle)
-        })
+        setImmediate(() => me.emitTick(recycle))
       }
     },
 
     stopTicking: function() {
-      console.log("simulated_exchange: stopTicking")
       clearInterval(ticker_interval)
       stop_ticking_now = true
     },
@@ -174,15 +171,13 @@ var initialization = (function() {
         me.current_balance[xc+"_balance"] = me.current_balance[xc+"_available"]
         me.volume += amount
         
-        //LOG("buy | amount, btc_balance:", amount, me.current_balance.btc_balance)
+        // LOG("buy | amount, btc_balance:", amount, me.current_balance.btc_balance)
 
-        callback(null, {
+        return callback(null, {
           id: parseInt(Math.random()*10000)
         })
       }
-      else {
-        callback("Not enough " + xc + "resources in balance.", null)
-      }
+      else return callback("Not enough " + xc + "resources in balance.", null)
     },
     sell: function(amount, price, callback) {
       amount = parseFloat(amount)
@@ -197,12 +192,12 @@ var initialization = (function() {
         me.current_balance[xc+"_available"] += adjusted_amount_price
         me.current_balance[xc+"_balance"] = me.current_balance[xc+"_available"]
         me.volume += amount
-        callback(null, {
+        return callback(null, {
           id: parseInt(Math.random()*10000)
         })
       }
       else {
-        callback("Not enough BTC resources in balance.", null)  
+        return callback("Not enough BTC resources in balance.", null)  
       }
     }
   }

@@ -41,9 +41,9 @@ module.exports = function(STAMPEDE) {
         }
         
         // Fasten in case of series simulation, avoid share summarization
-        if (me.simulation) {
+        if (config.simulation) {
           me.sumInvestmentValue()
-          callback()
+          return callback()
         } 
         else {
           me.summarizeShares(callback)

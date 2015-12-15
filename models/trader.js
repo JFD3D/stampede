@@ -1,20 +1,20 @@
 "use strict"
 
-module.exports = function(STAMPEDE) {
+module.exports = _S => {
 
-  var config          = STAMPEDE.config
-  var common          = STAMPEDE.common
-  var async           = STAMPEDE.async
-  var db              = STAMPEDE.db
-  var email           = STAMPEDE.email
-  var LOG             = STAMPEDE.LOG("trader")
-  var _               = STAMPEDE._
+  var config          = _S.config
+  var common          = _S.common
+  var async           = _S.async
+  var db              = _S.db
+  var email           = _S.email
+  var LOG             = _S.LOG("trader")
+  var _               = _S._
 
       // All traders will be loaded into this object
   var live_traders    = {}
 
       // Trading performance timers initialization for benchmarking
-  var perf_timers     = STAMPEDE.perf_timers
+  var perf_timers     = _S.perf_timers
   var logPerformance  = common.logPerformance
 
       // Load Market and Walled models to initialize instances below
@@ -172,7 +172,7 @@ module.exports = function(STAMPEDE) {
     this.amount                     = 0
 
     // Book-keeping for purchase/sale entries
-    this.book                       = new STAMPEDE.book(name)
+    this.book                       = new _S.book(name)
 
     /*
      *
@@ -561,7 +561,7 @@ module.exports = function(STAMPEDE) {
       wallet.current.investment += (purchase.amount * purchase.price)
       wallet.current.btc_amount_managed += purchase.amount
 
-      if (!series_simulation) STAMPEDE.controller.notifyClient({
+      if (!series_simulation) _S.controller.notifyClient({
         message:
           "+B " + purchase.amount.toFixed(5) +
           "BTC for " + currency_buy_amount.toFixed(2) +
@@ -571,7 +571,7 @@ module.exports = function(STAMPEDE) {
         permanent: true
       })
 
-      STAMPEDE.controller.buy(
+      _S.controller.buy(
         purchase.amount.toFixed(6),
         purchase.price.toFixed(2),
       function(error, order) {
@@ -671,7 +671,7 @@ module.exports = function(STAMPEDE) {
       // Reset cycles to load all (market, wallet) details
       cycles_until_full = 1
 
-      if (!series_simulation) STAMPEDE.controller.notifyClient({
+      if (!series_simulation) _S.controller.notifyClient({
         message: (
           "-S" + ((sale.stop && !sale.shed) ? "(STOP)" : (sale.shed ? "(SHED)" : "(REG)")) +
           " " + sale.amount.toFixed(5) +
@@ -683,7 +683,7 @@ module.exports = function(STAMPEDE) {
         permanent: true
       })
 
-      STAMPEDE.controller.sell(
+      _S.controller.sell(
         sale.amount.toFixed(6),
         sale.price.toFixed(2),
       function(error, order) {
@@ -731,7 +731,7 @@ module.exports = function(STAMPEDE) {
 
 
   function wakeAll(done) {
-    STAMPEDE.stop = false
+    _S.stop = false
     initializeConfig()
     async.series([
       loadTraders,
@@ -748,13 +748,13 @@ module.exports = function(STAMPEDE) {
   }
 
   function hook(done) {
-    STAMPEDE.exchange.startTicking()
-    STAMPEDE.exchange.tickEmitter.on("tick", tick)
+    _S.exchange.startTicking()
+    _S.exchange.tickEmitter.on("tick", tick)
     done()
   }
 
   function unhook() {
-    STAMPEDE.exchange.stopTicking()
+    _S.exchange.stopTicking()
   }
 
   // Trigger ticking market per streaming API
@@ -763,7 +763,7 @@ module.exports = function(STAMPEDE) {
     var time_since_last_cycle = (Date.now() - last_cycle_end)
     var delay_permitted = (exchange_simulated || time_since_last_cycle > 1000)
 
-    if (!cycle_in_progress && !STAMPEDE.stop && delay_permitted) {
+    if (!cycle_in_progress && !_S.stop && delay_permitted) {
       cycle()
     }
   }
@@ -780,7 +780,7 @@ module.exports = function(STAMPEDE) {
 
     // Update client on performed decisions
     if (broadcast_time) {
-      STAMPEDE.controller.refreshDecisions({
+      _S.controller.refreshDecisions({
         buy_decisions: cycle_buy_decisions,
         sell_decisions: cycle_sell_decisions
       })
@@ -813,16 +813,16 @@ module.exports = function(STAMPEDE) {
   function finalizeCycle(cycle_start_timer) {
     var finalize_cycle_start = Date.now()
     // Export current market and wallet data
-    STAMPEDE.current_market   = market.current
-    STAMPEDE.current_wallet   = wallet.current
-    STAMPEDE.current_traders  = live_traders
+    _S.current_market   = market.current
+    _S.current_wallet   = wallet.current
+    _S.current_traders  = live_traders
 
     if (broadcast_time) {
-      STAMPEDE.controller.refreshOverview()
+      _S.controller.refreshOverview()
     }
 
     var stop_cycles =
-          (config.simulation && market.current.error) || STAMPEDE.stop
+          (config.simulation && market.current.error) || _S.stop
 
     if (perf_timers.cycle_counter % 100000 === 0) logPerformance(perf_timers)
     perf_timers.finalize_cycle += (Date.now() - finalize_cycle_start)
@@ -863,7 +863,7 @@ module.exports = function(STAMPEDE) {
     }
     else {
       LOG("No traders present or market simulation stopped.")
-      STAMPEDE.stop_simulation = true
+      _S.stop_simulation = true
       if (done) return done()
     }
   }
@@ -890,9 +890,9 @@ module.exports = function(STAMPEDE) {
         Date.now() - market_post_assignments_start
       )
       if (broadcast_time) {
-        STAMPEDE.controller.refreshTraders(live_traders)
-        STAMPEDE.controller.refreshWallet(wallet.current)
-        STAMPEDE.controller.refreshMarket(market.current)
+        _S.controller.refreshTraders(live_traders)
+        _S.controller.refreshWallet(wallet.current)
+        _S.controller.refreshMarket(market.current)
       }
       perf_timers.market += (Date.now() - market_start_timer)
       if (done) {
@@ -927,7 +927,7 @@ module.exports = function(STAMPEDE) {
           sheets[sheets_index].time = parseInt(record)
         }
       })
-      STAMPEDE.controller.drawSheets(sheets, "full")
+      _S.controller.drawSheets(sheets, "full")
       done(error, sheets)
     })
   }
@@ -953,7 +953,7 @@ module.exports = function(STAMPEDE) {
 
         sheets.push(new_value)
         if (broadcast_time) {
-          STAMPEDE.controller.drawSheets(new_value, "incremental")
+          _S.controller.drawSheets(new_value, "incremental")
         }
 
         // Now, let's check if we should remove any points
@@ -983,6 +983,7 @@ module.exports = function(STAMPEDE) {
 
     if (cycles_until_full === 0) {
       wallet.check(live_traders, function() {
+        wallet.assignAvailableResources(MAX_SUM_INVESTMENT)
         return finalize()
       })
     }
@@ -992,9 +993,9 @@ module.exports = function(STAMPEDE) {
 
     function finalize() {
       if (!series_simulation && broadcast_time) {
-        STAMPEDE.controller.refreshShares(wallet.shares)
+        _S.controller.refreshShares(wallet.shares)
       }
-      wallet.assignAvailableResources(MAX_SUM_INVESTMENT)
+      
       perf_timers.wallet += (Date.now() - wallet_start_timer)
       if (done) {
         return done()
@@ -1018,7 +1019,7 @@ module.exports = function(STAMPEDE) {
       )
     }
     else {
-      if (!series_simulation) STAMPEDE.controller.notifyClient({
+      if (!series_simulation) _S.controller.notifyClient({
         message: "Unable to update config, values are invalid."
       })
     }
@@ -1067,7 +1068,7 @@ module.exports = function(STAMPEDE) {
       var trader = new Trader(trader_name)
       trader.wake(next)
     }, function() {
-      STAMPEDE.controller.refreshTraders(live_traders)
+      _S.controller.refreshTraders(live_traders)
       return done()
     })
   }
@@ -1075,15 +1076,15 @@ module.exports = function(STAMPEDE) {
 
   function loadTraders(done) {
     live_traders = {}
-    market = new STAMPEDE.market()
-    wallet = new STAMPEDE.wallet()
+    market = new _S.market()
+    wallet = new _S.wallet()
     db.smembers(TRADER_LIST_KEY, function(error, trader_list) {
       trader_count = trader_list.length
       if (trader_list.length) {
         checkTraders(trader_list, done)
       }
       else {
-        STAMPEDE.controller.refreshTraders(live_traders)
+        _S.controller.refreshTraders(live_traders)
         return done()
       }
     })
@@ -1125,24 +1126,24 @@ module.exports = function(STAMPEDE) {
 
   function stopAll(done) {
     // clearTimeout(timer)
-    wallet = new STAMPEDE.wallet()
-    market = new STAMPEDE.market()
+    wallet = new _S.wallet()
+    market = new _S.market()
     sheets = []
     live_traders = {}
     unhook()
-    STAMPEDE.stop = true
+    _S.stop = true
     if (done) done()
   }
 
   function refreshAll() {
     if (market && wallet) {
-      STAMPEDE.controller.refreshMarket(market.current)
-      STAMPEDE.controller.refreshWallet(wallet.current)
-      STAMPEDE.controller.refreshTraders(live_traders)
-      STAMPEDE.controller.refreshOverview()
-      STAMPEDE.controller.refreshShares(wallet.shares)
+      _S.controller.refreshMarket(market.current)
+      _S.controller.refreshWallet(wallet.current)
+      _S.controller.refreshTraders(live_traders)
+      _S.controller.refreshOverview()
+      _S.controller.refreshShares(wallet.shares)
       console.log("trader | refreshAll | sheets.length :", sheets.length)
-      setTimeout(STAMPEDE.controller.drawSheets(sheets, "full"), 2000)
+      setTimeout(_S.controller.drawSheets(sheets, "full"), 2000)
     }
   }
 

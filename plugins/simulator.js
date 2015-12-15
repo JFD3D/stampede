@@ -1,15 +1,13 @@
 "use strict"
 
-module.exports = function(STAMPEDE) {
+module.exports = _S => {
 
-  var db              = STAMPEDE.db
-  var config          = STAMPEDE.config
-  var common          = STAMPEDE.common
-  
-  
-  var LOG             = STAMPEDE.LOG("simulator")
-  var _               = STAMPEDE._
-  var async           = STAMPEDE.async
+  var db              = _S.db
+  var common          = _S.common
+  var config          = _S.config
+  var LOG             = _S.LOG("simulator")
+  var _               = _S._
+  var async           = _S.async
 
   const REC_SET_ATTR  = ["include_in_series", "name"]
   const SETS_REPO     = "stampede_data_sets"
@@ -35,7 +33,7 @@ module.exports = function(STAMPEDE) {
     this.headers            = ["time", "high", "low", "last"]
     this.csv_file_name      = record_name + ".csv"
     this.csv_file_path      = (
-      STAMPEDE.config.data_set_directory || "/var/stampede_data_sets/"
+      _S.config.data_set_directory || "/var/stampede_data_sets/"
     ) + this.csv_file_name
   }
 
@@ -134,12 +132,12 @@ module.exports = function(STAMPEDE) {
     run: function(done) {
       var sim = this
 
-      STAMPEDE.trader.prepareForSimulation(sim.series_simulation)
+      _S.trader.prepareForSimulation(sim.series_simulation)
       LOG("run | Loading traders for deal removal.")
-      STAMPEDE.trader.loadTraders(function() {
-        STAMPEDE.trader.cleanBooks()
+      _S.trader.loadTraders(function() {
+        _S.trader.cleanBooks()
         LOG("removed cleanBooks | reloading traders")
-        STAMPEDE.trader.wakeAll(function() {
+        _S.trader.wakeAll(function() {
           LOG("starting simulation wakeAll")
           if (done) done({
             message: "Started Market simulation."
@@ -167,13 +165,13 @@ module.exports = function(STAMPEDE) {
       var sim               = this
       var data_sets_results = []
 
-      db.smembers(SETS_REPO, function(error, data_sets) {
+      db.smembers(SETS_REPO, (error, data_sets) => {
         if (data_sets.length > 0) {
           sim.loaded_data_sets = data_sets
-          async.eachSeries(data_sets, function(data_set_name, next) {
+          async.eachSeries(data_sets, (data_set_name, next) => {
             let set = new Set(data_set_name)
 
-            set.getAttributes(function() {
+            set.getAttributes(() => {
               data_sets_results.push({
                 record_name: data_set_name,
                 include_in_series: set.include_in_series,
@@ -182,13 +180,13 @@ module.exports = function(STAMPEDE) {
               return next()
             })
           }, function() {
-            STAMPEDE.controller.refreshSimulationSets(data_sets_results)
+            _S.controller.refreshSimulationSets(data_sets_results)
             LOG(data_sets_results)
             if (done) return done(error, data_sets_results)  
           })
         }
         else {
-          STAMPEDE.controller.refreshSimulationSets([])
+          _S.controller.refreshSimulationSets([])
           if (done) return done(error, [])
         }
           
@@ -211,12 +209,11 @@ module.exports = function(STAMPEDE) {
       var time_start = Date.now()
 
       LOG("loadSet | data_set_name:", data_set_name)
-      set.load(function(error, data) {
+      set.load((error, data) => {
         sim.current.data_set_name = data_set_name
         sim.current.data_set = data
         sim.analyseCurrentSet()
         common.timer(time_start, "loadSet | " + data.length)
-
         return done(error, data)
       })
     },
@@ -225,10 +222,9 @@ module.exports = function(STAMPEDE) {
     // Trigger check if series is running that dataset has been finished
     // If we have worked with a stored data set
     finish: function() {
-
-      var current_wallet = STAMPEDE.current_wallet
-      var current_market = STAMPEDE.current_market
-      var current_traders = STAMPEDE.current_traders
+      var current_wallet  = _S.current_wallet
+      var current_market  = _S.current_market
+      var current_traders = _S.current_traders
       var sim = this
       
       LOG(
@@ -239,14 +235,14 @@ module.exports = function(STAMPEDE) {
       var final_ratio = parseInt(
         (current_wallet.currency_value / config.trading.maximum_investment) * 100
       )
-      STAMPEDE.controller.notifyClient({
+      _S.controller.notifyClient({
         message: "Serie ("+
           ( 
-            sim.current.series_array ? 
+            sim.current_serie ? 
             (
-              sim.current.series_array[sim.current.serie_index] + " / (" + 
-              (sim.current.serie_index + 1) + " of " + 
-              sim.current.series_array.length + ")"
+              sim.current_serie.options + " / (" + 
+              (sim.current_serie.idx + 1) + " of " + 
+              sim.current_serie.count + ")"
             ) : 
             "Interactive"
           ) + ") | Ratio: " + final_ratio + ".", 
@@ -275,15 +271,15 @@ module.exports = function(STAMPEDE) {
               }
             ]
 
-        sim.current.series_attributes.forEach(function(serie_attribute) {
+        sim.current.series_attributes.forEach(serie_attribute => {
           let serie_attribute_arrayed = serie_attribute.split(":")
+
           if (serie_attribute_arrayed[0] !== "data_sets") {
             let item    = {}
             item.value  = 
               config[serie_attribute_arrayed[0]][serie_attribute_arrayed[1]]
             item.type   = serie_attribute_arrayed[0]
             item.field  = serie_attribute_arrayed[1]
-
             result.push(item)
           }
         })
@@ -322,28 +318,26 @@ module.exports = function(STAMPEDE) {
 
 
         sim.current.series_results.push(result)
-        STAMPEDE.controller.refreshSimulationResults(
+        _S.controller.refreshSimulationResults(
           sim.current.series_results.sort(function(a, b) { 
             return b[b.length-1].value - a[a.length-1].value
           }))
-        sim.current.serie_index++
-        if (sim.current.series_array.length > sim.current.serie_index) {
+        
+        if (!sim.current_serie.last) {
           // Continue with next simulation
-          LOG("Continuing with next serie ("+sim.current.serie_index+").")
-          sim.analyseResults()
           sim.processSerie()
         }
         else {
           // End simulation series
           sim.series_simulation = false
-          STAMPEDE.trader.stopAll()
+          _S.trader.stopAll()
           LOG("!!!!!!! Series simulations ended.")
         }
       }
       else {
         LOG("Finishing interactive simulation, refreshing all.")
-        STAMPEDE.trader.refreshAll()
-        STAMPEDE.trader.stopAll()
+        _S.trader.refreshAll()
+        _S.trader.stopAll()
       }
     },
 
@@ -389,7 +383,7 @@ module.exports = function(STAMPEDE) {
       )
       
 
-      set.getAttributes(function() {
+      set.getAttributes(() => {
         sim.current.data_set_properties = data_set_properties
         sim.current.data_set_properties.name = set.optional_ui_name
       })
@@ -405,61 +399,25 @@ module.exports = function(STAMPEDE) {
     },
 
     startSeries: function(done) {
-      var sim               = this
-      var series_config     = require("./../configs/series/series_config").series
-      var series_array      = []
-      var series_attributes = ["data_sets:data_set"]
-      var series_options    = [[]]
-      var data_sets         = []
+      let sim               = this
+      let series_array      = []
+      let series_options    = [[]]
+      let data_sets         = []
 
       LOG("entering startSeries.")
 
-      sim.loadAllSets(function(load_errors, data_sets_results) {
-        data_sets_results.forEach(function(set) {
-          if (set.include_in_series) {
-            data_sets.push(set.record_name)
-            series_options[0].push(data_sets.length - 1)
-          }
-        })
-        
-        series_config.data_sets = data_sets
-
-        for (var setting in series_config.trading) {
-          let setting_array = []
-          series_attributes.push("trading:"+setting)
-          series_config.trading[setting].forEach(function(option, option_index) {
-            setting_array.push(option_index)
-          })
-          series_options.push(setting_array)
-        }
-
-        for (var strategy in series_config.strategies) {
-          let setting_array = []
-          series_attributes.push("strategy:"+strategy)
-          series_config.strategies[strategy].forEach(function(option, option_index) {
-            setting_array.push(option_index)
-          })
-          series_options.push(setting_array)
-        }
-
-        LOG(
-          "series_options, series_attributes:", 
-          series_options, series_attributes
+      sim.loadAllSets((load_errors, data_sets_results) => {
+        sim.series_simulation = true
+        data_sets = _.pluck(
+          _.where(data_sets_results, { include_in_series: true }), 'record_name'
         )
 
-        // Now combine options
+        let new_series = _S.series.generate(data_sets)
 
-        let series_array = cartesian(series_options)
-
-        LOG("series_array.length:", series_array.length)
-        sim.current.serie_index = 0
-        sim.current.series_array = series_array
-        sim.current.series_attributes = series_attributes
-        sim.current.series_config = series_config
-        sim.current.series_results = []
-        sim.series_simulation = true
-        
-        if (data_sets.length && series_array.length) {
+        sim.current.series_attributes = new_series.attributes
+        sim.current.series_results    = []
+       
+        if (new_series.generated) {
           sim.processSerie()  
           if (done) return done()
         }
@@ -472,47 +430,32 @@ module.exports = function(STAMPEDE) {
 
 
     processSerie: function() {
-      var sim = this
-      var serie_options = sim.current.series_array[sim.current.serie_index]
-      var serie_data_set_name = 
-            sim.current.series_config.data_sets[serie_options[0]]
-      STAMPEDE.trader.stopAll()
-      sim.applySerieConfig()
-      sim.loadSerieSet(serie_data_set_name, function(error, set) {
-        STAMPEDE.controller.simulatorWarmUp(set)
+      let sim           = this
+      let current_serie = _S.series.next()
+
+      sim.current_serie = current_serie
+      _S.trader.stopAll()
+      sim.applySerieConfig(current_serie)
+      sim.loadSerieSet(current_serie.data_set, (error, set_data) => {
+        _S.controller.simulatorWarmUp(set_data)
         sim.run()
       })
     },
 
     applySerieConfig: function() {
-      var sim           = this
-      var serie_config  = sim.current.series_config
-      var serie_options = sim.current.series_array[sim.current.serie_index]
-      var s             = 0
+      let sim = this
 
-      for (var setting in serie_config.trading) {
-        // Read settings from 1, since we are applying in order after data sets
-        s++
-        config.trading[setting] = 
-          serie_config.trading[setting][serie_options[s]]
-      }
-      for (var strategy in serie_config.strategies) {
-        s++
-        config.strategy[strategy] = 
-          serie_config.strategies[strategy][serie_options[s]]
-      }
-
-      LOG(
-        "applySerieConfig | serie_options, config.trading, config.strategy:", 
-        serie_options, config.trading, config.strategy
+      _S.series.items.forEach(
+        item => _.extend(config[item], sim.current_serie.config[item])
       )
+      // LOG("applySerieConfig | _S.config:", _S.config)
     },
 
     loadSerieSet: function(serie_data_set_name, done) {
       var sim = this
 
       if (serie_data_set_name === sim.current.data_set_name) {
-        done(null, STAMPEDE.controller.generated_data)
+        return done(null, _S.controller.generated_data)
       }
       else {
         LOG("Loading series set:", serie_data_set_name)
@@ -521,22 +464,7 @@ module.exports = function(STAMPEDE) {
     }
   }
 
-  function cartesian(arg) {
-    var r = [], max = arg.length-1
 
-    function helper(arr, i) {
-      for (var j=0, l=arg[i].length; j<l; j++) {
-        var a = arr.slice(0) // clone arr
-        a.push(arg[i][j])
-        if (i==max) {
-          r.push(a)
-        } else
-          helper(a, i+1)
-      }
-    }
-    helper([], 0)
-    return r
-  }
 
 
 
