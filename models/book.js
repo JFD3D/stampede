@@ -54,7 +54,7 @@ module.exports = function(STAMPEDE) {
             var entry = parseBookRecord(book_record)
 
             if (entry) {
-              book.accountFor(entry)
+              accountFor(entry)
             }
           })
         }
