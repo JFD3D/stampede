@@ -1,36 +1,32 @@
 
 
 /*
-  This is the main route controller and provides a way for: 
+  This is the main route _C and provides a way for: 
   - rendering views
   - pushing updates to client
 
 */
 
-module.exports = function(STAMPEDE) {
-  var LOG             = STAMPEDE.LOG("controller")
-  var CONFIG          = STAMPEDE.config
-  var common          = STAMPEDE.common
-  var Trader          = STAMPEDE.trader
-  var Loader          = STAMPEDE.data_loader
-  var live            = STAMPEDE.live
-  var SIMULATOR       = new STAMPEDE.simulator()
-  var EXCHANGE        = STAMPEDE.exchange
-  
-  var jade            = STAMPEDE.jade
-  var async           = STAMPEDE.async
-  var generated_data  = []
-  var controller      = {}
+module.exports = function(_S) {
+  var LOG             = _S.LOG("controller")
+  var CONFIG          = _S.config
+  var common          = _S.common
+  var Trader          = _S.trader
+  var Loader          = _S.data_loader
+  var live            = _S.live
+  var SIMULATOR       = _S.current_simulator
+  var EXCHANGE        = _S.exchange
+  var jade            = _S.jade
+  var async           = _S.async
+  var _C              = {}
   var traders_awake   = false
 
   const SIMULATION = (CONFIG.exchange.selected === "simulated_exchange")
 
-  controller.index = function(req, res) {
-
+  _C.index = (req, res) => {
     if (SIMULATION) {
-
       var cleanBooks = Trader.cleanBooks
-      var wakeTraders = controller.wakeTraders
+      var wakeTraders = _C.wakeTraders
       var cleanSheets = Trader.cleanSheets
 
       async.series([
@@ -40,9 +36,7 @@ module.exports = function(STAMPEDE) {
         cleanBooks
       ], respond)
     }
-    else {
-      respond()
-    }
+    else respond()
 
     function respond() {
 
@@ -55,7 +49,7 @@ module.exports = function(STAMPEDE) {
         trading_config: CONFIG.trading,
         config: CONFIG,
         trading_strategies: CONFIG.strategy,
-        helpers: STAMPEDE.helpers
+        helpers: _S.helpers
       }
       res.render('index', response)
       // Delay displaying all information on front end
@@ -65,14 +59,14 @@ module.exports = function(STAMPEDE) {
 
   }
 
-  controller.dataLoader = function(req, res) {
+  _C.dataLoader = (req, res) => {
     res.render("data_loader", {
       title: 'Stampede: Data loader',
       current_user: req.current_user
     })
   }
 
-  controller.loadTradeHistory = function(req, res) {
+  _C.loadTradeHistory = (req, res) => {
     var day_span  = parseInt(req.body.day_span)
     var set_name  = req.body.set_name
 
@@ -84,11 +78,11 @@ module.exports = function(STAMPEDE) {
         set_name: set_name,
         data_file: req.body.data_file,
         req: req
-      }, function(errors, result) {
+      }, (errors, result) => {
         SIMULATOR.saveSet({
           name: set_name, 
           data: result.data
-        }, function(errors, set) {
+        }, (errors, set) => {
           res.send({
             data_length: result.data.length,
             set_name: result.set_name,
@@ -106,36 +100,34 @@ module.exports = function(STAMPEDE) {
     
   }
 
-  controller.shares = function(req, res) {
+  _C.shares = (req, res) => {
     res.render('share_index', {
       title: "Stampede - Shares view",
-      helpers: STAMPEDE.helpers,
+      helpers: _S.helpers,
       current_user: req.current_user
     })
   }
 
-  controller.addShare = function(req, res) {
+  _C.addShare = (req, res) => {
     var holder = req.body.holder.trim()
-        investment = parseInt(req.body.investment),
-        input_valid = (
+    var investment = parseInt(req.body.investment)
+    var input_valid = (
           common.validateEmail(holder) &&
           investment > 0
         )
 
     if (input_valid) Trader.addShare(holder, investment)
-
     res.redirect("/shares")
-
   }
 
-  controller.refreshShares = function(shares) {
+  _C.refreshShares = (shares) => {
 
     jade.renderFile(__dirname + "/../views/_shares_table.jade", {
       shares: shares, 
-      helpers: STAMPEDE.helpers,
+      helpers: _S.helpers,
       formatter: common.formatter
-    }, function(error, html) {
-      if (error) console.log(
+    }, (error, html) => {
+      if (error) LOG(
         "rendering updateShares | error, html:", error, html
       )
       if (html) live.sendToAll("stampede_updates", {
@@ -146,14 +138,14 @@ module.exports = function(STAMPEDE) {
 
   }
 
-  controller.addTrader = function(req, res) {
+  _C.addTrader = (req, res) => {
     var trader = new Trader.instance()
     trader.create(function(error, response) {
       res.send({message: "Trader added."})
     })
   }
 
-  controller.removeTrader = function(req, res) {
+  _C.removeTrader = (req, res) => {
     var trader_name = req.params.trader_name
     var trader = new Trader.instance(trader_name)
     trader.remove(function(live_traders) {
@@ -161,55 +153,53 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  controller.removeDeal = function(req, res) {
+  _C.removeDeal = (req, res) => {
     var deal_name = req.params.deal_name,
         deal = {name: deal_name},
         trader_name = req.params.trader_name,
         trader = new Trader.instance(trader_name)
-    trader.wake(function(error, record) {
-      trader.removeDeal(deal_name, function() {
-        res.send({message: "Deal removed."})
-      })
+    trader.wake((error, record) => {
+      trader.removeDeal(deal_name, () => res.send({ message: "Deal removed." }))
     })
   }
 
 
-  controller.sellDeal = function(req, res) {
+  _C.sellDeal = (req, res) => {
     var deal_name = req.params.deal_name,
         deal = {name: deal_name},
         trader_name = req.params.trader_name,
         trader = new Trader.instance(trader_name)
-    trader.wake(function(error, record) {
-      trader.sellDeal(deal_name, function() {
+    trader.wake((error, record) => {
+      trader.sellDeal(deal_name, () => {
         res.send({message: "Deal sale opened."})
       })
     })
   }
 
 
-  controller.wakeTraders = function(done) {
-    Trader.wakeAll(function() {
+  _C.wakeTraders = (done) => {
+    Trader.wakeAll(() => {
       traders_awake = true
       if (done) done()
     })
   }
 
-  controller.stop = function(req, res) {
+  _C.stop = (req, res) => {
     Trader.stopAll(function() {
       traders_awake = false
       res.send({message: "Stopped all traders.", success: true})
     })
   }
 
-  controller.start = function(req, res) {
-    Trader.wakeAll(function() {
+  _C.start = (req, res) => {
+    Trader.wakeAll(() => {
       traders_awake = true
       res.send({message: "Woke all traders.", success: true})
     })
   }
 
-  controller.getValueSheet = function(req, res) {
-    Trader.pullValueSheet(function(value_sheet) {
+  _C.getValueSheet = (req, res) => {
+    Trader.pullValueSheet((value_sheet) => {
       res.send({
         value_sheet: value_sheet,
         message: "Value sheet pulled: Length ("+value_sheet.length+")"
@@ -217,12 +207,12 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  controller.refreshMarket = function(market_data) {
+  _C.refreshMarket = (market_data) => {
     jade.renderFile(__dirname + "/../views/_market.jade", {
       current_market: market_data, 
-      helpers: STAMPEDE.helpers,
+      helpers: _S.helpers,
       formatter: common.formatter
-    }, function(error, html) {
+    }, (error, html) => {
       if (html) live.sendToAll("stampede_updates", {
         container: "live-ticker",
         html: html
@@ -238,13 +228,13 @@ module.exports = function(STAMPEDE) {
     }
   }
 
-  controller.refreshOverview = function(market_data) {
+  _C.refreshOverview = (market_data) => {
     jade.renderFile(__dirname + "/../views/_overview.jade", {
-      current_market: STAMPEDE.current_market,
-      current_wallet: STAMPEDE.current_wallet,
-      helpers: STAMPEDE.helpers,
+      current_market: _S.current_market,
+      current_wallet: _S.current_wallet,
+      helpers: _S.helpers,
       formatter: common.formatter
-    }, function(error, html) {
+    }, (error, html) => {
       if (html) live.sendToAll("stampede_updates", {
         container: "live-overview",
         html: html
@@ -252,7 +242,7 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  controller.drawSheets = function(data, update_type) {
+  _C.drawSheets = (data, update_type) => {
     var outgoing = {
       data: data,
       display_limit: CONFIG.sheet_size_limit,
@@ -262,13 +252,13 @@ module.exports = function(STAMPEDE) {
     live.sendToAll("stampede_value_sheet_update", outgoing)
   }
 
-  controller.refreshWallet = function(wallet_data, done) {
+  _C.refreshWallet = (wallet_data, done) => {
     jade.renderFile(__dirname + "/../views/_wallet.jade", {
       current_wallet: wallet_data, 
-      helpers: STAMPEDE.helpers,
+      helpers: _S.helpers,
       formatter: common.formatter
     }, function(error, html) {
-      if (error) console.log("!!!! refreshWallet error:", error)
+      if (error) LOG("!!!! refreshWallet error:", error)
       if (html) live.sendToAll("stampede_updates", {
         container: "live-balance",
         html: html
@@ -277,13 +267,13 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  controller.refreshTraders = function(traders, done) {
+  _C.refreshTraders = (traders, done) => {
     jade.renderFile(__dirname + "/../views/_traders.jade", {
       traders: traders, 
-      helpers: STAMPEDE.helpers,
+      helpers: _S.helpers,
       formatter: common.formatter
-    }, function(error, html) {
-      if (error) console.log("refreshTraders | renderFile | error:", error)
+    }, (error, html) => {
+      if (error) LOG("refreshTraders | renderFile | error:", error)
       if (html) live.sendToAll("stampede_updates", {
         container: "live-traders",
         html: html
@@ -292,24 +282,24 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  controller.refreshTradingConfig = function(done) {
+  _C.refreshTradingConfig = (done) => {
     var outgoing = {
-      data: STAMPEDE.config,
+      data: _S.config,
       container: "live-trading-config"
     }
 
-    console.log("^^^^^ Updating wallet with data.", outgoing)
+    LOG("^^^^^ Updating wallet with data.", outgoing)
     live.sendToAll("stampede_updates", outgoing)
     if (done) done()
   }
 
 
-  controller.refreshDecisions = function(data) {
+  _C.refreshDecisions = (data) => {
     jade.renderFile(__dirname + "/../views/_decision_indicators.jade", {
       decisions: data, 
-    helpers: STAMPEDE.helpers
-  }, function(error, html) {
-      if (error) console.log("refreshDecisions | renderFile | error:", error)
+    helpers: _S.helpers
+  }, (error, html) => {
+      if (error) LOG("refreshDecisions | renderFile | error:", error)
       if (html) live.sendToAll("stampede_updates", {
         container: "decision-indicators",
         html: html
@@ -317,12 +307,12 @@ module.exports = function(STAMPEDE) {
     })  
   }
 
-  controller.refreshSimulationSets = function(data_sets, done) {
+  _C.refreshSimulationSets = (data_sets, done) => {
     jade.renderFile(__dirname + "/../views/_simulator_data_sets.jade", {
       data_sets: data_sets, 
-    helpers: STAMPEDE.helpers
+    helpers: _S.helpers
   }, function(error, html) {
-      if (error) console.log("refreshSimulationSets | renderFile | error:", error)
+      if (error) LOG("refreshSimulationSets | renderFile | error:", error)
       if (html) live.sendToAll("stampede_updates", {
         container: "simulator-data-sets",
         html: html
@@ -331,13 +321,13 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  controller.refreshSimulationResults = function(results, done) {
+  _C.refreshSimulationResults = (results, done) => {
     jade.renderFile(__dirname + "/../views/_simulator_serie_results.jade", {
       serie_results: results,
       formatter: common.formatter,
-      helpers: STAMPEDE.helpers
-    }, function(error, html) {
-      if (error) console.log("refreshSimulationResults | renderFile | error:", error)
+      helpers: _S.helpers
+    }, (error, html) => {
+      if (error) LOG("refreshSimulationResults | renderFile | error:", error)
       if (html) live.sendToAll("stampede_updates", {
         container: "simulator-series",
         html: html
@@ -346,7 +336,7 @@ module.exports = function(STAMPEDE) {
     })
   }
 
-  controller.updateTradingStrategy = function(req, res) {
+  _C.updateTradingStrategy = (req, res) => {
     var update_body = req.body
     var new_config = {}
     for (var attribute in CONFIG.strategy) {
@@ -357,7 +347,7 @@ module.exports = function(STAMPEDE) {
   }
 
 
-  controller.updateTradingConfig = function(req, res) {
+  _C.updateTradingConfig = (req, res) => {
     var update_body = req.body
     var new_config = {}
     for (var attribute in CONFIG.trading) {
@@ -369,48 +359,21 @@ module.exports = function(STAMPEDE) {
     res.send({message: "Trading configuration update submitted."})
   }
 
-  controller.resetTradingConfig = function(req, res) {
+  _C.resetTradingConfig = (req, res) => {
     Trader.resetConfig()
     res.redirect("/")
   }
 
-  controller.notifyClient = function(data, done) {
+  _C.notifyClient = (data, done) => {
     var outgoing = data
 
     live.sendToAll("stampede_updates", outgoing)
     if (done) done()
   }
 
-
-  // EXCHANGE interaction routes
-
-  controller.transactions = function(callback) {
-    EXCHANGE.transactions(callback)
-  }
-
-  controller.user_transactions = function(callback) {
-    EXCHANGE.user_transactions(callback)
-  }
-
-  controller.ticker = function(callback) {
-    EXCHANGE.ticker(callback)
-  }
-
-  controller.buy = function(amount, price, callback) {
-    EXCHANGE.buy(amount, price, callback)
-  }
-
-  controller.sell = function(amount, price, callback) {
-    EXCHANGE.sell(amount, price, callback)
-  }
-
-  controller.balance = function(callback) {
-    EXCHANGE.balance(callback)
-  }
-
   // GENERATOR SPECific
 
-  controller.simulatorHome = function(req, res) {
+  _C.simulatorHome = (req, res) => {
     if (SIMULATION) {
       res.render('index', {
         title: 'Stampede: Simulator',
@@ -421,7 +384,7 @@ module.exports = function(STAMPEDE) {
         config: CONFIG,
         traders_awake: true,
         trading_strategies: CONFIG.strategy,
-        helpers: STAMPEDE.helpers
+        helpers: _S.helpers
       })
 
     }
@@ -429,46 +392,41 @@ module.exports = function(STAMPEDE) {
       res.redirect("/")
     }
 
-    setTimeout(function() {
-      Trader.loadTraders(function() {
+    setTimeout(() => {
+      Trader.loadTraders(() => {
         SIMULATOR.loadAllSets()
         Trader.refreshAll() 
       })
     }, 2000)
   }
 
-  controller.simulatorGenerate = function(req, res) {
-
-    generated_data = STAMPEDE.generator.launch()
-    controller.generated_data = generated_data
+  _C.simulatorGenerate = (req, res) => {
+    _S.generated_data = _S.generator.launch()
     SIMULATOR.resetDataSet()
-    var binned_data = STAMPEDE.generator.bin(generated_data, 300)
 
     res.send({
       message: "Generated data.",
-      data: binned_data
+      data: _S.generator.bin(_S.generated_data, 300)
     })
   }
 
-  controller.simulatorCleanUp = function(req, res) {
-    Trader.cleanBooks(function() {
+  _C.simulatorCleanUp = (req, res) => {
+    Trader.cleanBooks(() => {
       res.send({message: "All deals removed."})
     })
   }
 
-  controller.simulatorRun = function(req, res) {
-    console.log(
-      "Simulator warming up (data length - "+generated_data.length+")."
+  _C.simulatorRun = (req, res) => {
+    LOG(
+      "Simulator warming up (data length - "+_S.generated_data.length+")."
     )
     
     // MAKE SURE we run simulation on virtual exchange !!!
-    if (generated_data && generated_data.length && SIMULATION) {
-      LOG("simulatorRun | generated_data.length:", generated_data.length)
-      simulatorWarmUp(generated_data)
+    if (_S.generated_data && _S.generated_data.length && SIMULATION) {
+      LOG("simulatorRun | generated_data.length:", _S.generated_data.length)
+      simulatorWarmUp(_S.generated_data)
       // SIMULATOR.startSeries()
-      SIMULATOR.run(function(response) {
-        res.send({message: response.message || "Submitted simulator launch."})
-      })
+      SIMULATOR.run(() => res.send({message: "Submitted simulator launch."}))
     }
     else {
       res.send({
@@ -479,10 +437,10 @@ module.exports = function(STAMPEDE) {
 
 
 
-  controller.simulatorRunSeries = function(req, res) {
+  _C.simulatorRunSeries = (req, res) => {
     // MAKE SURE we run simulation on virtual exchange !!!
     if (SIMULATION) {
-      SIMULATOR.startSeries(function(errors, started) {
+      SIMULATOR.startSeries((errors, started) => {
         if (errors) {
           res.render("general_error", {
             error: errors,
@@ -495,7 +453,7 @@ module.exports = function(STAMPEDE) {
             trading_config: CONFIG.trading,
             traders_awake: true,
             trading_strategies: CONFIG.strategy,
-            helpers: STAMPEDE.helpers,
+            helpers: _S.helpers,
             title: "Stampede: Series simulation"
           })
         }
@@ -507,14 +465,34 @@ module.exports = function(STAMPEDE) {
     }
   }
 
-  controller.simulatorSave = function(req, res) {
-    console.log("Storage of generated data requested.")
+
+  _C.factoryRunSeries = (req, res) => {
+    if (SIMULATION) {
+      res.render("series", {
+        simulator_enabled: true,
+        trading_config: CONFIG.trading,
+        traders_awake: true,
+        trading_strategies: CONFIG.strategy,
+        helpers: _S.helpers,
+        title: "Stampede: Series simulation"
+      })
+
+      // Start factory run
+      _S.factory.init()
+    }
+    else {
+      res.send({message: "WARNING: Simulated exchange is not selected."})
+    }
+  }
+
+  _C.simulatorSave = (req, res) => {
+    LOG("Storage of generated data requested.")
     var optional_set_name = (req.body.set_name_ui || null)
-    if (generated_data) {
+    if (_S.generated_data) {
       SIMULATOR.saveSet({
         name: optional_set_name,
-        data: generated_data
-      }, function(errors) {
+        data: _S.generated_data
+      }, (errors) => {
         res.send({message: "Submitted the simulator dataset for save."})
         SIMULATOR.loadAllSets()
       })
@@ -524,53 +502,46 @@ module.exports = function(STAMPEDE) {
     }
   }
 
-  controller.switchSetInclusion = function(req, res) {
+  _C.switchSetInclusion = (req, res) => {
     var set_name          = req.body.set_name
     var include_in_series = req.body.include_in_series
 
     SIMULATOR.updateSet({ 
       set_name: set_name,
       include_in_series: include_in_series
-    }, function(error) { res.send({ error: error }) })
+    }, error => res.send({ error: error }))
   }
 
-  controller.simulatorLoad = function(req, res) {
+  _C.simulatorLoad = function(req, res) {
     var set_name = req.params.data_set
     SIMULATOR.loadSet(set_name, function(error, data) {
-      generated_data = data
-      controller.generated_data = generated_data
-      var binned_data = STAMPEDE.generator.bin(data, 300)
+      _S.generated_data = data
       res.send({
         message: "Loaded data.",
-        data: binned_data
+        data: _S.generator.bin(data, 300)
       })
     })
   }
 
-  controller.simulatorRemove = function(req, res) {
+  _C.simulatorRemove = function(req, res) {
     var set_name = req.params.data_set
     SIMULATOR.removeSet(set_name)
   }
 
-  // Called from within simulated exchange once the end of data has been reached
-  controller.simulatorFinish = function(exchange_data) {
-    SIMULATOR.finish()
-  }
-
-  controller.simulatorWarmUp = simulatorWarmUp
+  _C.simulatorWarmUp = simulatorWarmUp
 
   function simulatorWarmUp(data) {
-    controller.generated_data = data
-    if (data && data.length) STAMPEDE.exchange.load(STAMPEDE, data)
+    _S.generated_data = data
+    if (data && data.length) _S.exchange.load(_S, data)
   }
 
   // This is used to real time simulate data on index
   function simulatorRealtimePrep(done) {
     // No data is passed into simulated exchange, it will be a real time exchange
-    STAMPEDE.exchange.load(STAMPEDE)
+    _S.exchange.load(_S)
     if (done) return done()
   }
 
-  return (controller)
+  return (_C)
 
 }

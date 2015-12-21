@@ -23,18 +23,18 @@
           tr
             td Purchases
             td #{trader.purchases}
-            td #{trader.book.purchases_amount_currency.toFixed(2)}
-            td #{trader.book.purchases_amount_btc.toFixed(5)}
+            td #{trader.book.current.purchases_amount_currency.toFixed(2)}
+            td #{trader.book.current.purchases_amount_btc.toFixed(5)}
           tr
             td Sales
             td #{trader.sales}
-            td #{trader.book.sales_amount_currency.toFixed(2)}
-            td #{trader.book.sales_amount_btc.toFixed(5)}
+            td #{trader.book.current.sales_amount_currency.toFixed(2)}
+            td #{trader.book.current.sales_amount_btc.toFixed(5)}
       .spacer
-      - if (trader.book.entries && trader.book.entries.length)
+      - if (trader.book.current.entries && trader.book.current.entries.length)
         h3 Trader book
         .scrollable
-          - var book_entries = trader.book.entries.sort(function(a, b) { return b.time - a.time })
+          - var book_entries = trader.book.current.entries
           table.table.table-striped
             tr
               th Type

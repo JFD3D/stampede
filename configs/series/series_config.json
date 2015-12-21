@@ -1,11 +1,11 @@
 {
   "trading": {
-    "min_purchase": [10],
-    "greed": [3],
-    "impatience": [99]
+    "min_purchase": [10, 15, 20, 30],
+    "greed": [3, 4, 5, 6, 7, 10, 12],
+    "impatience": [1, 75, 99]
   },
   "strategy": {
-    "trailing_stop": [true],
+    "trailing_stop": [true, false],
     "market_based_buy": [true, false]
   }
 }

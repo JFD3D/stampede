@@ -1,4 +1,4 @@
-
+'use strict'
 
 module.exports = function(STAMPEDE) {
 
@@ -6,174 +6,160 @@ module.exports = function(STAMPEDE) {
   var config            = STAMPEDE.config
   var db                = STAMPEDE.db
   var email             = STAMPEDE.email
-  var LOG               = STAMPEDE.LOG("wallet")
-  var currency          = (config.exchange.currency || "usd")
+  var LOG               = STAMPEDE.LOG('wallet')
+  var currency          = (config.exchange.currency || 'usd')
   var live_traders
-  var error_email_sent
+  var ERR_EMAIL_SENT
 
   function Wallet() {
-    this.current = {
+    let current = {
       currency: currency,
       initial_investment: config.trading.maximum_investment,
       investment: 0,
-      btc_amount_managed: 0
+      btc_amount_managed: 0,
+      shares: [],
+      // Assign lower cool, in order not to start trading right away
+      cool: 0.5
     }
-    this.shares = []
-    // Assign lower cool, in order not to start trading right away
-    this.cool = 0.5
-  }
-
-  Wallet.prototype = {
-    check: function(current_traders, callback) {
-      var me = this
+    
+    function check(current_traders, done) {
       live_traders = current_traders
-      STAMPEDE.controller.balance(function(error, data) {
+      STAMPEDE.exchange.balance(function(error, data) {
         if (data && !isNaN(parseFloat(data.fee))) {
-          me.assign(data)
-          if (me.current.error) delete me.current.error
+          assignData(data)
+          if (current.error) delete current.error
         }
         else {
           LOG(
-            "!!!!!!!!!!!!!!!!ERROR Getting WALLET from API !!!!!!!!!!!!!!", 
+            '!!!!!!!!!!!!!!!!ERROR Getting WALLET from API !!!!!!!!!!!!!!', 
             error, data
           )
-          me.current.error = "Unable to load current balance ["+(new Date())+"]."
+          current.error = 'Unable to load current balance ['+(new Date())+'].'
         }
         
+        assignAvailableResources()
+
         // Fasten in case of series simulation, avoid share summarization
         if (config.simulation) {
-          me.sumInvestmentValue()
-          return callback()
+          sumInvestmentValue()
+          return done()
         } 
         else {
-          me.summarizeShares(callback)
+          summarizeShares(() => {
+            sumInvestmentValue()
+            return done()
+          }) // < contains execution of sumInvestmentValue()
         }
       })
-    },
-    assign: function(data) {
-      var me                = this
+    }
+
+    function assignData(data) {
       var wallet_properties = [
-        "btc_reserved", 
-        "fee", 
-        "btc_available", 
-        (config.exchange.currency + "_reserved"), 
-        "btc_balance", 
-        (config.exchange.currency + "_balance"), 
-        (config.exchange.currency + "_available")
+        'btc_reserved', 'fee', 'btc_available', 
+        (config.exchange.currency + '_reserved'), 
+        'btc_balance', 
+        (config.exchange.currency + '_balance'), 
+        (config.exchange.currency + '_available')
       ]
 
-      wallet_properties.forEach(function(property) {
-        me.current[property] = parseFloat(data[property] || 0)
+      wallet_properties.forEach(property => {
+        current[property] = parseFloat(data[property] || 0)
       })
-      me.current.cool     = (me.current.cool || me.cool)
-      me.current.time     = data.time || Date.now()
-      me.current.greed    = (
-        (config.trading.greed / 100) + ((me.current.fee || 0.5) / (2*100))
+      current.cool     = (current.cool || cool)
+      current.time     = data.time || Date.now()
+      current.greed    = (
+        (config.trading.greed / 100) + ((current.fee || 0.5) / (2*100))
       )
-      
-      if (config.strategy.shedding && me.current.anxiety) {
-        me.current.greed += (me.current.anxiety * me.current.greed)
-      }
-      
-      return me
-    },
+    }
 
-    assignAvailableResources: function(MAX_SUM_INVESTMENT) {
-      var me                  = this
-      var available_currency  = me.current[config.exchange.currency+"_available"]
+    function assignAvailableResources(MAX_SUM_INVESTMENT) {
+      var available_currency  = current[config.exchange.currency+'_available']
 
-      me.current.available_currency   = available_currency
-      me.current.available_to_traders = 
+      current.available_currency   = available_currency
+      current.available_to_traders = 
         (
-          MAX_SUM_INVESTMENT - me.current.investment
+          MAX_SUM_INVESTMENT - current.investment
         ) < available_currency ? 
-          MAX_SUM_INVESTMENT - me.current.investment : 
+          MAX_SUM_INVESTMENT - current.investment : 
           available_currency
-    },
+    }
 
-    summarizeShares: function(callback) {
-      var me = this
-      me.shares = []
-      me.current.initial_investment = 0
+    function summarizeShares(done) {
+      current.shares = []
+      current.initial_investment = 0
 
-      db.smembers("stampede_shares", function(errors, share_list) {
-        if (
-          share_list && 
-          share_list.length > 0
-        ) {
+      db.smembers('stampede_shares', (errors, share_list) => {
+        if (share_list && share_list.length) {
           
           // Parse each recorded share
-          share_list.forEach(function(share_string) {
-            var share_arrayed = share_string.split("|")
+          share_list.forEach(share_string => {
+            var share_arrayed = share_string.split('|')
             var share = {
                   holder: share_arrayed[0],
                   invested_currency_amount: parseInt(share_arrayed[1])
                 }
-            me.current.initial_investment += share.invested_currency_amount
-            me.shares.push(share)
+            current.initial_investment += share.invested_currency_amount
+            current.shares.push(share)
           })
 
           // Now assign part value
-          me.shares.forEach(function(share) {
+          current.shares.forEach(function(share) {
             var piece                   = (
               share.invested_currency_amount / 
-              (me.current.initial_investment || 0.01)
+              (current.initial_investment || 0.01)
             )
-            var current_currency_value  = (piece * me.current.currency_value)
+            var current_currency_value  = (piece * current.currency_value)
             
             share.current_currency_value = current_currency_value
             share.pie_share = ((piece * 100).toFixed(1) + '%')
             share.profit_loss = (
               (current_currency_value - share.invested_currency_amount) / 
               share.invested_currency_amount*100
-            ).toFixed(3)+"%"
+            ).toFixed(3)+'%'
           })
         }
         else {
-          var current_currency_value = me.current.currency_value || 0
+          var current_currency_value = current.currency_value || 0
           // Assign initial investment as maximum 
           // (this flies in case of simulator)
           var current_initial_investment = config.trading.maximum_investment
 
-          me.current.initial_investment = current_initial_investment
-          me.shares = [{
-            holder: "Primary",
+          current.initial_investment = current_initial_investment
+          current.shares = [{
+            holder: 'Primary',
             invested_currency_amount: current_initial_investment,
-            pie_share: "100%",
+            pie_share: '100%',
             current_currency_value: current_currency_value,
             profit_loss: (
               (current_currency_value / current_initial_investment - 1) * 100
-            ).toFixed(3) + "%"
+            ).toFixed(3) + '%'
           }]
         }
-        me.sumInvestmentValue()
-        if (callback) callback()
+        if (done) return done()
       })
-    },
-
-    sumInvestmentValue: function() {
-      var me = this
-      me.current.profit_loss_currency = (
-        me.current.currency_value - me.current.initial_investment
-      )
-      me.current.profit_loss = (
-        (me.current.profit_loss_currency / me.current.initial_investment)
-      )
-      me.current.anxiety = Math.abs(
-        me.current.profit_loss < 0 ? (me.current.profit_loss) : 0
-      )
-    },
-
-    addShare: function(holder, amount_invested, callback) {
-      var share = {
-        holder: holder,
-        invested_currency_amount: amount_invested
-      }
-      db.sadd(
-        "stampede_shares", 
-        share.holder+"|"+share.invested_currency_amount, callback)
     }
 
+    function sumInvestmentValue() {
+      current.profit_loss_currency = (
+        current.currency_value - current.initial_investment
+      )
+      current.profit_loss = (
+        (current.profit_loss_currency / current.initial_investment)
+      )
+      current.anxiety = Math.abs(
+        current.profit_loss < 0 ? (current.profit_loss) : 0
+      )
+    }
+
+    function addShare(holder, amount_invested, done) {
+      db.sadd('stampede_shares', holder+'|'+amount_invested, done)
+    }
+
+    return {
+      addShare: addShare,
+      check: check,
+      current: current
+    }
   }
 
   return Wallet

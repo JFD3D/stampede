@@ -9,10 +9,12 @@ module.exports = _S => {
   let CURRENT     = { generated : false }
   let LOG         = _S.LOG('series')
 
-  function generate(data_sets) {
+  function generate(data_set_records) {
     let options           = [[]]
     let attributes        = ['data_sets:data_set']
-
+    let data_sets         = _.pluck(
+      _.where(data_set_records, { include_in_series: true }), 'record_name'
+    )
     // Push in data set indexes to the options
     _.each(data_sets, (data_set, idx) => {
       options[0].push(idx)
@@ -55,30 +57,32 @@ module.exports = _S => {
     CURRENT.idx++
 
     let current_options = CURRENT.array[CURRENT.idx]
-    let current_set_idx = current_options[0]
     let serie_config    = {}
     let option_idx      = 0
 
-    _.each(CONF_ITEMS, (conf_item) => {
-      serie_config[conf_item] = {}
-      _.each(SERIES_CONF[conf_item], (item_setting_idxs, item_setting_name) => {
-        option_idx++
-        serie_config[conf_item][item_setting_name] = 
-          item_setting_idxs[current_options[option_idx]]
+    if (current_options) {
+      let current_set_idx = current_options[0]
+      
+      _.each(CONF_ITEMS, (conf_item) => {
+        serie_config[conf_item] = {}
+        _.each(SERIES_CONF[conf_item], (item_setting_idxs, item_setting_name) => {
+          option_idx++
+          serie_config[conf_item][item_setting_name] = 
+            item_setting_idxs[current_options[option_idx]]
+        })
       })
-    })
-
-    LOG('next | CURRENT.idx, serie_config, current_options:', CURRENT.idx, serie_config, current_options)
-
-    return {
-      options       : current_options,
-      config        : serie_config,
-      data_set      : SERIES_CONF.data_sets[current_set_idx],
-      last          : (CURRENT.idx === (CURRENT.array.length - 1)),
-      count         : CURRENT.array.length,
-      remaining     : (CURRENT.array.length - (CURRENT.idx + 1)),
-      idx           : CURRENT.idx
+      LOG('next | CURRENT.idx, serie_config, current_options:', CURRENT.idx, serie_config, current_options)      
+      return {
+        options       : current_options,
+        config        : serie_config,
+        data_set      : SERIES_CONF.data_sets[current_set_idx],
+        last          : (CURRENT.idx === (CURRENT.array.length - 1)),
+        count         : CURRENT.array.length,
+        remaining     : (CURRENT.array.length - (CURRENT.idx + 1)),
+        idx           : CURRENT.idx
+      }
     }
+    else return null
   }
 
   return {

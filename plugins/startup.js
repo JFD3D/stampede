@@ -63,6 +63,7 @@ module.exports = _S => {
       initializeRedisConnection()
       initializeExchange()
       loadDependencies()
+      instantiateSimulator()
 
       if (_S.role === 'server') {
         setupWebApplication()
@@ -83,6 +84,10 @@ module.exports = _S => {
 
   function loadDependencies () {
     _S.module_types.forEach(initializeModuleType)
+  }
+
+  function instantiateSimulator() {
+    _S.current_simulator = new _S.simulator()
   }
 
   function initializeExchange() {
@@ -200,6 +205,7 @@ module.exports = _S => {
     app.get('/simulator/generate', enAuth, Con.simulatorGenerate)
     app.get('/simulator/run', enAuth, Con.simulatorRun)
     app.get('/simulator/run_series', enAuth, Con.simulatorRunSeries)
+    app.get('/simulator/series', enAuth, Con.factoryRunSeries)
     app.post('/simulator/switch_set_inclusion', enAuth, Con.switchSetInclusion)
     app.get('/simulator/load_data_set/:data_set', enAuth, Con.simulatorLoad)
     app.get('/simulator/remove_data_set/:data_set', enAuth, Con.simulatorRemove)

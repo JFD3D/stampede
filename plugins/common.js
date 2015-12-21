@@ -2,7 +2,8 @@
 
 module.exports = _S => {
   
-  var fs = require("fs")
+  var fs  = require("fs")
+  var csv = require("fast-csv")
   var fibonacci_cache = [0, 1]
   var LOG = _S.LOG("common")
 
@@ -182,18 +183,20 @@ module.exports = _S => {
   }
 
   function loadCSV(file_path, transformFn, callback) {
-    var csv = require("fast-csv")
+    LOG('loadCSV | file_path:', file_path)
+
+    
     var reader = fs.createReadStream(file_path)
     var data = []
     var csvStream = 
       csv()
-        .on("data", function(data_point) {
-          var transformed_point = transformFn(data_point)
-          if (transformed_point) data.push(transformed_point)
-        })
-        .on("end", function(){
-          callback(null, data)
-        })
+      .on("data", data_point => {
+        var transformed_point = transformFn(data_point)
+        if (transformed_point) data.push(transformed_point)
+      })
+      .on("end", function() {
+        return callback(null, data)
+      })
 
     reader.pipe(csvStream);
   }

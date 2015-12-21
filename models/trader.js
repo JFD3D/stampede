@@ -9,27 +9,14 @@ module.exports = _S => {
   var email           = _S.email
   var LOG             = _S.LOG("trader")
   var _               = _S._
-
-      // All traders will be loaded into this object
+  // All traders will be loaded into this object
   var live_traders    = {}
-
-      // Trading performance timers initialization for benchmarking
+  // Trading performance timers initialization for benchmarking
   var perf_timers     = _S.perf_timers
   var logPerformance  = common.logPerformance
-
-      // Load Market and Walled models to initialize instances below
-      /*
-       *
-       *
-       *  Initialize market and wallet instances
-       *
-       *
-       *
-       */
-
+  // Load Market and Walled models to initialize instances below
   var market
   var wallet
-
   // Shared constants
   var TRADER_PREFIX   = "trader_"
   var ID_COUNTER      = "stampede_trader_number"
@@ -38,8 +25,6 @@ module.exports = _S => {
   // Main repository in redis for keeping list of traders
   var TRADER_LIST_KEY = "stampede_traders"
   var CURRENCY_LABEL  = config.exchange.currency.toUpperCase()
-
-
   // Additional shared variables
   // Current USD value history list
   var sheets              = []
@@ -58,43 +43,28 @@ module.exports = _S => {
   var error_email_sent                             // Indicate if email for certain error has already been sent
   var broadcast_time                               // Will compute leftover on this
   var cycle_in_progress
-
-      /*
-       *
-       * Constants for trading
-       *
-       *
-       *
-       */
-
-  var MAX_SUM_INVESTMENT     // Allowed max sum of investment
-  var MIN_PURCHASE          // Allowed investment per trader's deal
-  var INITIAL_GREED          // Greed (.05 means trader looks for 5% upside)
-  var BID_ALIGN              // Align bid before buying to allow competitive price
-  var IMPATIENCE             // Where do I buy up from middle
-
-      /*
-       *
-       * Trading strategies
-       *
-       *
-       *
-       */
-
+  /*
+   * Constants for trading
+   */
+  // Allowed max sum of investment
+  var MAX_SUM_INVESTMENT
+  // Allowed investment per trader's deal 
+  var MIN_PURCHASE
+  // Greed (.05 means trader looks for 5% upside)
+  var INITIAL_GREED
+  // Align bid before buying to allow competitive price
+  var BID_ALIGN
+  // Where do I buy up from middle
+  var IMPATIENCE
+  /*
+   * Trading strategies
+   */
   // Sales will happen only after trailing stop is reached
   var TRAILING_STOP_ENABLED
   // Market spread based increments for buying
   var MARKET_BASED_BUY
-
-      /*
-       *
-       * Logging options
-       *
-       *
-       *
-       */
+  // Whether we log decisions
   var DECISION_LOGGING
-
   // USD value sheet size limit
   var SHEET_SIZE_LIMIT
   var AMOUNT_DIVIDER
@@ -110,17 +80,13 @@ module.exports = _S => {
     IMPATIENCE            = (config.trading.impatience / 100)
     // WIP: divide amount total by this number, get into config?
     AMOUNT_DIVIDER        = 2
-
     // Strategies now
     TRAILING_STOP_ENABLED = config.strategy.trailing_stop
     MARKET_BASED_BUY      = config.strategy.market_based_buy
-
-
     // Logging options load
     DECISION_LOGGING      = (config.logging || {}).decisions || false
     // USD value sheet size limit
     SHEET_SIZE_LIMIT      = config.sheet_size_limit || 300
-
     // Set performance timers to zero
     perf_timers.cycle                   = 0
     perf_timers.decisions               = 0
@@ -134,67 +100,39 @@ module.exports = _S => {
     cycles_until_full                   = 0
   }
 
-
-
-
   /*
-   *
-   *
    *  Trader prototype
-   *
-   *
    *
    */
 
   function Trader(name) {
 
     /*
-     *
-     *
      *  Trader basics
      *
-     *
-     *
      */
-
     this.name                       = name
-
     // Assign profit tracking
     this.profit                     = 0
-
     // Assign purchase tracking
     this.purchases                  = 0
-
     // Assign sales tracking
     this.sales                      = 0
-
     this.average_buy_price          = 0
     this.amount                     = 0
-
     // Book-keeping for purchase/sale entries
-    this.book                       = new _S.book(name)
-
+    this.book                       = _S.book(name)
     /*
-     *
-     *
      *  Redis repos and scopes
-     *
-     *
      *
      */
     this.main_list                  = TRADER_LIST_KEY
   }
 
-
   /*
-   *
-   *
    *  Trader engine definitions
    *
-   *
-   *
    */
-
   function cleanBooks(done) {
     _.each(live_traders, function(trader) {
       trader.clean()
@@ -202,9 +140,7 @@ module.exports = _S => {
     if (done) return done()
   }
 
-
   Trader.prototype = {
-
     // Record and initialize(add to shared live_traders) new trader
     create: function(done) {
       var me = this
@@ -268,7 +204,6 @@ module.exports = _S => {
       })
     },
 
-
     /*
      *
      * Awaken trader = Load associations
@@ -277,7 +212,6 @@ module.exports = _S => {
      *
      *
      */
-
     wake: function(done) {
       var me = this
 
@@ -331,11 +265,14 @@ module.exports = _S => {
         var avg_price         = me.average_buy_price
         var cur_amount        = me.amount
         var cur_price         = purchase.price
-        var target_avg_price  = (cur_price * (1 + (
-          MARKET_BASED_BUY ? ((
-            market.current.spread > 0.02 ? market.current.spread : 0.02
-          ) / 2) : INITIAL_GREED
-        )))
+        var target_avg_price  = (
+          cur_price * (1 + (wallet.current.fee / 100)) * (1 + 
+          (
+            MARKET_BASED_BUY ? ((
+              market.current.spread > 0.02 ? market.current.spread : 0.02
+            ) / 2) : INITIAL_GREED
+          )
+        ))
 
         equalizer           = (
           (cur_amount * (avg_price - target_avg_price)) /
@@ -571,7 +508,7 @@ module.exports = _S => {
         permanent: true
       })
 
-      _S.controller.buy(
+      _S.exchange.buy(
         purchase.amount.toFixed(6),
         purchase.price.toFixed(2),
       function(error, order) {
@@ -600,7 +537,7 @@ module.exports = _S => {
             subject: "Stampede: Error BUYING deal through bitstamp API",
             template: "error.jade",
             data: { error: error }
-          }, function(success) {
+          }, success => {
             console.log("ERROR Email sending success?:", success)
             error_email_sent = true
           })
@@ -615,7 +552,7 @@ module.exports = _S => {
 
       me.purchases++
       me.average_buy_price = (
-        (me.average_buy_price * me.amount) + currency_buy_amount
+        (me.average_buy_price * me.amount) + (currency_buy_amount * (1 + (wallet.current.fee / 100)))
       ) / (me.amount + purchase.amount)
       me.amount += purchase.amount
 
@@ -623,16 +560,14 @@ module.exports = _S => {
       me.max_price = market.current.last
 
       async.parallel([
-        function(next) {
+        next => {
           // Only save the record to db if we are not simulating
           if (!exchange_simulated) {
             me.saveRecord(next)
           }
           else return next()
         },
-        function(next) {
-          me.book.add(purchase, next)
-        }
+        next => me.book.add(purchase, next)
       ], done)
     },
 
@@ -683,7 +618,7 @@ module.exports = _S => {
         permanent: true
       })
 
-      _S.controller.sell(
+      _S.exchange.sell(
         sale.amount.toFixed(6),
         sale.price.toFixed(2),
       function(error, order) {
@@ -759,10 +694,10 @@ module.exports = _S => {
 
   // Trigger ticking market per streaming API
   function tick(data) {
-    market.current.last = data.price
     var time_since_last_cycle = (Date.now() - last_cycle_end)
     var delay_permitted = (exchange_simulated || time_since_last_cycle > 1000)
 
+    market.current.last = data.price
     if (!cycle_in_progress && !_S.stop && delay_permitted) {
       cycle()
     }
@@ -840,7 +775,7 @@ module.exports = _S => {
       var currency_amount = 0
       var btc_amount = 0
 
-      async.each(trader_names, function(trader_name, next) {
+      async.each(trader_names, (trader_name, next) => {
         var trader = live_traders[trader_name]
 
         currency_amount += (
@@ -848,7 +783,7 @@ module.exports = _S => {
         )
         btc_amount += trader.amount
         trader.decide(next)
-      }, function() {
+      }, () => {
         perf_timers.decisions += (Date.now() - decisions_start_timer)
         var cool_up = INITIAL_GREED
         wallet.current.cool = (
@@ -856,9 +791,7 @@ module.exports = _S => {
           cool_up < (1 - wallet.current.cool)
         ) ? (wallet.current.cool + cool_up) : 1
         wallet.current.average_buy_price = (currency_amount / btc_amount)
-        if (done) {
-          return done()
-        }
+        if (done) return done()
       })
     }
     else {
@@ -927,7 +860,8 @@ module.exports = _S => {
           sheets[sheets_index].time = parseInt(record)
         }
       })
-      _S.controller.drawSheets(sheets, "full")
+      if (!series_simulation) 
+        _S.controller.drawSheets(sheets, "full")
       done(error, sheets)
     })
   }
@@ -952,7 +886,7 @@ module.exports = _S => {
         }
 
         sheets.push(new_value)
-        if (broadcast_time) {
+        if (broadcast_time && _S.controller) {
           _S.controller.drawSheets(new_value, "incremental")
         }
 
@@ -982,10 +916,7 @@ module.exports = _S => {
     var wallet_start_timer = Date.now()
 
     if (cycles_until_full === 0) {
-      wallet.check(live_traders, function() {
-        wallet.assignAvailableResources(MAX_SUM_INVESTMENT)
-        return finalize()
-      })
+      wallet.check(live_traders, finalize)
     }
     else {
       return finalize()
@@ -993,7 +924,7 @@ module.exports = _S => {
 
     function finalize() {
       if (!series_simulation && broadcast_time) {
-        _S.controller.refreshShares(wallet.shares)
+        _S.controller.refreshShares(wallet.current.shares)
       }
       
       perf_timers.wallet += (Date.now() - wallet_start_timer)
@@ -1068,7 +999,8 @@ module.exports = _S => {
       var trader = new Trader(trader_name)
       trader.wake(next)
     }, function() {
-      _S.controller.refreshTraders(live_traders)
+      if (_S.controller)
+        _S.controller.refreshTraders(live_traders)
       return done()
     })
   }
@@ -1076,15 +1008,16 @@ module.exports = _S => {
 
   function loadTraders(done) {
     live_traders = {}
-    market = new _S.market()
-    wallet = new _S.wallet()
+    market = _S.market()
+    wallet = _S.wallet()
     db.smembers(TRADER_LIST_KEY, function(error, trader_list) {
       trader_count = trader_list.length
       if (trader_list.length) {
         checkTraders(trader_list, done)
       }
       else {
-        _S.controller.refreshTraders(live_traders)
+        if (_S.controller)
+          _S.controller.refreshTraders(live_traders)
         return done()
       }
     })
@@ -1126,8 +1059,8 @@ module.exports = _S => {
 
   function stopAll(done) {
     // clearTimeout(timer)
-    wallet = new _S.wallet()
-    market = new _S.market()
+    wallet = _S.wallet()
+    market = _S.market()
     sheets = []
     live_traders = {}
     unhook()
@@ -1141,7 +1074,7 @@ module.exports = _S => {
       _S.controller.refreshWallet(wallet.current)
       _S.controller.refreshTraders(live_traders)
       _S.controller.refreshOverview()
-      _S.controller.refreshShares(wallet.shares)
+      _S.controller.refreshShares(wallet.current.shares)
       console.log("trader | refreshAll | sheets.length :", sheets.length)
       setTimeout(_S.controller.drawSheets(sheets, "full"), 2000)
     }

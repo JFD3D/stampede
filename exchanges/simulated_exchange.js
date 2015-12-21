@@ -1,4 +1,4 @@
-
+'use strict'
 
 // This is a redirection to exchange object under Simulator > exchange
 module.exports = Exchange
@@ -12,7 +12,7 @@ function Exchange() {
    *
    *
    */
-  console.log("Initializing Simulated Exchange wrapper...")
+  console.log('Initializing Simulated Exchange wrapper...')
   this.initialization_start = Date.now()
 }
 
@@ -25,23 +25,26 @@ var initialization = (function() {
   var controller
   var ticker_interval
   var stop_ticking_now
+  var _S
 
   Exchange.prototype = {
     
     load: function(STAMPEDE, market_data) {
+      _S            = STAMPEDE
+      LOG           = STAMPEDE.LOG('sim_x')
+      config        = STAMPEDE.config
+      generator     = STAMPEDE.generator
+      xc            = config.exchange.currency
+      controller    = STAMPEDE.controller
 
-      LOG = STAMPEDE.LOG("sim_x")
-      config = STAMPEDE.config
-      generator = STAMPEDE.generator
-      xc = config.exchange.currency
-      controller = STAMPEDE.controller
       var me = this
-
-      console.log(
-        "Exchange (init:" + me.initialization_start + ") | Loading data.",
-          market_data ? market_data.length : "Starting real time simulation."
-      )
       var now = Date.now()
+
+      LOG(
+        '(init:' + me.initialization_start + ') | Loading data.',
+          market_data ? market_data.length : 'Starting real time simulation.'
+      )
+      
       me.real_time = (!market_data)
 
       market_data = 
@@ -64,9 +67,9 @@ var initialization = (function() {
         time: (start_tick.time || 0)
       }
 
-      me.current_balance[xc + "_reserved"] = 0
-      me.current_balance[xc + "_balance"] = 
-        me.current_balance[xc + "_available"] = config.trading.maximum_investment
+      me.current_balance[xc + '_reserved'] = 0
+      me.current_balance[xc + '_balance'] = 
+        me.current_balance[xc + '_available'] = config.trading.maximum_investment
 
       // Initialize container for future ticker data, that will be supplied by generator
       me.volume = 10000
@@ -108,15 +111,15 @@ var initialization = (function() {
       else {
         callback((me.current_tick > me.ticks.length) ? {
           stop: true
-        } : "Unable to retrieve ticker data from Simulated Exchange.", null)
-        controller.simulatorFinish(me)
+        } : 'Unable to retrieve ticker data from Simulated Exchange.', null)
+        _S.current_simulator.finish()
       }
       
     },
 
     startTicking: function() {
       var me = this
-      var events = require("events")
+      var events = require('events')
       var Ticker = new events.EventEmitter()
 
       me.tickEmitter = Ticker
@@ -136,12 +139,12 @@ var initialization = (function() {
       var me = this
       me.ticker((error, market_current) => {
         if (market_current) {
-          me.tickEmitter.emit("tick", {
+          me.tickEmitter.emit('tick', {
             price: market_current.last
           })
         }
         else {
-          LOG("startTicking | stop")
+          LOG('startTicking | stop')
         }
       }, true) // <- true for no shift to current tick
       
@@ -163,41 +166,41 @@ var initialization = (function() {
       var me = this
       var adjusted_amount_price = (amount*price)*(1+(me.current_balance.fee/100))
 
-      if (me.current_balance[xc+"_available"] >= adjusted_amount_price) {
+      if (me.current_balance[xc+'_available'] >= adjusted_amount_price) {
 
         me.current_balance.btc_available += amount
         me.current_balance.btc_balance = me.current_balance.btc_available
-        me.current_balance[xc+"_available"] -= adjusted_amount_price
-        me.current_balance[xc+"_balance"] = me.current_balance[xc+"_available"]
+        me.current_balance[xc+'_available'] -= adjusted_amount_price
+        me.current_balance[xc+'_balance'] = me.current_balance[xc+'_available']
         me.volume += amount
         
-        // LOG("buy | amount, btc_balance:", amount, me.current_balance.btc_balance)
+        // LOG('buy | amount, btc_balance:', amount, me.current_balance.btc_balance)
 
         return callback(null, {
           id: parseInt(Math.random()*10000)
         })
       }
-      else return callback("Not enough " + xc + "resources in balance.", null)
+      else return callback('Not enough ' + xc + 'resources in balance.', null)
     },
     sell: function(amount, price, callback) {
       amount = parseFloat(amount)
       price = parseFloat(price)
 
-      var me = this
+      var me                    = this
       var adjusted_amount_price = (amount*price)*(1-(me.current_balance.fee/100))
 
       if (me.current_balance.btc_available >= amount) {
         me.current_balance.btc_available -= amount
         me.current_balance.btc_balance = me.current_balance.btc_available
-        me.current_balance[xc+"_available"] += adjusted_amount_price
-        me.current_balance[xc+"_balance"] = me.current_balance[xc+"_available"]
+        me.current_balance[xc+'_available'] += adjusted_amount_price
+        me.current_balance[xc+'_balance'] = me.current_balance[xc+'_available']
         me.volume += amount
         return callback(null, {
           id: parseInt(Math.random()*10000)
         })
       }
       else {
-        return callback("Not enough BTC resources in balance.", null)  
+        return callback('Not enough BTC resources in balance.', null)  
       }
     }
   }
