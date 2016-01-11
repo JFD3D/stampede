@@ -25,10 +25,10 @@ You can run one-off or live simulations via '/simulator' path. First load the da
 
 ###Simulation series
 This lets you run the simulations in parallel for combinations of trading and strategy configurations.
-1. Generate or load some data sets via '/simulator' or '/data_loader'.
-2. Mark the data sets to be included in series via '/simulator'.
-3. Then copy and adjust series_config_template.json into a series_config.json file.
-4. You can run the series simulation via: '/simulator/series'.
+1. Generate or load some data sets via '/simulator' or '/data_loader'
+2. Mark the data sets to be included in series via '/simulator'
+3. Then copy and adjust series_config_template.json into a series_config.json file
+4. You can run the series simulation via: '/simulator/series'
 
 ##Maintainers
 Peter Berezny - [Github](https://github.com/pejrak)
