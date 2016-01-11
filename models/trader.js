@@ -525,7 +525,7 @@ module.exports = _S => {
             subject: "Stampede - Buying: " + purchase.amount.toFixed(7) + "BTC",
             template: "purchase.jade",
             data: { purchase: purchase, market: market, wallet: wallet }
-          }, function(success) {
+          }, success => {
             console.log("Email sending success?:", success)
             if (error_email_sent) error_email_sent = false
           })
@@ -583,14 +583,14 @@ module.exports = _S => {
         me.average_buy_price * (1 + (INITIAL_GREED * sale_ratio)))) / me.amount
 
       async.parallel([
-        function(next) {
+        next => {
           // Only save the record to db if we are not simulating
           if (!exchange_simulated) {
             me.saveRecord(next)
           }
           else return next()
         },
-        function(next) {
+        next => {
           me.book.add(sale, next)
         }
       ], done)
