@@ -1,23 +1,34 @@
 #Stampede - Bitcoin trading bot
-Node.js bitcoin trading bot experiment. Runnable from any low -> high spec machine or instance. Best put behind nginx or other http proxy for front end.
+Node.js bitcoin trading bot experiment. Runnable from any low spec machine or instance. Best put behind nginx or other http proxy for front end.
 
 ##Supported
-Bitstamp and Btcchina exchanges are supported.
+Bitstamp exchange is supported.
 
 ##Configuration and deployment
-1. Install nodejs (v0.10+)
+1. Install nodejs (v4.0+)
 2. Install redis (v2.4+)
 3. Install and setup nginx if you are going to put it in front of nodejs
 4. Create config file. The app can be configured by making a copy of the /plugins/config_template.js file to /plugins/config.js using your information and api keys.
 
-###Simulator
+##Simulator
 Stampede allows backtesting and testing on generated data sets. 
 
-##Backtesting
+###Backtesting data
+You can load past data via '/data_loader' path. You can name the data set and select the number of days for cutoff.
+Obtain the data from [bitcoin charts](http://api.bitcoincharts.com/v1/csv/bitstampUSD.csv.gz), or another source in CSV format of: time[unix_time_stamp],price[float].
 
+###Generated data
+You can generate new (30 days long) datasets via '/simulator' path, which will base them on short, mid, long term vectors.
 
+###Simulations
+You can run one-off or live simulations via '/simulator' path. First load the data set and then start simulation.
 
-
+###Simulation series
+This lets you run the simulations in parallel for combinations of trading and strategy configurations.
+1. Generate or load some data sets via '/simulator' or '/data_loader'.
+2. Mark the data sets to be included in series via '/simulator'.
+3. Then copy and adjust series_config_template.json into a series_config.json file.
+4. You can run the series simulation via: '/simulator/series'.
 
 ##Maintainers
 Peter Berezny - [Github](https://github.com/pejrak)
