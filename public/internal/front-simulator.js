@@ -1,11 +1,12 @@
 var Simulator = (function() {
 
   function initialize() {
-    $("#generator-launch").click(launchGenerator);
-    $("#simulator-run").click(runSimulator);
-    $("#simulator-save-data").click(saveDataSet);
-    $("body").on("click", ".simulator-data-loader", loadSavedData);
-    $("body").on("click", ".simulator-data-remover", removeSavedData);
+    $("#generator-launch").click(launchGenerator)
+    $("#simulator-run").click(runSimulator)
+    $("#simulator-save-data").click(saveDataSet)
+    $("body").on("click", ".simulator-data-loader", loadSavedData)
+    $("body").on("click", ".simulator-data-remover", removeSavedData)
+    $("body").on("click", ".simulation-speed-button", controlSimSpeed)
     $("body").on("change", ".switch-data-set-inclusion", switchSetInclusion)
   }
 
@@ -22,6 +23,17 @@ var Simulator = (function() {
         console.log(error)
         notify(response.message || response.error)
       }
+    })
+  }
+
+  function controlSimSpeed(event) {
+    var $button = $(event.currentTarget)
+    var vector = parseInt($button.attr('data-vector'))
+
+    $.post('/simulator/adjust_speed', {
+      vector: vector
+    }, function(response) {
+      notify(response.message || 'Failed to submit simulation speed adjustment')
     })
   }
   

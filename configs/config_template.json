@@ -1,0 +1,51 @@
+{
+  "credentials": {
+    "simulated_exchange": {},
+    "bitstamp": {
+      "client_id": "_UPDATE_",
+      "key": "_UPDATE_",
+      "secret": "_UPDATE_"
+    },
+    "btce": {
+      "key": "_UPDATE_",
+      "secret": "_UPDATE_"
+    }
+  },
+  "session_secret": "_UPDATE_",
+  "exchange": {
+    "selected": "simulated_exchange",
+    "currency": "usd"
+  },
+  "owner": {
+    "email": "_UPDATE_"
+  },
+  "email": {
+    "presence": "_UPDATE_",
+    "password": "_UPDATE_"
+  },
+  "trading": {
+    "min_purchase": 6,
+    "maximum_investment": 10000,
+    "bid_alignment": 0.1,
+    "greed": 5,
+    "impatience": 95
+  },
+  "strategy": {
+    "trailing_stop": true,
+    "market_based_buy": true
+  },
+  "auth": {
+    "client_id": "_UPDATE_",
+    "client_secret": "_UPDATE_"
+  },
+  "port": 3111,
+  "sheet_size_limit": 3000,
+  "hosts": {
+    "development": "http://localhost",
+    "production": "_UPDATE_"
+  },
+  "logging": {
+    "decisions": false
+  },
+  "allowed_user_emails": ["_UPDATE_", "_UPDATE_"]
+}

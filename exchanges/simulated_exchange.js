@@ -12,8 +12,8 @@ function Exchange() {
    *
    *
    */
-  console.log('Initializing Simulated Exchange wrapper...')
-  this.initialization_start = Date.now()
+  this.tick_interval_multiplier = 1
+  this.initialization_start     = Date.now()
 }
 
 var initialization = (function() {
@@ -27,15 +27,20 @@ var initialization = (function() {
   var stop_ticking_now
   var _S
 
+  const _DEFAULT_TICK_INTERVAL = 1500
+
+
+  console.log('Initializing Simulated Exchange wrapper...')
+
   Exchange.prototype = {
     
-    load: function(STAMPEDE, market_data) {
-      _S            = STAMPEDE
-      LOG           = STAMPEDE.LOG('sim_x')
-      config        = STAMPEDE.config
-      generator     = STAMPEDE.generator
-      xc            = config.exchange.currency
-      controller    = STAMPEDE.controller
+    load: function(_S, market_data) {
+      _S                      = _S
+      LOG                     = _S.LOG('sim_exchange')
+      config                  = _S.config
+      generator               = _S.generator
+      xc                      = config.exchange.currency
+      controller              = _S.controller
 
       var me = this
       var now = Date.now()
@@ -76,13 +81,13 @@ var initialization = (function() {
     },
 
 
-    balance: function(callback) {
+    balance: function(done) {
       var me = this
       me.current_balance.time = (me.ticks[me.current_tick] || {}).time
-      callback(null, me.current_balance)
+      done(null, me.current_balance)
     },
 
-    ticker: function(callback, shift) {
+    ticker: function(done, shift) {
       // Take currently loaded data and move further by a tick
       
       var me = this,
@@ -106,10 +111,10 @@ var initialization = (function() {
         market_current.ask = market_current.last
         market_current.volume = me.volume
         market_current.simulation_progress = me.current_tick / me.ticks_length
-        callback(null, market_current)
+        return done(null, market_current)
       }
       else {
-        callback((me.current_tick > me.ticks.length) ? {
+        done((me.current_tick > me.ticks.length) ? {
           stop: true
         } : 'Unable to retrieve ticker data from Simulated Exchange.', null)
         _S.current_simulator.finish()
@@ -124,11 +129,24 @@ var initialization = (function() {
 
       me.tickEmitter = Ticker
       stop_ticking_now = false
+      me.setTickingInterval()
+    },
+
+    setTickingInterval: function(vector) {
+      var me = this
+
+      if (Math.abs(vector) === 1) {
+        me.tick_interval_multiplier *= (vector > 0 ? 2 : 0.5)
+      }
+      else {
+        me.tick_interval_multiplier = 1
+      }
+
       if (ticker_interval) clearInterval(ticker_interval)
       if (me.real_time) {
         ticker_interval = setInterval(function() {
           me.emitTick()
-        }, 1500)
+        }, (_DEFAULT_TICK_INTERVAL / me.tick_interval_multiplier))
       }
       else {
         me.emitTick(true) // True to execute next tick right away
@@ -158,7 +176,7 @@ var initialization = (function() {
       stop_ticking_now = true
     },
 
-    buy: function(amount, price, callback) {
+    buy: function(amount, price, done) {
 
       amount = parseFloat(amount)
       price = parseFloat(price)
@@ -176,13 +194,13 @@ var initialization = (function() {
         
         // LOG('buy | amount, btc_balance:', amount, me.current_balance.btc_balance)
 
-        return callback(null, {
+        return done(null, {
           id: parseInt(Math.random()*10000)
         })
       }
-      else return callback('Not enough ' + xc + 'resources in balance.', null)
+      else return done('Not enough ' + xc + 'resources in balance.', null)
     },
-    sell: function(amount, price, callback) {
+    sell: function(amount, price, done) {
       amount = parseFloat(amount)
       price = parseFloat(price)
 
@@ -195,12 +213,12 @@ var initialization = (function() {
         me.current_balance[xc+'_available'] += adjusted_amount_price
         me.current_balance[xc+'_balance'] = me.current_balance[xc+'_available']
         me.volume += amount
-        return callback(null, {
+        return done(null, {
           id: parseInt(Math.random()*10000)
         })
       }
       else {
-        return callback('Not enough BTC resources in balance.', null)  
+        return done('Not enough BTC resources in balance.', null)  
       }
     }
   }

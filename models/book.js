@@ -1,9 +1,9 @@
 'use strict'
 
 // Book for entries book keeping
-module.exports = function(STAMPEDE) {
-  var db = STAMPEDE.db
-  var exchange_simulated = STAMPEDE.exchange_simulated
+module.exports = function(_S) {
+  var db = _S.db
+  var exchange_simulated = _S.exchange_simulated
 
   // Defines book instance, basically just an array of entries (sales, purchases)
   function Book(trader_name) {

@@ -39,6 +39,7 @@
 
   _SIM.beacon.on('serie_result', (content) => {
     // LOG('serie result sending content:', content)
+    _status = 'idle'
     process.send({ channel: 'completion', content: content})
   })
 

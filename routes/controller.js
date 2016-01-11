@@ -15,7 +15,6 @@ module.exports = function(_S) {
   var Loader          = _S.data_loader
   var live            = _S.live
   var SIMULATOR       = _S.current_simulator
-  var EXCHANGE        = _S.exchange
   var jade            = _S.jade
   var async           = _S.async
   var _C              = {}
@@ -135,7 +134,17 @@ module.exports = function(_S) {
         html: html
       })
     })
+  }
 
+  _C.adjustSimulationSpeed = (req, res) => {
+    var vector = parseInt(req.body.vector)
+    if (SIMULATION && [-1, 0, 1].indexOf(vector)) {
+      _S.exchange.setTickingInterval(vector)
+      res.send({ 
+        message: 'Speed multiplier now at: ' + _S.exchange.tick_interval_multiplier 
+      })
+    }
+    else res.send({ message: 'Incorrect vector or no simulation running.' })
   }
 
   _C.addTrader = (req, res) => {
@@ -209,7 +218,11 @@ module.exports = function(_S) {
 
   _C.refreshMarket = (market_data) => {
     jade.renderFile(__dirname + "/../views/_market.jade", {
-      current_market: market_data, 
+      current_market: market_data,
+      sim_control: {
+        real_time: (SIMULATION && _S.exchange.real_time),
+        interval_multiplier: (_S.exchange.tick_interval_multiplier || 1)
+      },
       helpers: _S.helpers,
       formatter: common.formatter
     }, (error, html) => {

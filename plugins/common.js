@@ -86,6 +86,7 @@ module.exports = _S => {
   function average(array) {
     var ar_len = array.length
     var ar_sum = sum(array)
+    
     return (ar_sum / ar_len)
   }
 

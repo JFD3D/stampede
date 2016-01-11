@@ -1,12 +1,12 @@
 'use strict'
 
-module.exports = function(STAMPEDE) {
+module.exports = function(_S) {
 
-  var async             = STAMPEDE.async
-  var config            = STAMPEDE.config
-  var db                = STAMPEDE.db
-  var email             = STAMPEDE.email
-  var LOG               = STAMPEDE.LOG('wallet')
+  var async             = _S.async
+  var config            = _S.config
+  var db                = _S.db
+  var email             = _S.email
+  var LOG               = _S.LOG('wallet')
   var currency          = (config.exchange.currency || 'usd')
   var live_traders
   var ERR_EMAIL_SENT
@@ -24,7 +24,7 @@ module.exports = function(STAMPEDE) {
     
     function check(current_traders, done) {
       live_traders = current_traders
-      STAMPEDE.exchange.balance(function(error, data) {
+      _S.exchange.balance(function(error, data) {
         if (data && !isNaN(parseFloat(data.fee))) {
           assignData(data)
           if (current.error) delete current.error
@@ -144,7 +144,7 @@ module.exports = function(STAMPEDE) {
         current.currency_value - current.initial_investment
       )
       current.profit_loss = (
-        (current.profit_loss_currency / current.initial_investment)
+        current.profit_loss_currency / current.initial_investment
       )
       current.anxiety = Math.abs(
         current.profit_loss < 0 ? (current.profit_loss) : 0

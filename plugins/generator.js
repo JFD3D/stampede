@@ -1,7 +1,8 @@
-module.exports = function(STAMPEDE) {
+'use strict'
+
+module.exports = _S => {
   
   var debug = false
-  var generator = {}
   var minute = 60*1000
   var hour = 60*minute
   var day = 24*hour
@@ -242,10 +243,10 @@ module.exports = function(STAMPEDE) {
   //if (debug) console.log("GENERATED DATA:\n", generateData())
 
   function binner(data, span, key) {
-    var divider = data.length / (span || 1000),
-        binned_data = [],
-        key = key || "last",
-        cursor = {size: 0}
+    var divider       = data.length / (span || 1000)
+    var binned_data   = []
+    var key           = key || "last"
+    var cursor        = {size: 0}
 
     data.forEach(function(data_point, index) {
       cursor.time = data_point.time
@@ -265,14 +266,15 @@ module.exports = function(STAMPEDE) {
     return binned_data
   }  
 
-  generator.launch = generateData
-  generator.bin = binner
-  generator.initializeStartPoint = initializeStartPoint
-  generator.assignExtremes = assignExtremes
-  generator.initializeDataPoint = initializeDataPoint
-  generator.initializeCurrentExtremes = initializeCurrentExtremes
+  return {
+    launch: generateData,
+    bin: binner,
+    initializeStartPoint: initializeStartPoint,
+    assignExtremes: assignExtremes,
+    initializeDataPoint: initializeDataPoint,
+    initializeCurrentExtremes: initializeCurrentExtremes
+  }
 
-  return generator
 }
 
 

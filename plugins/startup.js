@@ -207,6 +207,7 @@ module.exports = _S => {
     app.get('/simulator/run_series', enAuth, Con.simulatorRunSeries)
     app.get('/simulator/series', enAuth, Con.factoryRunSeries)
     app.post('/simulator/switch_set_inclusion', enAuth, Con.switchSetInclusion)
+    app.post('/simulator/adjust_speed', enAuth, Con.adjustSimulationSpeed)
     app.get('/simulator/load_data_set/:data_set', enAuth, Con.simulatorLoad)
     app.get('/simulator/remove_data_set/:data_set', enAuth, Con.simulatorRemove)
     app.get('/remove_all_simulator_deals', enAuth, Con.simulatorCleanUp)
