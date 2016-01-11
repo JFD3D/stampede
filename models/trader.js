@@ -412,7 +412,6 @@ module.exports = _S => {
 
     isSelling: function(sale) {
       var is_selling_start = Date.now()
-
       var me = this
       // Calculate trader bid
       // (aligned by bid alignment to make us competitive when bidding)

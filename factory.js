@@ -13,8 +13,8 @@
   let _COMPLETED    = 0
   let _WORKERS      = []
   let _RESULTS      = []
-  let _SERIES
   let _CACHE        = {}
+  let _SERIES
 
   const CPUS        = os.cpus()
   const WORKER_COUNT= (CPUS.length / 2)
@@ -32,13 +32,6 @@
       completed: 0,
       started: 0,
       proc: null
-    }
-    // Create and assign process
-    let init        = () => {
-      current.proc = fork(
-        __dirname + '/worker.js', [id], {
-          execArgv: ['--max_old_space_size=' + WORKER_MEM]
-      })
     }
     let receive = message => {
       let content = message.content
@@ -68,6 +61,27 @@
         LOG('receive | message:', message)
       }
     }
+    // Create and assign process
+    let spawn      = () => {
+      current.proc = fork(
+        __dirname + '/worker.js', [id], {
+          execArgv: ['--max_old_space_size=' + WORKER_MEM]
+      })
+      current.proc.on('message', receive)
+      current.proc.on('error', error => {
+        LOG(
+          'worker(' + id + ') error:', error, 'Killing and resurrecting')
+        current.proc.kill('SIGKILL')
+        spawn()
+      })
+
+      current.proc.on('exit', (code, signal) => {
+        LOG(
+          'worker(' + id + ') code, signal:', code, signal, 
+          'Resurrecting')
+        spawn()
+      })
+    }
     let assignSerie = done => {
       let new_serie = _S.series.next()
       if (new_serie && new_serie.data_set) {
@@ -96,22 +110,7 @@
     }
 
     // Initialize right away before listening
-    init()
-
-    current.proc.on('message', receive)
-    current.proc.on('error', error => {
-      LOG(
-        'worker(' + id + ') error:', error, 'Killing and resurrecting')
-      current.proc.kill('SIGKILL')
-      init()
-    })
-
-    current.proc.on('exit', (code, signal) => {
-      LOG(
-        'worker(' + id + ') code, signal:', code, signal, 
-        'Resurrecting')
-      init()
-    })
+    spawn()
 
     return {
       id          : id,
