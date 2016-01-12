@@ -90,8 +90,8 @@ var initialization = (function() {
     ticker: function(done, shift) {
       // Take currently loaded data and move further by a tick
       
-      var me = this,
-          market_current = me.ticks[me.current_tick]
+      var me = this
+      var market_current = me.ticks[me.current_tick]
       
       if (me.real_time) {
         var now = Date.now(),
