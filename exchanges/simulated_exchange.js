@@ -34,8 +34,8 @@ var initialization = (function() {
 
   Exchange.prototype = {
     
-    load: function(_S, market_data) {
-      _S                      = _S
+    load: function(STAMPEDE, market_data) {
+      _S                      = STAMPEDE
       LOG                     = _S.LOG('sim_exchange')
       config                  = _S.config
       generator               = _S.generator

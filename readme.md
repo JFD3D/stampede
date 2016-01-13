@@ -8,7 +8,7 @@ Bitstamp exchange is supported.
 1. Install nodejs (v4.0+)
 2. Install redis (v2.4+)
 3. Install and setup nginx if you are going to put it in front of nodejs
-4. Create config file. The app can be configured by making a copy of the /plugins/config_template.js file to /plugins/config.js using your information and api keys.
+4. Create config file. The app can be configured by making a copy of the /plugins/config_template.json file to /plugins/config.js using your information and api keys.
 
 ##Simulator
 Stampede allows backtesting and testing on generated data sets. 

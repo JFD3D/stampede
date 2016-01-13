@@ -20,7 +20,7 @@ var Simulator = (function() {
       include_in_series: include_in_series
     }, function(response) {
       if (response.error) {
-        console.log(error)
+        console.log(response.error)
         notify(response.message || response.error)
       }
     })
