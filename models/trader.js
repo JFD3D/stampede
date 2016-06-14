@@ -245,6 +245,7 @@ module.exports = _S => {
       )
     },
 
+    walletCool: (purchase) => (wallet.current.cool >= 1),
     validBuyAmount: function(purchase) {
       var me                = this
       // Current allowed investment (on top of existing)
@@ -361,7 +362,8 @@ module.exports = _S => {
       var is_buying_start = Date.now()
       var buy_checklist = [
             {required: true, fn: me.validBuyPrice, name: "buy_price"},
-            {required: true, fn: me.validBuyAmount, name: "valid_amount"}
+            {required: true, fn: me.validBuyAmount, name: "valid_amount"},
+            {required: true, fn: me.walletCool, name: 'wallet_cool'}
           ]
 
       // Calculate trader bid
@@ -385,6 +387,11 @@ module.exports = _S => {
 
       cycle_buy_decisions.push(structured_decision)
       perf_timers.is_buying += (Date.now() - is_buying_start)
+
+      if (purchase.amount) {
+        structured_decision.trader += (', amount: ' + purchase.amount.toFixed(4))
+      }
+
       return structured_decision.decision
     },
 
@@ -466,10 +473,9 @@ module.exports = _S => {
 
         var purchase  = { time: market.current.time, type: "purchase" }
         var sale      = { time: market.current.time, type: "sale" }
-        if (wallet_cool && me.isBuying(purchase)) {
+        if (me.isBuying(purchase)) {
           me.buy(purchase, done)
-        }
-        else if (
+        } else if (
           wallet_cool && me.amount > (MIN_PURCHASE / cur_price) &&
           me.isSelling(sale)
         ) {
@@ -1075,7 +1081,9 @@ module.exports = _S => {
       _S.controller.refreshOverview()
       _S.controller.refreshShares(wallet.current.shares)
       console.log("trader | refreshAll | sheets.length :", sheets.length)
-      setTimeout(_S.controller.drawSheets(sheets, "full"), 2000)
+      setTimeout(() => {
+        _S.controller.drawSheets(sheets, "full")
+      }, 2000)
     }
   }
 
